@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="naacGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFD700"/>
+      <stop offset="50%" stop-color="#FFA500"/>
+      <stop offset="100%" stop-color="#B8860B"/>
+    </linearGradient>
+    <linearGradient id="naacBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F2027"/>
+      <stop offset="50%" stop-color="#203A43"/>
+      <stop offset="100%" stop-color="#2C5364"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#naacGold)" filter="url(#shadow)"/>
+  <circle cx="100" cy="100" r="88" fill="url(#naacBlue)"/>
+  <circle cx="100" cy="100" r="84" fill="none" stroke="#FFD700" stroke-width="2" stroke-dasharray="4,2"/>
+
+  <!-- NAAC Top Arc Text -->
+  <path id="topArc" d="M 35 100 A 65 65 0 0 1 165 100" fill="none"/>
+  <text fill="#ffffff" font-family="'Segoe UI', Roboto, sans-serif" font-size="13" font-weight="900" letter-spacing="3">
+    <textPath href="#topArc" startOffset="50%" text-anchor="middle">
+      ★ NAAC ★
+    </textPath>
+  </text>
+
+  <!-- Central Grade Box -->
+  <rect x="42" y="70" width="116" height="58" rx="8" fill="#ffffff" stroke="#FFD700" stroke-width="2.5"/>
+  <text x="100" y="102" font-family="'Arial Black', 'Impact', sans-serif" font-size="34" font-weight="900" fill="#B8860B" text-anchor="middle">A+</text>
+  <text x="100" y="119" font-family="'Segoe UI', sans-serif" font-size="11" font-weight="bold" fill="#0F2027" text-anchor="middle" letter-spacing="2">GRADE</text>
+
+  <!-- Bottom Arc Text -->
+  <path id="bottomArc" d="M 165 108 A 65 65 0 0 1 35 108" fill="none"/>
+  <text fill="#FFD700" font-family="'Segoe UI', Roboto, sans-serif" font-size="9" font-weight="bold" letter-spacing="1.5">
+    <textPath href="#bottomArc" startOffset="50%" text-anchor="middle">
+      ACCREDITED
+    </textPath>
+  </text>
+  
+  <!-- 5 Golden Stars at Bottom -->
+  <g fill="#FFD700" transform="translate(68, 155) scale(0.65)">
+    <polygon points="10,1 4,19 19,7 1,7 16,19"/>
+    <polygon points="35,1 29,19 44,7 26,7 41,19"/>
+    <polygon points="60,1 54,19 69,7 51,7 66,19"/>
+    <polygon points="85,1 79,19 94,7 76,7 91,19"/>
+  </g>
+</svg>

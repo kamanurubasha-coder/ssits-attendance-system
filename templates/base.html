@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sri Sai Institute of Technology and Science - Attendance Portal{% endblock %}</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+    <!-- Top Institution Brand Header -->
+    <header class="college-header shadow-sm">
+        <div class="container-fluid px-3 px-md-4">
+            <div class="row align-items-center py-2 py-md-3">
+                <!-- Left: College Logo -->
+                <div class="col-auto text-center">
+                    <img src="/static/images/college_logo.png" alt="College Logo" class="brand-logo college-logo-img">
+                </div>
+
+                <!-- Center: College Name & Accreditations (Noticeably Enlarged) -->
+                <div class="col text-center px-1">
+                    <h1 class="college-title mb-0">SRI SAI INSTITUTE OF TECHNOLOGY AND SCIENCE</h1>
+                    <div class="college-subtitle mt-1">(AN AUTONOMOUS INSTITUTION)</div>
+                    <div class="college-affiliations mt-1">
+                        <span class="badge-sub"><i class="bi bi-patch-check-fill text-primary me-1"></i> Approved by AICTE, New Delhi</span>
+                        <span class="badge-sub"><i class="bi bi-building-check text-success me-1"></i> Affiliated to JNTUA</span>
+                        <span class="badge-sub badge-code"><i class="bi bi-tag-fill text-warning me-1"></i> COLLEGE CODE: SRSR</span>
+                    </div>
+                    <div class="portal-badge-wrap mt-1">
+                        <span class="portal-badge">
+                            <i class="bi bi-shield-check text-warning me-1"></i>
+                            INSTITUTIONAL ATTENDANCE & WHATSAPP ALERT AUTOMATION
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Right: NAAC Logo -->
+                <div class="col-auto text-center">
+                    <img src="/static/images/naac_logo.png" alt="NAAC Accredited with B+ Grade" class="brand-logo naac-logo-img">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    {% block sub_navbar %}{% endblock %}
+
+    <!-- Navigation Bar for Super Administrator -->
+    {% if session.get('admin_id') and session.get('admin_role') != 'principal' %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-admin sticky-top shadow-sm py-2">
+        <div class="container-fluid px-3 px-md-4">
+            <div class="d-flex align-items-center">
+                <span class="badge bg-danger text-white fw-bold me-2 px-3 py-2 fs-6">
+                    <i class="bi bi-shield-lock-fill me-1"></i> SUPER ADMIN
+                </span>
+                <span class="text-white-50 small">
+                    Logged in as: <strong class="text-warning">{{ session.get('admin_name') }}</strong>
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <a class="btn btn-sm btn-outline-light rounded-pill px-3" href="/admin/dashboard">
+                    <i class="bi bi-speedometer2 me-1"></i> Control Panel
+                </a>
+                <a class="btn btn-sm btn-outline-warning rounded-pill px-3" href="/faculty-directory">
+                    <i class="bi bi-person-lines-fill me-1"></i> Faculty Directory
+                </a>
+                <a class="btn btn-sm btn-danger rounded-pill px-3" href="/logout">
+                    <i class="bi bi-box-arrow-right me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Navigation Bar for Principal -->
+    {% if session.get('principal_id') or (session.get('admin_id') and session.get('admin_role') == 'principal') %}
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm py-2" style="background: linear-gradient(135deg, #4A0E17 0%, #1A0B2E 100%) !important;">
+        <div class="container-fluid px-3 px-md-4">
+            <div class="d-flex align-items-center">
+                <span class="badge bg-warning text-dark fw-bold me-2 px-3 py-2 fs-6">
+                    <i class="bi bi-building-fill-lock me-1"></i> PRINCIPAL EXECUTIVE PORTAL
+                </span>
+                <span class="text-white-50 small d-none d-md-inline">
+                    Institutional Authority: <strong class="text-white">{{ session.get('principal_name', 'Dr. Principal / Director') }}</strong>
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <a class="btn btn-sm btn-outline-light rounded-pill px-3" href="/principal/dashboard">
+                    <i class="bi bi-speedometer2 me-1"></i> Command Center
+                </a>
+                <a class="btn btn-sm btn-outline-warning rounded-pill px-3" href="/faculty-directory">
+                    <i class="bi bi-person-lines-fill me-1"></i> Directory
+                </a>
+                <a class="btn btn-sm btn-danger rounded-pill px-3" href="/principal/logout">
+                    <i class="bi bi-box-arrow-right me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Navigation Bar for HOD -->
+    {% if session.get('hod_id') %}
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top shadow-sm py-2" style="background: linear-gradient(135deg, #0F2744 0%, #064E3B 100%) !important;">
+        <div class="container-fluid px-3 px-md-4">
+            <div class="d-flex align-items-center">
+                <span class="badge bg-warning text-dark fw-bold me-2 px-3 py-2 fs-6">
+                    <i class="bi bi-person-workspace me-1"></i> HOD - {{ session.get('dept_code') }}
+                </span>
+                <span class="text-white-50 small d-none d-md-inline">
+                    {{ session.get('dept_name') }} | Head: <strong class="text-white">{{ session.get('hod_name') }}</strong>
+                </span>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <a class="btn btn-sm btn-outline-light rounded-pill px-3" href="/hod/dashboard">
+                    <i class="bi bi-speedometer2 me-1"></i> Dept Control Center
+                </a>
+                <a class="btn btn-sm btn-outline-warning rounded-pill px-3" href="/faculty-directory">
+                    <i class="bi bi-person-lines-fill me-1"></i> Directory
+                </a>
+                <a class="btn btn-sm btn-danger rounded-pill px-3" href="/hod/logout">
+                    <i class="bi bi-box-arrow-right me-1"></i> Logout
+                </a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Navigation Bar for Logged in Faculty -->
+    {% if session.get('teacher_id') %}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-navy sticky-top shadow-sm py-2">
+        <div class="container-fluid px-3 px-md-4">
+            <div class="d-flex align-items-center">
+                <span class="badge bg-gold text-dark fw-bold me-2 px-3 py-2 fs-6">
+                    <i class="bi bi-mortarboard-fill me-1"></i> {{ session.get('program_code') }} - {{ session.get('dept_code') }} ({{ session.get('year_name') }})
+                </span>
+                <span class="text-white-50 d-none d-md-inline small">
+                    Faculty: <strong class="text-white">{{ session.get('teacher_name') }}</strong>
+                </span>
+            </div>
+
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse justify-content-end" id="navContent">
+                <ul class="navbar-nav align-items-center gap-2 mt-2 mt-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link text-white {% if request.endpoint == 'dashboard' %}active-link{% endif %}" href="/dashboard">
+                            <i class="bi bi-calendar2-check-fill me-1 text-warning"></i> Attendance Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white {% if request.endpoint == 'manage_students' %}active-link{% endif %}" href="/manage-students">
+                            <i class="bi bi-people-fill me-1 text-info"></i> Manage Students
+                        </a>
+                    </li>
+                    <li class="nav-item ms-lg-2">
+                        <a class="btn btn-sm btn-outline-light rounded-pill px-3" href="/logout">
+                            <i class="bi bi-box-arrow-right me-1"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Main Container -->
+    <main class="py-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="container mb-3">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show shadow-sm" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer with ECE Department Credit on Bottom Right -->
+    <footer class="footer py-3 border-top mt-auto bg-dark-footer text-white">
+        <div class="container-fluid px-3 px-md-4">
+            <div class="row align-items-center g-2">
+                <div class="col-12 col-md-6 text-center text-md-start">
+                    <p class="mb-1 small text-white-50">
+                        © 2026 <strong class="text-white">Sri Sai Institute of Technology and Science</strong>. All Rights Reserved.
+                    </p>
+                    <p class="mb-0 text-white-50 extra-small">
+                        Diploma (Polytechnic) &amp; B.Tech Autonomous Attendance &amp; WhatsApp Alert Engine &bull; Rayachoty
+                    </p>
+                </div>
+                <div class="col-12 col-md-6 text-center text-md-end">
+                    <span class="badge badge-ece-credit px-3 py-2">
+                        <i class="bi bi-cpu-fill text-warning me-1"></i> DESIGNED AND DEVELOPED BY ECE DEPARTMENT
+                    </span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ================= OPTIONAL OFF-CANVAS MENU (WELCOME PAGE ONLY) ================= -->
+    {% block offcanvas_menu %}{% endblock %}
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

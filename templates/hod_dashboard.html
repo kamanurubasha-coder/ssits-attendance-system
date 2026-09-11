@@ -1,0 +1,781 @@
+{% extends "base.html" %}
+
+{% block title %}HOD Dashboard - {{ department.name }} ({{ department.code }}) - SSITS{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-5 my-3">
+    <!-- HOD Department Top Banner -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4 animate-fade-in" style="background: linear-gradient(135deg, #2d124d 0%, #4b1f6d 60%, #1e3a5f 100%);">
+        <div class="card-body p-4 text-white">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                        <span class="badge bg-warning text-dark fw-bold px-3 py-1 text-uppercase">
+                            <i class="bi bi-diagram-3-fill me-1"></i> Department Head Command
+                        </span>
+                        <span class="badge bg-white text-dark fw-semibold px-2 py-1">
+                            CODE: {{ department.code }}
+                        </span>
+                        <span class="badge bg-white bg-opacity-25 text-white px-2 py-1">
+                            Diploma & B.Tech Unified Access
+                        </span>
+                    </div>
+                    <h2 class="fw-bold mb-1 text-white">Department of {{ department.name }}</h2>
+                    <p class="text-white-50 mb-0 small">
+                        HOD Portal &bull; Head: <strong class="text-gold-light">{{ session.get('hod_name', session.get('username')) }}</strong> &bull; Complete academic oversight over all Diploma (3 Yrs) & B.Tech (4 Yrs) sections.
+                    </p>
+                </div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <form method="GET" action="/hod/dashboard" class="d-flex align-items-center gap-2 bg-white bg-opacity-10 p-2 rounded-3 border border-white border-opacity-25">
+                        <label class="text-white small fw-bold mb-0 text-nowrap"><i class="bi bi-calendar3 me-1"></i> Date:</label>
+                        <input type="date" name="date" class="form-control form-control-sm bg-white text-dark fw-bold" value="{{ selected_date }}" onchange="this.form.submit()">
+                    </form>
+                    <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#hodPasswordModal">
+                        <i class="bi bi-key-fill me-1"></i> Change Password
+                    </button>
+                    <a href="/hod/logout" class="btn btn-sm btn-danger">
+                        <i class="bi bi-box-arrow-right me-1"></i> Logout
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Department Summary Metric Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100 p-3 bg-light">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-bold">TOTAL CLASSES</span>
+                    <i class="bi bi-grid-3x3-gap-fill text-purple fs-5"></i>
+                </div>
+                <h3 class="fw-extrabold text-navy mb-0">{{ dept_classes|length }}</h3>
+                <small class="text-muted">{{ diploma_classes|length }} Diploma + {{ btech_classes|length }} B.Tech</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100 p-3 bg-light">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-bold">TOTAL ENROLLED</span>
+                    <i class="bi bi-people-fill text-primary fs-5"></i>
+                </div>
+                <h3 class="fw-extrabold text-primary mb-0">{{ total_dept_students }}</h3>
+                <small class="text-muted">Across All Years</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100 p-3 bg-light">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-bold">PRESENT TODAY</span>
+                    <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                </div>
+                <h3 class="fw-extrabold text-success mb-0">{{ total_dept_present }}</h3>
+                <small class="text-muted">Date: {{ selected_date }}</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100 p-3 bg-light">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-bold">ABSENT TODAY</span>
+                    <i class="bi bi-x-circle-fill text-danger fs-5"></i>
+                </div>
+                <h3 class="fw-extrabold text-danger mb-0">{{ total_dept_absent }}</h3>
+                <small class="text-danger fw-semibold">Action Required</small>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100 p-3 bg-light">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-bold">ATTENDANCE %</span>
+                    <i class="bi bi-pie-chart-fill text-warning fs-5"></i>
+                </div>
+                <h3 class="fw-extrabold text-navy mb-0">{{ dept_attendance_pct }}%</h3>
+                <div class="progress mt-1" style="height: 5px;">
+                    <div class="progress-bar bg-success" style="width: {{ dept_attendance_pct }}%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-2">
+            <div class="card border-0 shadow-sm rounded-3 h-100 p-3 bg-light">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span class="text-muted small fw-bold">CLASSES MARKED</span>
+                    <i class="bi bi-clipboard2-check-fill text-info fs-5"></i>
+                </div>
+                <h3 class="fw-extrabold text-info mb-0">{{ marked_classes_count }}/{{ dept_classes|length }}</h3>
+                <small class="text-muted">Status</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-pills mb-4 gap-2 bg-white p-2 rounded-4 shadow-sm border" id="hodDashboardTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active fw-bold px-3 py-2 rounded-3" id="tab-classes-btn" data-bs-toggle="pill" data-bs-target="#tab-classes" type="button" role="tab">
+                <i class="bi bi-mortarboard-fill me-1"></i> Live Class Monitor ({{ dept_classes|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold px-3 py-2 rounded-3 text-danger" id="tab-absents-btn" data-bs-toggle="pill" data-bs-target="#tab-absents" type="button" role="tab">
+                <i class="bi bi-person-x-fill me-1"></i> Department Absentees ({{ dept_absentees|length }})
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold px-3 py-2 rounded-3" id="tab-monthly-btn" data-bs-toggle="pill" data-bs-target="#tab-monthly" type="button" role="tab">
+                <i class="bi bi-calendar-check-fill me-1"></i> Monthly Working Days Report
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold px-3 py-2 rounded-3 text-dark" id="tab-parent-btn" data-bs-toggle="pill" data-bs-target="#tab-parent" type="button" role="tab">
+                <i class="bi bi-search me-1"></i> Parent Cross-Checking Tracker
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link fw-bold px-3 py-2 rounded-3 text-secondary" id="tab-faculty-btn" data-bs-toggle="pill" data-bs-target="#tab-faculty" type="button" role="tab">
+                <i class="bi bi-people-fill me-1"></i> Department Faculty
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Contents -->
+    <div class="tab-content" id="hodDashboardTabContent">
+        <!-- TAB 1: Live Class Monitor -->
+        <div class="tab-pane fade show active" id="tab-classes" role="tabpanel">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold text-navy mb-0">
+                            <i class="bi bi-collection-play-fill text-purple me-2"></i> {{ department.code }} Classes Attendance Overview
+                        </h5>
+                        <small class="text-muted">Attendance records for date: <strong>{{ selected_date }}</strong></small>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 student-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>PROGRAM</th>
+                                    <th>ACADEMIC YEAR</th>
+                                    <th>SECTION</th>
+                                    <th>CLASS TEACHER</th>
+                                    <th class="text-center">ENROLLED</th>
+                                    <th class="text-center">PRESENT</th>
+                                    <th class="text-center">ABSENT</th>
+                                    <th class="text-center">RATE</th>
+                                    <th class="text-center">STATUS</th>
+                                    <th class="text-center">ACTIONS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in dept_classes %}
+                                <tr>
+                                    <td>
+                                        {% if c.program_id == 1 %}
+                                        <span class="badge bg-primary px-2 py-1">Diploma</span>
+                                        {% else %}
+                                        <span class="badge bg-success px-2 py-1">B.Tech</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><strong class="text-navy">{{ c.year_name }}</strong></td>
+                                    <td><span class="badge bg-light text-dark border">Sec {{ c.section }}</span></td>
+                                    <td>
+                                        <div class="fw-bold text-dark">{{ c.teacher_name or 'Not Assigned' }}</div>
+                                        <small class="text-muted"><i class="bi bi-telephone me-1"></i>{{ c.teacher_phone or 'N/A' }}</small>
+                                    </td>
+                                    <td class="text-center fw-bold">{{ c.total_students }}</td>
+                                    <td class="text-center fw-bold text-success">{{ c.present_count }}</td>
+                                    <td class="text-center fw-bold text-danger">{{ c.absent_count }}</td>
+                                    <td class="text-center">
+                                        <span class="fw-bold text-navy">{{ c.pct }}%</span>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if c.is_marked %}
+                                        <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                            <i class="bi bi-check2 me-1"></i> Marked
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-warning-subtle text-warning-emphasis border border-warning px-2 py-1">
+                                            <i class="bi bi-clock me-1"></i> Pending
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="/download-pdf/{{ c.id }}?date={{ selected_date }}" class="btn btn-sm btn-outline-danger" title="Download Official PDF">
+                                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Department Absentees -->
+        <div class="tab-pane fade" id="tab-absents" role="tabpanel">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h5 class="fw-bold text-danger mb-0">
+                            <i class="bi bi-person-x-fill me-2"></i> {{ department.code }} Absent Students on {{ selected_date }}
+                        </h5>
+                        <small class="text-muted">Total {{ dept_absentees|length }} absentees across all Diploma & B.Tech {{ department.code }} sections</small>
+                    </div>
+                    <div>
+                        <span class="badge bg-danger-subtle text-danger border border-danger px-3 py-2 fw-bold">
+                            <i class="bi bi-whatsapp me-1"></i> 1-Click WhatsApp Direct to Parents
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    {% if dept_absentees %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 student-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>ROLL NO</th>
+                                    <th>STUDENT NAME</th>
+                                    <th>PROGRAM / CLASS</th>
+                                    <th>PARENT NAME</th>
+                                    <th>PARENT CONTACT</th>
+                                    <th class="text-center">PERIODS ABSENT</th>
+                                    <th class="text-center">WHATSAPP ALERT</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for a in dept_absentees %}
+                                <tr>
+                                    <td><code class="fw-bold fs-6 text-dark">{{ a.roll_number }}</code></td>
+                                    <td><strong class="text-navy">{{ a.name }}</strong></td>
+                                    <td>
+                                        <span class="badge {% if a.program_id == 1 %}bg-primary{% else %}bg-success{% endif %} me-1">
+                                            {{ a.program_name }}
+                                        </span>
+                                        <small class="fw-bold text-dark">{{ a.year_name }} (Sec {{ a.section }})</small>
+                                    </td>
+                                    <td>{{ a.parent_name or 'Parent' }}</td>
+                                    <td>
+                                        <span class="fw-bold text-dark"><i class="bi bi-telephone-fill text-success me-1"></i>{{ a.parent_phone }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-danger-subtle text-danger border border-danger px-2 py-1">
+                                            {{ a.absent_periods_str or 'All Periods' }}
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="https://api.whatsapp.com/send?phone={{ a.wa_phone }}&text={{ a.wa_message }}" target="_blank" class="btn btn-sm btn-success fw-bold px-3">
+                                            <i class="bi bi-whatsapp me-1"></i> Send Alert
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="p-5 text-center text-muted">
+                        <i class="bi bi-emoji-smile fs-1 text-success d-block mb-2"></i>
+                        <h5 class="fw-bold text-dark">No Absentees Recorded Today!</h5>
+                        <p class="mb-0">Either all students attended or attendance has not been marked yet for date {{ selected_date }}.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: Monthly Working Days Report -->
+        <div class="tab-pane fade" id="tab-monthly" role="tabpanel">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 border-0">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-4">
+                            <h5 class="fw-bold text-navy mb-0">
+                                <i class="bi bi-calendar3 text-purple me-2"></i> Monthly Working Days Attendance Report
+                            </h5>
+                            <small class="text-muted">Total working days vs. attended days with percentage</small>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
+                                <select class="form-select form-select-sm" style="width: auto;" id="hod_report_class_id">
+                                    <option value="" disabled selected>-- Select Class / Batch --</option>
+                                    {% for c in dept_classes %}
+                                    <option value="{{ c.id }}">{{ c.program_name }} - {{ c.year_name }} Sec {{ c.section }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select class="form-select form-select-sm" style="width: auto;" id="hod_report_month">
+                                    {% for m in range(1, 13) %}
+                                    <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>Month {{ m }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select class="form-select form-select-sm" style="width: auto;" id="hod_report_year">
+                                    <option value="{{ current_year }}" selected>{{ current_year }}</option>
+                                    <option value="{{ current_year - 1 }}">{{ current_year - 1 }}</option>
+                                </select>
+                                <button class="btn btn-sm btn-purple text-white fw-bold" onclick="loadHodMonthlyReport()">
+                                    <i class="bi bi-search me-1"></i> Generate
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-4" id="hodMonthlyReportContainer">
+                    <div class="text-center text-muted py-5">
+                        <i class="bi bi-file-earmark-spreadsheet fs-1 text-purple d-block mb-2"></i>
+                        <h5>Select a Class and Month above, then click Generate</h5>
+                        <p class="small text-muted mb-0">Computes total days conducted in the selected month and individual attendance count.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: Parent Cross-Checking Tracker -->
+        <div class="tab-pane fade" id="tab-parent" role="tabpanel">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 border-0">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                        <div>
+                            <h5 class="fw-bold text-navy mb-1">
+                                <i class="bi bi-person-lines-fill text-gold me-2"></i> Parent Inquiry Cross-Checking Tracker
+                            </h5>
+                            <small class="text-muted">Instant day-by-day attendance audit when parents visit the department</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3 align-items-end mb-4 bg-light p-3 rounded-3 border">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold small text-navy">Select Class / Batch</label>
+                            <select class="form-select" id="hod_parent_class_id" onchange="loadHodClassStudents(this.value)">
+                                <option value="" disabled selected>-- Choose Class --</option>
+                                {% for c in dept_classes %}
+                                <option value="{{ c.id }}">{{ c.program_name }} - {{ c.year_name }} Sec {{ c.section }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold small text-navy">Select Student (Roll No - Name)</label>
+                            <select class="form-select" id="hod_parent_student_id">
+                                <option value="" disabled selected>-- Select Class First --</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-bold small text-navy">Month</label>
+                            <select class="form-select" id="hod_parent_month">
+                                <option value="all" selected>All Months (Full History)</option>
+                                {% for m in range(1, 13) %}
+                                <option value="{{ m }}">Month {{ m }} ({{ ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][m-1] }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-gold w-100 fw-bold shadow-sm" onclick="getHodDailyAttendance()">
+                                <i class="bi bi-calendar-check-fill me-1"></i> Get Daily Attendance
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Direct Quick Roll Search Option -->
+                    <div class="mb-4 pt-2 border-top d-flex flex-wrap align-items-center gap-2">
+                        <span class="small fw-bold text-muted"><i class="bi bi-lightning-charge-fill text-warning me-1"></i> Or Direct Roll Search:</span>
+                        <div class="input-group input-group-sm" style="max-width: 340px;">
+                            <input type="text" id="hod_direct_roll" class="form-control text-uppercase fw-bold" placeholder="e.g. 22G31A0501" onkeydown="if(event.key==='Enter') getHodDailyAttendanceByRoll()">
+                            <button class="btn btn-navy fw-bold" type="button" onclick="getHodDailyAttendanceByRoll()">Find Ward</button>
+                        </div>
+                    </div>
+
+                    <!-- Daily Output Area -->
+                    <div id="hodParentOutputContainer">
+                        <div class="text-center text-muted py-4">
+                            <i class="bi bi-search fs-1 text-gold d-block mb-2"></i>
+                            <h6 class="fw-bold">Select Student and Click "Get Daily Attendance"</h6>
+                            <p class="small mb-0">Displays complete day-by-day attendance status (Present/Absent) with 1-click WhatsApp parent share.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: Department Faculty -->
+        <div class="tab-pane fade" id="tab-faculty" role="tabpanel">
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+                <div class="card-header bg-white py-3 border-0">
+                    <h5 class="fw-bold text-navy mb-0">
+                        <i class="bi bi-people-fill text-purple me-2"></i> {{ department.name }} Class Coordinators & Mentors
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 student-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>PROGRAM</th>
+                                    <th>CLASS / YEAR</th>
+                                    <th>SECTION</th>
+                                    <th>FACULTY NAME</th>
+                                    <th>CONTACT NUMBER</th>
+                                    <th>OFFICIAL EMAIL / USERNAME</th>
+                                    <th class="text-center">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for c in dept_classes %}
+                                <tr>
+                                    <td>
+                                        {% if c.program_id == 1 %}
+                                        <span class="badge bg-primary">Diploma</span>
+                                        {% else %}
+                                        <span class="badge bg-success">B.Tech</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><strong>{{ c.year_name }}</strong></td>
+                                    <td><span class="badge bg-light text-dark border">Sec {{ c.section }}</span></td>
+                                    <td class="fw-bold text-navy">
+                                        <i class="bi bi-person-badge text-purple me-1"></i> {{ c.teacher_name or 'Unassigned' }}
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-semibold"><i class="bi bi-telephone-fill me-1"></i> {{ c.teacher_phone or 'N/A' }}</span>
+                                    </td>
+                                    <td>
+                                        <code class="text-secondary">{{ c.teacher_username or 'N/A' }}</code>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success-subtle text-success border border-success px-2 py-1">Active</span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- HOD Change Password Modal -->
+<div class="modal fade" id="hodPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-purple text-white">
+                <h5 class="modal-title fw-bold"><i class="bi bi-key-fill me-2"></i> Change HOD Password</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="hodPwAlert" class="alert d-none"></div>
+                <form id="hodPasswordForm" onsubmit="handleHodPasswordChange(event)">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-navy">Current Password</label>
+                        <input type="password" class="form-control" id="hod_current_pw" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-navy">New Password</label>
+                        <input type="password" class="form-control" id="hod_new_pw" required minlength="4">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small text-navy">Confirm New Password</label>
+                        <input type="password" class="form-control" id="hod_confirm_pw" required minlength="4">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-purple text-white fw-bold">
+                            Update HOD Password
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadHodClassStudents(classId) {
+    const studentSelect = document.getElementById('hod_parent_student_id');
+    studentSelect.innerHTML = '<option value="" disabled selected>Loading students...</option>';
+    try {
+        const res = await fetch(`/api/class-students/${classId}`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+            let options = '<option value="" disabled selected>-- Select Student --</option>';
+            data.forEach(s => {
+                options += `<option value="${s.id}">${s.roll_number} - ${s.name}</option>`;
+            });
+            studentSelect.innerHTML = options;
+        } else {
+            studentSelect.innerHTML = '<option value="" disabled selected>No students found</option>';
+        }
+    } catch (e) {
+        studentSelect.innerHTML = '<option value="" disabled selected>Error loading students</option>';
+    }
+}
+
+async function getHodDailyAttendance() {
+    const studentSelect = document.getElementById('hod_parent_student_id');
+    const studentId = studentSelect.value;
+    const month = document.getElementById('hod_parent_month').value;
+    const year = new Date().getFullYear();
+    const container = document.getElementById('hodParentOutputContainer');
+
+    if (!studentId) {
+        alert('Please choose a class and student first.');
+        return;
+    }
+
+async function getHodDailyAttendance() {
+    const studentSelect = document.getElementById('hod_parent_student_id');
+    const studentId = studentSelect.value;
+    if (!studentId) {
+        alert('Please choose a class and student first!');
+        return;
+    }
+    const month = document.getElementById('hod_parent_month').value;
+    const year = new Date().getFullYear();
+    let url = `/api/student-daily-attendance?student_id=${studentId}`;
+    if (month && month !== 'all') {
+        url += `&month=${month}&year=${year}`;
+    }
+    await fetchAndRenderHodDossier(url, month, year);
+}
+
+async function getHodDailyAttendanceByRoll() {
+    const roll = (document.getElementById('hod_direct_roll').value || '').trim();
+    if (!roll) {
+        alert('Please enter student Roll Number (e.g. 22G31A0501)!');
+        return;
+    }
+    const month = document.getElementById('hod_parent_month').value;
+    const year = new Date().getFullYear();
+    let url = `/api/student-daily-attendance?roll_number=${encodeURIComponent(roll)}`;
+    if (month && month !== 'all') {
+        url += `&month=${month}&year=${year}`;
+    }
+    await fetchAndRenderHodDossier(url, month, year);
+}
+
+async function fetchAndRenderHodDossier(url, month, year) {
+    const container = document.getElementById('hodParentOutputContainer');
+    container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-gold" role="status"></div><p class="mt-2 text-muted">Fetching student official record from Central Database...</p></div>';
+
+    try {
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.status !== 'success' || !data.student) {
+            container.innerHTML = `<div class="alert alert-danger py-3"><i class="bi bi-exclamation-triangle-fill me-2"></i> ${data.message || 'Student record not found in college database.'}</div>`;
+            return;
+        }
+
+        const student = data.student;
+        const records = data.records || [];
+        const workingDays = data.total_working_days || data.total_tracked_days || 0;
+        const presentDays = data.total_present_days || data.total_attended_days || 0;
+        const absentDays = data.total_absent_days || 0;
+        const pct = data.attendance_pct || data.attendance_percentage || 0;
+        const pName = student.parent_name || student.father_name || 'Guardian';
+        const pPhone = student.parent_phone || student.father_phone || '';
+
+        let rowsHtml = '';
+        if (records.length === 0) {
+            rowsHtml = '<tr><td colspan="4" class="text-center text-muted py-4"><i class="bi bi-info-circle me-1"></i> No attendance sessions recorded yet for this selection.</td></tr>';
+        } else {
+            records.forEach((r, idx) => {
+                const isP = r.status === 'Present';
+                rowsHtml += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td><strong>${r.date}</strong> <small class="text-muted">(${r.day_name})</small></td>
+                        <td>
+                            <span class="badge ${isP ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger'} px-3 py-1 fw-bold">
+                                ${isP ? 'PRESENT' : 'ABSENT'}
+                            </span>
+                        </td>
+                        <td>${r.periods_summary || (isP ? 'Attended' : 'Marked Absent')}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        const monthLabel = (!month || month === 'all') ? 'Full Semester' : `Month ${month}/${year}`;
+        const waText = encodeURIComponent(`*Sri Sai Institute of Technology and Science (SRSR)*
+*Department of {{ department.name }} - Attendance Dossier*
+*Student:* ${student.name} (${student.roll_number})
+*Class:* ${student.prog_code || ''} ${student.dept_code || ''} (${student.year_name || ''} - Sec ${student.section || 'A'})
+*Duration:* ${monthLabel}
+*Total Sessions Tracked:* ${workingDays}
+*Sessions Present:* ${presentDays}
+*Sessions Absent:* ${absentDays}
+*Current Attendance Percentage:* ${pct}%
+*Status:* ${pct >= 75 ? 'ELIGIBLE FOR EXAMS' : (pct >= 65 ? 'CONDONATION REQUIRED' : 'SHORTAGE / DETAINED')}
+
+_Certified from Office of the Head of Department, SSITS Rayachoty._`);
+        const waLink = `https://api.whatsapp.com/send?phone=${pPhone ? '91' + pPhone : ''}&text=${waText}`;
+
+        container.innerHTML = `
+            <div class="card border shadow-sm rounded-3 mt-3 animate-fade-in">
+                <div class="card-header bg-navy text-white py-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h5 class="fw-bold text-white mb-0">${student.name} <span class="badge bg-warning text-dark ms-2 fs-6">${student.roll_number}</span></h5>
+                        <small class="text-white-50">
+                            ${student.prog_code || ''} ${student.dept_code || ''} (${student.year_name || ''} - Sec ${student.section || 'A'}) | 
+                            Parent: <strong class="text-white">${pName}</strong> | 
+                            Phone: <strong class="text-gold">+91 ${pPhone || '-'}</strong>
+                        </small>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center">
+                        <span class="badge ${pct >= 75 ? 'bg-success' : (pct >= 65 ? 'bg-warning text-dark' : 'bg-danger')} fs-6 px-3 py-2">
+                            ${pct}% Attendance (${presentDays}/${workingDays} Days)
+                        </span>
+                        ${pPhone ? `
+                        <a href="${waLink}" target="_blank" class="btn btn-success btn-sm fw-bold">
+                            <i class="bi bi-whatsapp me-1"></i> WhatsApp Parent
+                        </a>` : ''}
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 student-table">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 60px;">#</th>
+                                    <th style="width: 200px;">DATE</th>
+                                    <th style="width: 160px;">ATTENDANCE STATUS</th>
+                                    <th>SESSION / PERIOD DETAILS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${rowsHtml}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (e) {
+        container.innerHTML = `<div class="alert alert-danger py-3">Error retrieving attendance dossier: ${e.message}</div>`;
+    }
+}
+}
+
+async function loadHodMonthlyReport() {
+    const classId = document.getElementById('hod_report_class_id').value;
+    const month = document.getElementById('hod_report_month').value;
+    const year = document.getElementById('hod_report_year').value;
+    const container = document.getElementById('hodMonthlyReportContainer');
+
+    if (!classId) {
+        alert('Please select a class / batch first.');
+        return;
+    }
+
+    container.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-purple" role="status"></div><p class="mt-2 text-muted">Calculating monthly attendance...</p></div>';
+
+    try {
+        const res = await fetch(`/api/monthly-report?class_id=${classId}&month=${month}&year=${year}`);
+        const data = await res.json();
+
+        if (data.error) {
+            container.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+            return;
+        }
+
+        const workingDays = data.total_working_days || 0;
+        const students = data.students || [];
+
+        let rowsHtml = '';
+        students.forEach((s, idx) => {
+            const isGood = s.pct >= 75;
+            rowsHtml += `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td><code class="fw-bold">${s.roll_number}</code></td>
+                    <td><strong>${s.name}</strong></td>
+                    <td class="text-center fw-bold">${workingDays}</td>
+                    <td class="text-center fw-bold text-success">${s.present_days}</td>
+                    <td class="text-center fw-bold text-danger">${s.absent_days}</td>
+                    <td class="text-center">
+                        <span class="badge ${isGood ? 'bg-success' : 'bg-danger'} px-2 py-1 fw-bold">${s.pct}%</span>
+                    </td>
+                    <td class="text-center">
+                        <span class="badge ${isGood ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger'}">
+                            ${isGood ? 'Eligible' : 'Condominium / Shortage'}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        });
+
+        container.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-navy mb-0">Total College Conducted Days in Month: <span class="badge bg-purple text-white px-2 py-1">${workingDays} Days</span></h6>
+                <button class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i> Print Report</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 student-table">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 50px;">S.NO</th>
+                            <th style="width: 140px;">ROLL NO</th>
+                            <th>STUDENT NAME</th>
+                            <th class="text-center" style="width: 120px;">TOTAL DAYS</th>
+                            <th class="text-center" style="width: 120px;">ATTENDED</th>
+                            <th class="text-center" style="width: 120px;">ABSENT</th>
+                            <th class="text-center" style="width: 100px;">PCT %</th>
+                            <th class="text-center" style="width: 150px;">STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rowsHtml || '<tr><td colspan="8" class="text-center text-muted py-3">No student records found.</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } catch (e) {
+        container.innerHTML = `<div class="alert alert-danger">Error: ${e.message}</div>`;
+    }
+}
+
+async function handleHodPasswordChange(e) {
+    e.preventDefault();
+    const currPw = document.getElementById('hod_current_pw').value;
+    const newPw = document.getElementById('hod_new_pw').value;
+    const confPw = document.getElementById('hod_confirm_pw').value;
+    const alertBox = document.getElementById('hodPwAlert');
+
+    if (newPw !== confPw) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'New passwords do not match.';
+        alertBox.classList.remove('d-none');
+        return;
+    }
+
+    try {
+        const res = await fetch('/hod/api/change-password', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({current_password: currPw, new_password: newPw})
+        });
+        const data = await res.json();
+        if (data.success) {
+            alertBox.className = 'alert alert-success';
+            alertBox.textContent = data.message || 'Password changed successfully!';
+            alertBox.classList.remove('d-none');
+            document.getElementById('hodPasswordForm').reset();
+            setTimeout(() => {
+                const modalEl = document.getElementById('hodPasswordModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+                alertBox.classList.add('d-none');
+            }, 1500);
+        } else {
+            alertBox.className = 'alert alert-danger';
+            alertBox.textContent = data.error || 'Failed to change password.';
+            alertBox.classList.remove('d-none');
+        }
+    } catch (err) {
+        alertBox.className = 'alert alert-danger';
+        alertBox.textContent = 'Network error changing password.';
+        alertBox.classList.remove('d-none');
+    }
+}
+</script>
+{% endblock %}

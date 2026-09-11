@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Login & Faculty Portal - Sri Sai Institute of Technology and Science{% endblock %}
+
+{% block content %}
+<div class="container my-3">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-7">
+
+            <!-- Clean Single-Purpose Faculty Login Card -->
+            <div class="card shadow-lg border-0 overflow-hidden rounded-4">
+                <!-- Header Banner -->
+                <div class="card-header bg-navy text-white text-center p-4">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-white bg-opacity-10 text-warning rounded-circle p-3 mb-2 shadow-sm">
+                        <i class="bi bi-box-arrow-in-right fs-2"></i>
+                    </div>
+                    <h4 class="fw-bold mb-1">Faculty Attendance Sign In</h4>
+                    <p class="text-white-50 small mb-0">
+                        Designated Class Coordinator &amp; Attendance Portal (Google Authenticator 2FA)
+                    </p>
+                    <div class="mt-2">
+                        <span class="badge bg-warning text-dark fw-bold px-3 py-1">AUTONOMOUS &bull; SRSR</span>
+                    </div>
+                </div>
+
+                <div class="card-body p-4 p-md-5 bg-white">
+                    <form method="POST" action="/login" id="loginForm">
+                        <input type="hidden" name="login_type" value="faculty">
+
+                        <div class="row g-2 mb-3">
+                            <!-- Program Selection -->
+                            <div class="col-12 col-sm-6">
+                                <label for="program_id" class="form-label fw-semibold small text-muted mb-1">
+                                    <i class="bi bi-award-fill text-primary me-1"></i> 1. DEGREE / PROGRAM
+                                </label>
+                                <select class="form-select fw-bold" id="program_id" name="program_id" onchange="onProgramChange()" required>
+                                    <option value="" disabled selected>-- Choose Degree --</option>
+                                    {% for prog in programs %}
+                                    <option value="{{ prog.id }}" data-code="{{ prog.code }}" data-years="{{ prog.duration_years }}">
+                                        {{ prog.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Department Selection -->
+                            <div class="col-12 col-sm-6">
+                                <label for="dept_id" class="form-label fw-semibold small text-muted mb-1">
+                                    <i class="bi bi-diagram-3-fill text-primary me-1"></i> 2. BRANCH / DEPT
+                                </label>
+                                <select class="form-select" id="dept_id" name="dept_id" required>
+                                    <option value="" disabled selected>-- Select Branch --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <!-- Academic Year Selection -->
+                            <div class="col-12 col-sm-6">
+                                <label for="year_id" class="form-label fw-semibold small text-muted mb-1">
+                                    <i class="bi bi-mortarboard-fill text-primary me-1"></i> 3. ACADEMIC YEAR
+                                </label>
+                                <select class="form-select" id="year_id" name="year_id" required>
+                                    <option value="" disabled selected>-- Select Year --</option>
+                                </select>
+                            </div>
+
+                            <!-- Section Selection -->
+                            <div class="col-12 col-sm-6">
+                                <label for="section" class="form-label fw-semibold small text-muted mb-1">
+                                    <i class="bi bi-grid-3x3-gap-fill text-primary me-1"></i> 4. SECTION
+                                </label>
+                                <select class="form-select fw-bold" id="section" name="section" required>
+                                    <option value="A" selected>Section A</option>
+                                    <option value="B">Section B</option>
+                                    <option value="C">Section C</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Username or Gmail -->
+                        <div class="mb-3">
+                            <label for="username" class="form-label fw-semibold small text-muted mb-1">
+                                <i class="bi bi-envelope-at-fill text-primary me-1"></i> FACULTY GMAIL / LOGIN ID
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                                <input type="text" class="form-control" id="username" name="username" placeholder="e.g. your_email@gmail.com or assigned username" required>
+                            </div>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="password" class="form-label fw-semibold small text-muted mb-0">
+                                    <i class="bi bi-lock-fill text-primary me-1"></i> PASSWORD
+                                </label>
+                                <a href="/forgot-password?role=faculty" class="extra-small text-danger fw-semibold text-decoration-none">
+                                    <i class="bi bi-question-circle me-1"></i> Forgot Password?
+                                </a>
+                            </div>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-key"></i></span>
+                                <input type="password" class="form-control" id="password" name="password" placeholder="Enter password" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow-sm rounded-pill" style="background: var(--college-blue); border-color: var(--college-blue);">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Sign In to Attendance Dashboard
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-4 pt-3 border-top">
+                        <small class="text-muted">
+                            New Faculty Member? 
+                            <a href="/register" class="text-success fw-bold text-decoration-none ms-1">
+                                <i class="bi bi-person-plus me-1"></i> Go to Self-Registration Portal
+                            </a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Note -->
+            <div class="text-center mt-3 text-muted small">
+                <i class="bi bi-shield-lock me-1"></i> Multi-Role Architecture: Registered faculty accounts + Central administrative override.
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+const rawDepartments = {{ departments|tojson }};
+const rawYears = {{ academic_years|tojson }};
+const rawMappings = {{ program_dept_map|tojson }};
+
+function onProgramChange() {
+    const progSelect = document.getElementById("program_id");
+    const progId = parseInt(progSelect.value);
+    const selectedOption = progSelect.options[progSelect.selectedIndex];
+    const durationYears = parseInt(selectedOption.getAttribute("data-years"));
+
+    const validDeptIds = rawMappings[progId] || [];
+    const deptSelect = document.getElementById("dept_id");
+    deptSelect.innerHTML = '<option value="" disabled selected>-- Select Branch / Dept --</option>';
+
+    rawDepartments.forEach(d => {
+        if (validDeptIds.includes(d.id)) {
+            const opt = document.createElement("option");
+            opt.value = d.id;
+            opt.innerText = `${d.code} - ${d.name}`;
+            deptSelect.appendChild(opt);
+        }
+    });
+
+    const yearSelect = document.getElementById("year_id");
+    yearSelect.innerHTML = '<option value="" disabled selected>-- Select Year --</option>';
+
+    rawYears.forEach(y => {
+        if (y.year_num <= durationYears) {
+            const opt = document.createElement("option");
+            opt.value = y.id;
+            opt.innerText = `${y.year_name}`;
+            yearSelect.appendChild(opt);
+        }
+    });
+}
+
+function onRegProgramChange() {
+    const progSelect = document.getElementById("reg_program_id");
+    const progId = parseInt(progSelect.value);
+    const selectedOption = progSelect.options[progSelect.selectedIndex];
+    const durationYears = parseInt(selectedOption.getAttribute("data-years"));
+
+    const validDeptIds = rawMappings[progId] || [];
+    const deptSelect = document.getElementById("reg_dept_id");
+    deptSelect.innerHTML = '<option value="" disabled selected>-- Select Branch / Dept --</option>';
+
+    rawDepartments.forEach(d => {
+        if (validDeptIds.includes(d.id)) {
+            const opt = document.createElement("option");
+            opt.value = d.id;
+            opt.innerText = `${d.code} - ${d.name}`;
+            deptSelect.appendChild(opt);
+        }
+    });
+
+    const yearSelect = document.getElementById("reg_year_id");
+    yearSelect.innerHTML = '<option value="" disabled selected>-- Select Year --</option>';
+
+    rawYears.forEach(y => {
+        if (y.year_num <= durationYears) {
+            const opt = document.createElement("option");
+            opt.value = y.id;
+            opt.innerText = `${y.year_name}`;
+            yearSelect.appendChild(opt);
+        }
+    });
+}
+
+</script>
+{% endblock %}

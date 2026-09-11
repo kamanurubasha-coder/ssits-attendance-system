@@ -1,0 +1,1156 @@
+/* SSITS Portal Stylesheet - Vibrant Themes & Animations */
+:root {
+    /* ==========================================================================
+       1. FACULTY PORTAL & MANAGE STUDENTS THEME: EMERALD OBSIDIAN & GOLD
+       ========================================================================== */
+    --faculty-obsidian: #022C22;
+    --faculty-primary: #064E3B;
+    --faculty-primary-mid: #065F46;
+    --faculty-primary-light: #047857;
+    --faculty-teal: #0D9488;
+    --faculty-emerald: #10B981;
+    --faculty-emerald-glow: rgba(16, 185, 129, 0.4);
+    
+    /* Warm Amber & Gold Accents */
+    --gold-primary: #F59E0B;
+    --gold-light: #FEF3C7;
+    --gold-dark: #B45309;
+    --gold-glow: rgba(245, 158, 11, 0.35);
+
+    /* Backgrounds & Text */
+    --app-bg-slate: #F1F5F9;
+    --app-surface-white: #FFFFFF;
+    --text-primary-dark: #0F172A;
+    --text-secondary-muted: #64748B;
+
+    /* ==========================================================================
+       2. MASTER ADMIN PORTAL THEME: CYBER OBSIDIAN & ROYAL PURPLE / CRIMSON
+       ========================================================================== */
+    --admin-obsidian: #09090B;
+    --admin-surface: #18181B;
+    --admin-surface-light: #27272A;
+    --admin-purple-dark: #312E81;
+    --admin-purple: #4C1D95;
+    --admin-purple-bright: #7C3AED;
+    --admin-purple-glow: rgba(124, 58, 237, 0.4);
+    --admin-crimson: #DC2626;
+
+    /* ==========================================================================
+       3. JEWEL-TONED STATISTIC CARDS
+       ========================================================================== */
+    --stat-total-grad: linear-gradient(135deg, #3730A3 0%, #4F46E5 50%, #6366F1 100%);
+    --stat-present-grad: linear-gradient(135deg, #065F46 0%, #059669 50%, #10B981 100%);
+    --stat-absent-grad: linear-gradient(135deg, #9F1239 0%, #E11D48 50%, #F43F5E 100%);
+    --stat-rate-grad: linear-gradient(135deg, #B45309 0%, #D97706 50%, #F59E0B 100%);
+
+    /* Legacy Variables Mapping */
+    --college-blue: #064E3B;
+    --college-blue-dark: #022C22;
+    --college-gold: #F59E0B;
+    --college-gold-dark: #D97706;
+    --college-red: #E11D48;
+    --college-green: #10B981;
+    --college-gray-bg: #F1F5F9;
+
+    /* Department Palettes */
+    --grad-ece: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+    --grad-cse: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
+    --grad-aids: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
+    --grad-eee: linear-gradient(135deg, #D97706 0%, #B45309 100%);
+    --grad-mech: linear-gradient(135deg, #E11D48 0%, #BE123C 100%);
+    --grad-civil: linear-gradient(135deg, #EA580C 0%, #C2410C 100%);
+}
+
+/* Base Body Styles */
+body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: var(--app-bg-slate);
+    color: var(--text-primary-dark);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==========================================================================
+   4. TOP INSTITUTION BRAND HEADER (DEEP PRESTIGE NON-WHITE PALETTE)
+   ========================================================================== */
+.college-header {
+    background: linear-gradient(135deg, #071322 0%, #0F2744 50%, #064E3B 100%);
+    border-bottom: 3.5px solid #F59E0B;
+    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.25);
+    position: relative;
+    z-index: 1030;
+}
+
+.brand-logo {
+    height: 94px;
+    width: 94px;
+    object-fit: contain;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 50%;
+    padding: 4px;
+    border: 2px solid rgba(245, 158, 11, 0.6);
+}
+
+.brand-logo:hover {
+    transform: scale(1.09) rotate(-2deg);
+    border-color: #F59E0B;
+}
+
+.college-title {
+    font-family: 'Poppins', sans-serif;
+    font-size: 2.25rem;
+    font-weight: 900;
+    color: #FFFFFF;
+    letter-spacing: 0.8px;
+    line-height: 1.2;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+    margin-bottom: 2px;
+}
+
+.college-subtitle {
+    font-size: 1.05rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #FBBF24 !important;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 992px) {
+    .college-title {
+        font-size: 1.6rem;
+    }
+    .brand-logo {
+        height: 72px;
+        width: 72px;
+    }
+    .college-subtitle {
+        font-size: 0.92rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .college-title {
+        font-size: 1.2rem;
+    }
+    .brand-logo {
+        height: 54px;
+        width: 54px;
+    }
+    .college-subtitle {
+        font-size: 0.78rem;
+    }
+}
+
+.college-affiliations {
+    display: flex;
+    justify-content: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+.badge-sub {
+    background: rgba(255, 255, 255, 0.12);
+    color: #F1F5F9;
+    font-weight: 600;
+    padding: 3px 13px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+.badge-sub:hover {
+    transform: translateY(-1px);
+    border-color: #F59E0B;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.badge-code {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%) !important;
+    color: #FFFFFF !important;
+    border: 1.5px solid #FDE68A !important;
+    font-weight: 800;
+    font-size: 0.86rem;
+    padding: 3px 14px;
+    border-radius: 20px;
+    box-shadow: 0 3px 8px rgba(245, 158, 11, 0.35);
+}
+
+.portal-badge-wrap {
+    margin-top: 4px;
+}
+
+.portal-badge {
+    background: linear-gradient(90deg, #022C22 0%, #064E3B 50%, #047857 100%);
+    color: #FFFFFF;
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 4px 18px;
+    border-radius: 20px;
+    letter-spacing: 0.9px;
+    display: inline-block;
+    box-shadow: 0 3px 10px rgba(6, 78, 59, 0.3);
+    animation: glowPulse 3s infinite ease-in-out;
+}
+
+/* ==========================================================================
+   5. NAVIGATION BARS (FACULTY EMERALD vs ADMIN CYBER OBSIDIAN)
+   ========================================================================== */
+.bg-navy, .bg-faculty {
+    background: linear-gradient(90deg, #022C22 0%, #064E3B 50%, #047857 100%) !important;
+    border-bottom: 2.5px solid var(--faculty-emerald);
+}
+
+.bg-admin {
+    background: linear-gradient(90deg, #09090B 0%, #18181B 45%, #312E81 100%) !important;
+    border-bottom: 2.5px solid #8B5CF6;
+}
+
+.bg-gold {
+    background-color: var(--gold-primary) !important;
+    color: #0F172A !important;
+}
+
+.text-gold {
+    color: #D97706 !important;
+}
+
+.text-navy {
+    color: var(--faculty-primary) !important;
+}
+
+.active-link {
+    font-weight: 700;
+    color: #FDE68A !important;
+    border-bottom: 2.5px solid var(--gold-primary);
+}
+
+/* ==========================================================================
+   6. FACULTY DASHBOARD & MANAGE STUDENTS CARDS
+   ========================================================================== */
+.faculty-context-card {
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+    border-left: 5px solid var(--faculty-emerald) !important;
+    border-radius: 16px;
+    box-shadow: 0 4px 18px rgba(6, 78, 59, 0.08);
+    transition: all 0.3s ease;
+}
+
+.faculty-context-card:hover {
+    box-shadow: 0 8px 26px rgba(6, 78, 59, 0.12);
+}
+
+.card-header-faculty {
+    background: linear-gradient(135deg, #022C22 0%, #064E3B 100%) !important;
+    color: #FFFFFF !important;
+    border-bottom: 2px solid var(--faculty-emerald) !important;
+}
+
+/* ==========================================================================
+   7. VIBRANT JEWEL STATISTIC CARDS & HOVER ANIMATIONS
+   ========================================================================== */
+.stat-card {
+    border-radius: 18px;
+    color: #ffffff !important;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.18);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    cursor: default;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
+}
+
+.stat-card:hover {
+    transform: translateY(-7px) scale(1.025);
+    box-shadow: 0 20px 38px -6px rgba(0, 0, 0, 0.3);
+}
+
+.stat-card.total {
+    background: var(--stat-total-grad);
+}
+
+.stat-card.present {
+    background: var(--stat-present-grad);
+}
+
+.stat-card.absent {
+    background: var(--stat-absent-grad);
+}
+
+.stat-card.rate {
+    background: var(--stat-rate-grad);
+}
+
+.stat-card .text-white-50 {
+    color: rgba(255, 255, 255, 0.92) !important;
+    font-size: 0.8rem;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+}
+
+.stat-card .text-dark-50 {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 0.8rem;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+}
+
+.stat-card h2 {
+    font-size: 2.25rem;
+    font-weight: 800;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+}
+
+.stat-card i {
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.stat-card:hover i {
+    transform: scale(1.22) rotate(8deg);
+}
+
+/* Session Switcher Pills */
+.session-selector {
+    background: #E2E8F0;
+    padding: 4px;
+    border-radius: 30px;
+    display: inline-flex;
+    gap: 4px;
+    border: 1px solid #CBD5E1;
+}
+
+.session-btn {
+    border: none;
+    background: transparent;
+    padding: 6px 18px;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.session-btn:hover {
+    color: #0F172A;
+    transform: translateY(-1px);
+}
+
+.session-btn.active {
+    background: #FFFFFF;
+    color: var(--faculty-primary);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12);
+}
+
+.session-btn.active.morning {
+    color: #D97706;
+}
+
+.session-btn.active.afternoon {
+    color: #DC2626;
+}
+
+/* ==========================================================================
+   8. STUDENT ROSTER & ATTENDANCE TABLE
+   ========================================================================== */
+.student-table {
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.student-table thead th {
+    background: linear-gradient(90deg, #0F172A 0%, #064E3B 100%);
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 0.88rem;
+    letter-spacing: 0.5px;
+    padding: 13px 14px;
+    border: none;
+}
+
+.student-table tbody td {
+    padding: 12px 14px;
+    vertical-align: middle;
+    font-size: 0.92rem;
+}
+
+.student-table tbody tr {
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.student-table tbody tr:hover {
+    background-color: #ECFDF5 !important;
+    transform: scale(1.002);
+}
+
+.student-table tbody tr.row-absent {
+    background-color: #FFF1F2 !important;
+    border-left: 4.5px solid #F43F5E !important;
+}
+
+.student-table tbody tr.row-absent:hover {
+    background-color: #FFE4E6 !important;
+}
+
+/* Student Row Badges & WhatsApp Action */
+.badge-absent-pill {
+    background: linear-gradient(135deg, #BE123C 0%, #E11D48 50%, #F43F5E 100%);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(225, 29, 72, 0.35);
+    border-radius: 20px;
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+.badge-present-pill {
+    background: linear-gradient(135deg, #065F46 0%, #059669 50%, #10B981 100%);
+    color: #FFFFFF;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+    border-radius: 20px;
+    font-size: 0.78rem;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+.btn-student-wa {
+    background: #ECFDF5;
+    color: #065F46;
+    border: 1px solid #A7F3D0;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-student-wa:hover {
+    background: #10B981;
+    color: #FFFFFF;
+    border-color: #10B981;
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.btn-student-wa:hover i {
+    color: #FFFFFF !important;
+}
+
+/* Absent Checkbox */
+.absent-checkbox {
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    accent-color: #E11D48;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.absent-checkbox:hover {
+    transform: scale(1.25);
+}
+
+.absent-checkbox:checked {
+    animation: checkBounce 0.25s ease-in-out;
+}
+
+/* ==========================================================================
+   9. STRICT SINGLE-ROW STICKY ACTION BAR ("ANNI VARSAGA")
+   ========================================================================== */
+.sticky-bar-wrapper {
+    position: sticky;
+    bottom: 10px;
+    z-index: 1025;
+    margin-top: 15px;
+    margin-bottom: 6px;
+}
+
+.sticky-action-bar {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    background: rgba(15, 23, 42, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 18px;
+    box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.45);
+    padding: 9px 16px;
+    overflow-x: auto;
+    white-space: nowrap !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.sticky-action-bar::-webkit-scrollbar {
+    height: 4px;
+}
+
+.sticky-action-bar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 4px;
+}
+
+.action-bar-inner {
+    white-space: nowrap !important;
+    min-width: max-content;
+}
+
+.status-cluster, .action-cluster {
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+}
+
+/* Badges in Sticky Action Bar */
+.badge-absent-glow {
+    background: linear-gradient(135deg, #BE123C 0%, #E11D48 50%, #F43F5E 100%);
+    color: #FFFFFF;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 30px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    animation: badgePulse 2.2s infinite;
+    white-space: nowrap !important;
+}
+
+.bell-icon-anim {
+    display: inline-block;
+    animation: bellRing 2.6s ease-in-out infinite;
+}
+
+.badge-session-status {
+    background: rgba(255, 255, 255, 0.12);
+    color: #F8FAFC;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 0.84rem;
+    white-space: nowrap !important;
+}
+
+.badge-db-status {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34D399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+    border-radius: 30px;
+    font-weight: 700;
+    font-size: 0.84rem;
+    white-space: nowrap !important;
+}
+
+/* Single-Row Action Buttons */
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7.5px 14px !important;
+    font-weight: 700 !important;
+    font-size: 0.84rem !important;
+    border-radius: 12px;
+    border: none;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+    white-space: nowrap !important;
+    flex-shrink: 0;
+}
+
+.btn-action:hover {
+    transform: translateY(-3px) scale(1.03);
+}
+
+.btn-action:active {
+    transform: translateY(1px) scale(0.97);
+}
+
+.btn-save-db {
+    background: linear-gradient(135deg, #065F46 0%, #059669 50%, #10B981 100%);
+    color: #FFFFFF;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+}
+
+.btn-save-db:hover {
+    color: #FFFFFF;
+    box-shadow: 0 8px 22px rgba(16, 185, 129, 0.55);
+}
+
+.btn-pdf-doc {
+    background: linear-gradient(135deg, #9F1239 0%, #BE123C 50%, #E11D48 100%);
+    color: #FFFFFF;
+    box-shadow: 0 4px 14px rgba(225, 29, 72, 0.35);
+}
+
+.btn-pdf-doc:hover {
+    color: #FFFFFF;
+    box-shadow: 0 8px 22px rgba(225, 29, 72, 0.55);
+}
+
+.btn-hod-summary {
+    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    color: #FFFFFF;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.btn-hod-summary:hover {
+    color: #FFFFFF;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.5);
+    border-color: #F59E0B;
+}
+
+.btn-parents-wa {
+    background: linear-gradient(135deg, #059669 0%, #10B981 50%, #34D399 100%);
+    color: #FFFFFF;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+}
+
+.btn-parents-wa:hover {
+    color: #FFFFFF;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.6);
+}
+
+/* ==========================================================================
+   10. ADMIN DASHBOARD - CYBER OBSIDIAN & ROYAL PURPLE THEME
+   ========================================================================== */
+.admin-top-banner {
+    background: linear-gradient(135deg, #09090B 0%, #18181B 50%, #27272A 100%);
+    border-left: 6px solid #8B5CF6 !important;
+    border-radius: 16px;
+    color: #FFFFFF;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+
+.admin-top-banner .text-navy {
+    color: #FFFFFF !important;
+}
+
+.admin-card-metric {
+    border-radius: 16px;
+    padding: 18px;
+    color: #FFFFFF;
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.admin-card-metric::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 48%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
+}
+
+.admin-card-metric:hover {
+    transform: translateY(-7px) scale(1.025);
+    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.3);
+}
+
+.admin-card-metric i {
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.admin-card-metric:hover i {
+    transform: scale(1.22) rotate(-8deg);
+}
+
+.admin-card-metric.purple {
+    background: linear-gradient(135deg, #4C1D95 0%, #6D28D9 50%, #8B5CF6 100%);
+}
+
+.admin-card-metric.blue {
+    background: linear-gradient(135deg, #0E7490 0%, #06B6D4 50%, #22D3EE 100%);
+}
+
+.admin-card-metric.orange {
+    background: linear-gradient(135deg, #C2410C 0%, #EA580C 50%, #FB923C 100%);
+}
+
+.admin-card-metric.green {
+    background: linear-gradient(135deg, #15803D 0%, #16A34A 50%, #4ADE80 100%);
+}
+
+/* Admin Tabs Navigation */
+.admin-nav-tabs .nav-link {
+    font-weight: 700;
+    color: #64748B;
+    border-radius: 10px;
+    padding: 10px 20px;
+    transition: all 0.25s ease;
+}
+
+.admin-nav-tabs .nav-link.active {
+    background: linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.35);
+}
+
+.admin-nav-tabs .nav-link:hover:not(.active) {
+    background: #F1F5F9;
+    color: #334155;
+    transform: translateY(-1px);
+}
+
+/* Faculty Delete Button Animation */
+.btn-delete-faculty {
+    background: linear-gradient(135deg, #DC2626 0%, #B91C1C 100%);
+    color: #FFFFFF !important;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-delete-faculty:hover {
+    background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+}
+
+/* ==========================================================================
+   11. MICRO-ANIMATIONS ACROSS ALL OPTIONS
+   ========================================================================== */
+@keyframes badgePulse {
+    0% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(225, 29, 72, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+}
+
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0); }
+    20%, 60% { transform: rotate(14deg); }
+    40%, 80% { transform: rotate(-14deg); }
+}
+
+@keyframes checkBounce {
+    0% { transform: scale(0.8); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+@keyframes glowPulse {
+    0%, 100% { box-shadow: 0 3px 10px rgba(6, 78, 59, 0.3); }
+    50% { box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6); }
+}
+
+/* Smooth Card Hover Lift */
+.hover-lift {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Standard Buttons */
+.btn-faculty-emerald {
+    background: linear-gradient(135deg, #065F46 0%, #059669 50%, #10B981 100%);
+    color: #FFFFFF;
+    border: none;
+    font-weight: 700;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-faculty-emerald:hover {
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+}
+
+.btn-navy {
+    background: linear-gradient(135deg, #064E3B 0%, #047857 100%) !important;
+    color: #FFFFFF !important;
+    font-weight: 600;
+    border: none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-navy:hover {
+    background: linear-gradient(135deg, #022C22 0%, #064E3B 100%) !important;
+    color: #FFFFFF !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(6, 78, 59, 0.35);
+}
+
+.btn-whatsapp {
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+    color: #FFFFFF;
+    font-weight: 700;
+    border: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-whatsapp:hover {
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+}
+
+.btn-pdf {
+    background: linear-gradient(135deg, #E53E3E 0%, #C53030 100%);
+    color: #FFFFFF;
+    font-weight: 700;
+    border: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-pdf:hover {
+    background: #9B2C2C;
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(229, 62, 62, 0.4);
+}
+
+/* ==========================================================================
+   12. FOOTER & ECE DEPARTMENT CREDIT
+   ========================================================================== */
+.bg-dark-footer {
+    background: linear-gradient(90deg, #071322 0%, #0F2744 50%, #022C22 100%) !important;
+    border-top: 2px solid rgba(245, 158, 11, 0.4) !important;
+}
+
+.badge-ece-credit {
+    background: linear-gradient(135deg, #065F46 0%, #059669 50%, #10B981 100%);
+    color: #FFFFFF !important;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    font-size: 0.82rem;
+    box-shadow: 0 3px 12px rgba(16, 185, 129, 0.35);
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.25s ease;
+}
+
+.badge-ece-credit:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.5);
+    border-color: #F59E0B;
+}
+
+/* ==========================================================================
+   13. MONTHLY REPORT & STUDENT DOSSIER STYLES
+   ========================================================================== */
+.report-matrix-table thead th {
+    background: linear-gradient(90deg, #071322 0%, #0F2744 100%);
+    color: #FFFFFF;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    vertical-align: middle;
+    padding: 12px 10px;
+}
+
+.badge-eligible {
+    background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.badge-condonation {
+    background: linear-gradient(135deg, #D97706 0%, #F59E0B 100%);
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.badge-detained {
+    background: linear-gradient(135deg, #DC2626 0%, #EF4444 100%);
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.history-day-card {
+    border-radius: 10px;
+    border: 1px solid #E2E8F0;
+    transition: all 0.2s ease;
+}
+
+.history-day-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* ==========================================================================
+   14. 3-LINE HAMBURGER MENU & OFFCANVAS STYLING
+   ========================================================================== */
+.btn-menu-trigger {
+    background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-menu-trigger:hover {
+    background: linear-gradient(135deg, #FBBF24 0%, #F59E0B 100%);
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.55);
+}
+
+.offcanvas-ssits {
+    background: linear-gradient(180deg, #071322 0%, #0F2744 50%, #064E3B 100%);
+    color: #FFFFFF;
+    border-left: 3px solid #F59E0B;
+    box-shadow: -10px 0 35px rgba(0, 0, 0, 0.6);
+}
+
+.menu-portal-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #FFFFFF;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    margin-bottom: 10px;
+}
+
+.menu-portal-item:hover {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: #F59E0B;
+    transform: translateX(-4px);
+    color: #FBBF24;
+}
+
+.menu-portal-item .menu-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    margin-right: 14px;
+    flex-shrink: 0;
+}
+
+/* ==========================================================================
+   15. WELCOME LANDING PAGE STYLES
+   ========================================================================== */
+.welcome-hero {
+    background: linear-gradient(135deg, #071322 0%, #0F2744 60%, #064E3B 100%);
+    border-radius: 18px;
+    border: 2px solid rgba(245, 158, 11, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+
+.welcome-portal-card {
+    border-radius: 16px;
+    border: 1px solid #E2E8F0;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    background: #FFFFFF;
+    overflow: hidden;
+}
+
+.welcome-portal-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+    border-color: #3B82F6;
+}
+
+.welcome-portal-card.card-faculty:hover { border-color: #0284C7; }
+.welcome-portal-card.card-hod:hover { border-color: #F59E0B; }
+.welcome-portal-card.card-principal:hover { border-color: #DC2626; }
+.welcome-portal-card.card-admin:hover { border-color: #4F46E5; }
+
+/* Top Header of HOD & Principal Dashboards */
+.hod-top-banner {
+    background: linear-gradient(135deg, #0F2744 0%, #064E3B 50%, #071322 100%);
+    border-left: 6px solid #10B981;
+}
+
+.principal-top-banner {
+    background: linear-gradient(135deg, #4A0E17 0%, #1A0B2E 50%, #071322 100%);
+    border-left: 6px solid #E11D48;
+}
+
+/* ==========================================================================
+   16. COMPACT BUTTON SIZING & TYPOGRAPHY OPTIMIZATION
+   ========================================================================== */
+.btn {
+    font-size: 0.84rem !important;
+    padding: 0.34rem 0.75rem !important;
+    border-radius: 7px !important;
+    letter-spacing: 0.01em;
+}
+
+.btn-sm {
+    font-size: 0.74rem !important;
+    padding: 0.2rem 0.5rem !important;
+    border-radius: 5px !important;
+}
+
+.btn-lg {
+    font-size: 0.90rem !important;
+    padding: 0.45rem 1rem !important;
+    border-radius: 8px !important;
+}
+
+.btn-action {
+    padding: 5.5px 11px !important;
+    font-size: 0.78rem !important;
+    border-radius: 9px !important;
+    gap: 5px !important;
+}
+
+/* Ensure icons scale proportionally with compact buttons */
+.btn i, .btn-sm i, .btn-action i {
+    font-size: 0.95em;
+    vertical-align: middle;
+}
+
+/* ==========================================================================
+   17. ANIMATED CAMPUS SHOWCASE HERO WITH AMBIENT AURORA GLOW
+   ========================================================================== */
+.campus-showcase-stage {
+    position: relative;
+    padding: 24px;
+    border-radius: 28px;
+    background: linear-gradient(135deg, #071322 0%, #0F2744 40%, #064E3B 80%, #022C22 100%);
+    background-size: 250% 250%;
+    animation: auroraGradientShift 14s ease infinite;
+    box-shadow: 0 20px 60px rgba(7, 19, 34, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+}
+
+@keyframes auroraGradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+/* Subtle Geometric Tech Dot Grid */
+.campus-showcase-grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(rgba(245, 158, 11, 0.18) 1.2px, transparent 1.2px), radial-gradient(rgba(255, 255, 255, 0.08) 1.2px, transparent 1.2px);
+    background-size: 28px 28px;
+    background-position: 0 0, 14px 14px;
+    opacity: 0.85;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Floating Ambient Glowing Aurora Orbs */
+.ambient-glow-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(55px);
+    opacity: 0.65;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.ambient-orb-1 {
+    width: 260px;
+    height: 260px;
+    background: radial-gradient(circle, #3B82F6 0%, rgba(59, 130, 246, 0) 70%);
+    top: -40px;
+    left: -40px;
+    animation: floatOrbOne 10s ease-in-out infinite alternate;
+}
+
+.ambient-orb-2 {
+    width: 280px;
+    height: 280px;
+    background: radial-gradient(circle, #10B981 0%, rgba(16, 185, 129, 0) 70%);
+    bottom: -50px;
+    right: -40px;
+    animation: floatOrbTwo 12s ease-in-out infinite alternate;
+}
+
+.ambient-orb-3 {
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, #F59E0B 0%, rgba(245, 158, 11, 0) 70%);
+    top: 30%;
+    right: 25%;
+    animation: floatOrbThree 8s ease-in-out infinite alternate;
+}
+
+@keyframes floatOrbOne {
+    0% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(50px, 35px) scale(1.18); }
+    100% { transform: translate(-25px, 60px) scale(0.92); }
+}
+
+@keyframes floatOrbTwo {
+    0% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-60px, -40px) scale(1.25); }
+    100% { transform: translate(30px, -20px) scale(0.95); }
+}
+
+@keyframes floatOrbThree {
+    0% { transform: translate(0, 0) scale(0.9); opacity: 0.45; }
+    50% { transform: translate(30px, -30px) scale(1.2); opacity: 0.75; }
+    100% { transform: translate(-40px, 20px) scale(1); opacity: 0.5; }
+}
+
+/* Animated Shimmering Neon Halo Border around the Photo Card */
+.campus-photo-card-halo {
+    position: relative;
+    z-index: 2;
+    padding: 3px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #F59E0B, #3B82F6, #10B981, #F59E0B);
+    background-size: 300% 300%;
+    animation: haloGlowRotate 8s linear infinite;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease;
+}
+
+.campus-photo-card-halo:hover {
+    transform: translateY(-6px) scale(1.008);
+    box-shadow: 0 25px 55px rgba(0, 0, 0, 0.55), 0 0 30px rgba(245, 158, 11, 0.35);
+}
+
+@keyframes haloGlowRotate {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.campus-photo-inner {
+    border-radius: 17px;
+    overflow: hidden;
+    position: relative;
+    background: #0F172A;
+}
+
+.campus-photo-inner img {
+    transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.campus-photo-card-halo:hover .campus-photo-inner img {
+    transform: scale(1.03);
+}
+
+

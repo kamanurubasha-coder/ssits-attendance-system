@@ -1,0 +1,627 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Attendance & WhatsApp Alerts - Sri Sai Institute{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-md-4">
+
+    <!-- Top Banner / Class Context Card -->
+    <div class="card mb-4 faculty-context-card border-0">
+        <div class="card-body p-3 p-md-4">
+            <div class="row align-items-center g-3">
+                <div class="col-12 col-lg-5">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle p-3 bg-light text-success me-3 fs-3 shadow-sm">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex gap-2 mb-1">
+                                <span class="badge bg-success text-uppercase px-2 py-1">
+                                    {{ program_info.name }}
+                                </span>
+                                <span class="badge bg-navy text-white text-uppercase px-2 py-1">
+                                    {{ dept_info.code }} - {{ year_info.year_name }} (Section {{ section }})
+                                </span>
+                            </div>
+                            <h4 class="fw-bold mb-0 text-navy">{{ dept_info.name }}</h4>
+                            <div class="small text-muted mt-1">
+                                Class Teacher: <span class="fw-semibold text-dark">{{ teacher.name }}</span> | 
+                                HOD: <span class="fw-semibold text-dark">{{ hod.name }}</span> ({{ hod.phone }})
+                            </div>
+                            <div class="mt-2 d-flex flex-wrap gap-2">
+                                <button type="button" class="btn btn-sm btn-outline-primary fw-semibold rounded-pill" onclick="openFacultyMonthlyModal()">
+                                    <i class="bi bi-calendar3 me-1"></i> Class Monthly Sheet
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-success fw-semibold rounded-pill" onclick="openFacultyParentInquiryModal()">
+                                    <i class="bi bi-search-heart me-1"></i> Parent Inquiry / Tracker
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session, Date & Day Type Controls -->
+                <div class="col-12 col-lg-7">
+                    <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-3">
+                        <!-- Date Picker -->
+                        <div>
+                            <label for="attendanceDate" class="form-label small fw-bold text-muted mb-1">
+                                <i class="bi bi-calendar-event me-1"></i> ATTENDANCE DATE
+                            </label>
+                            <input type="date" id="attendanceDate" class="form-control form-control-sm fw-bold" value="{{ today_date }}">
+                        </div>
+
+                        <!-- Day Status (Working, Sunday, Second Saturday, Holiday) -->
+                        <div>
+                            <label for="dayTypeSelect" class="form-label small fw-bold text-muted mb-1">
+                                <i class="bi bi-calendar-check me-1"></i> DAY STATUS
+                            </label>
+                            <select id="dayTypeSelect" class="form-select form-select-sm fw-bold border-primary" onchange="onDayTypeChange()">
+                                <option value="working">🟢 Working Day</option>
+                                <option value="sunday">🏖️ Sunday (Weekly Off)</option>
+                                <option value="second_saturday">🏢 Second Saturday</option>
+                                <option value="holiday">🌴 Declared Holiday</option>
+                            </select>
+                        </div>
+
+                        <!-- Session Switcher (Morning / Afternoon) -->
+                        <div id="sessionControlWrap">
+                            <label class="form-label small fw-bold text-muted mb-1 d-block">
+                                <i class="bi bi-clock-history me-1"></i> ATTENDANCE SESSION
+                            </label>
+                            <div class="session-selector shadow-sm">
+                                <button type="button" class="session-btn active morning" id="btnMorning" onclick="switchSession('morning')">
+                                    <i class="bi bi-sun-fill text-warning me-1"></i> Morning
+                                </button>
+                                <button type="button" class="session-btn" id="btnAfternoon" onclick="switchSession('afternoon')">
+                                    <i class="bi bi-cloud-sun-fill text-danger me-1"></i> Afternoon (Bunk Alert)
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Holiday / Special Day Notice Banner (Shows dynamically when Sunday, 2nd Saturday or Holiday) -->
+    <div id="holidayBanner" class="alert alert-warning shadow-sm border-0 py-3 px-4 mb-4 rounded-3" style="display: none;">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-cup-hot-fill fs-2 text-warning me-3"></i>
+                <div>
+                    <h5 class="fw-bold mb-1 text-dark" id="holidayBannerTitle">Sunday (Weekly College Off)</h5>
+                    <div class="small text-muted" id="holidayBannerDesc">
+                        No regular classes are conducted today. You can still review past attendance by picking a previous date from the calendar.
+                    </div>
+                </div>
+            </div>
+            <div id="holidayBannerActions">
+                <button type="button" class="btn btn-sm btn-outline-dark" onclick="editHolidayOccasion()">
+                    <i class="bi bi-pencil me-1"></i> Edit Occasion Name
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Statistics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card stat-card total shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-white-50 small fw-bold">TOTAL ENROLLED</div>
+                        <h2 class="fw-bold text-white mb-0" id="statTotal">0</h2>
+                    </div>
+                    <i class="bi bi-people-fill fs-1 text-white opacity-75"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card present shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-white-50 small fw-bold" id="statPresentLabel">PRESENT COUNT</div>
+                        <h2 class="fw-bold text-white mb-0" id="statPresent">0</h2>
+                    </div>
+                    <i class="bi bi-person-check-fill fs-1 text-white opacity-75"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card absent shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-white-50 small fw-bold" id="statAbsentLabel">ABSENT COUNT</div>
+                        <h2 class="fw-bold text-white mb-0" id="statAbsent">0</h2>
+                    </div>
+                    <i class="bi bi-person-x-fill fs-1 text-white opacity-75"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card rate shadow-sm p-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-dark-50 small fw-bold" id="statRateLabel">ATTENDANCE RATE</div>
+                        <h2 class="fw-bold text-dark mb-0" id="statPercentage">0%</h2>
+                    </div>
+                    <i class="bi bi-pie-chart-fill fs-1 text-dark opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Student Attendance Table Card -->
+    <div class="card shadow-sm border-0 mb-5" id="tableCard">
+        <div class="card-header bg-white py-3 border-0">
+            <div class="row align-items-center g-2">
+                <div class="col-12 col-md-6">
+                    <h5 class="fw-bold text-navy mb-0" id="tableCardTitle">
+                        <i class="bi bi-card-checklist me-2 text-primary"></i>
+                        Class Roll Sheet & Absentees Selection
+                    </h5>
+                    <small class="text-muted" id="tableCardSubTitle">Tick the checkbox for students who are ABSENT for this session.</small>
+                </div>
+                <div class="col-12 col-md-6 text-md-end" id="tableControlsCol">
+                    <div class="d-flex gap-2 justify-content-md-end">
+                        <input type="text" id="searchInput" class="form-control form-control-sm w-auto" placeholder="🔍 Search student / roll no...">
+                        <button class="btn btn-sm btn-outline-danger" onclick="toggleAllAbsent(true)">
+                            <i class="bi bi-check2-all me-1"></i> Mark All Absent
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="toggleAllAbsent(false)">
+                            <i class="bi bi-x-circle me-1"></i> Clear All
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover student-table align-middle mb-0" id="attendanceTable">
+                    <thead>
+                        <tr>
+                            <th class="text-center" style="width: 70px;">ABSENT?</th>
+                            <th style="width: 60px;">S.NO</th>
+                            <th style="width: 170px;">ROLL NUMBER / PIN</th>
+                            <th>STUDENT NAME</th>
+                            <th>FATHER / PARENT NAME</th>
+                            <th style="width: 180px;">PARENT WHATSAPP</th>
+                            <th class="text-center" style="width: 130px;">STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                <div class="spinner-border spinner-border-sm text-primary me-2"></div>
+                                Loading student records...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Sticky Bottom Action Bar (Strict Single Continuous Row Layout) -->
+<div class="sticky-bar-wrapper">
+    <div class="container-fluid px-2 px-md-4">
+        <div class="sticky-action-bar shadow-lg">
+            <div class="d-flex align-items-center justify-content-between flex-nowrap gap-2 w-100 action-bar-inner">
+                <!-- Left: Status Cluster (Strict Single Line) -->
+                <div class="d-flex align-items-center flex-nowrap gap-2 flex-shrink-0 status-cluster">
+                    <span class="badge badge-absent-glow fs-6 px-2 px-md-3 py-2" id="barBadge">
+                        <i class="bi bi-bell-fill me-1 bell-icon-anim"></i> <span id="barAbsentCount">0</span> Absentees
+                    </span>
+                    <span class="badge badge-session-status px-2 py-2" id="sessionNotice">
+                        <i class="bi bi-sun-fill text-warning me-1"></i> Morning
+                    </span>
+                    <span id="saveStatusIndicator" class="badge badge-db-status px-2 py-2">
+                        <i class="bi bi-database me-1"></i> Ready to Save
+                    </span>
+                </div>
+
+                <!-- Right: Action Buttons Cluster (Strict Single Line) -->
+                <div class="d-flex align-items-center flex-nowrap gap-2 flex-shrink-0 action-cluster">
+                    <!-- Save Attendance Record -->
+                    <button type="button" class="btn btn-action btn-save-db shadow-sm" id="btnSaveAttendance" onclick="saveAttendanceData()" title="Save marked attendance to database">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i>
+                        <span>Save Attendance</span>
+                    </button>
+
+                    <!-- PDF Report Download Button -->
+                    <button type="button" class="btn btn-action btn-pdf-doc shadow-sm" onclick="generatePdfReport()" title="Download official college attendance PDF report">
+                        <i class="bi bi-file-earmark-pdf-fill me-1"></i>
+                        <span>PDF Report</span>
+                    </button>
+
+                    <!-- HOD WhatsApp Summary Button -->
+                    <button type="button" class="btn btn-action btn-hod-summary shadow-sm" id="btnHodSummary" onclick="openHodSummaryModal()" title="Send attendance summary to Department HOD">
+                        <i class="bi bi-person-lines-fill me-1 text-warning"></i>
+                        <span>HOD Summary</span>
+                    </button>
+
+                    <!-- WhatsApp Alerts to Parents -->
+                    <button type="button" class="btn btn-action btn-parents-wa shadow" id="btnParentsWhatsApp" onclick="openWhatsAppModal()" title="Send WhatsApp alerts to parents of absent students">
+                        <i class="bi bi-whatsapp me-1 text-white"></i>
+                        <span>WhatsApp Parents</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= MODALS ================= -->
+
+<!-- 4. Save Confirmation & Database Transparency Modal -->
+<div class="modal fade" id="saveConfirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-check-circle-fill me-2"></i> Attendance Saved to Database
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="text-center mb-3">
+                    <div class="rounded-circle bg-success-subtle text-success d-inline-flex p-3 fs-1 mb-2">
+                        <i class="bi bi-database-check"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">Successfully Stored in Database</h5>
+                    <p class="text-muted small mb-0">Your attendance entries are safely stored in the central college database.</p>
+                </div>
+
+                <div class="card bg-light border-0 p-3 mb-3">
+                    <div class="row g-2 small">
+                        <div class="col-6">
+                            <span class="text-muted">Storage Location:</span>
+                            <div class="fw-bold text-dark font-monospace">attendance.db &rarr; attendance_records</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Class & Section:</span>
+                            <div class="fw-bold text-dark">{{ dept_info.code }} - {{ year_info.year_name }} (Sec {{ section }})</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Date & Session:</span>
+                            <div class="fw-bold text-dark" id="modalSaveDateSession">-</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Logged At:</span>
+                            <div class="fw-bold text-dark" id="modalSaveTimestamp">-</div>
+                        </div>
+                        <div class="col-4 text-center mt-2 pt-2 border-top">
+                            <div class="text-muted">Enrolled</div>
+                            <div class="fs-5 fw-bold text-primary" id="modalSaveTotal">0</div>
+                        </div>
+                        <div class="col-4 text-center mt-2 pt-2 border-top">
+                            <div class="text-muted">Present</div>
+                            <div class="fs-5 fw-bold text-success" id="modalSavePresent">0</div>
+                        </div>
+                        <div class="col-4 text-center mt-2 pt-2 border-top">
+                            <div class="text-muted">Absent</div>
+                            <div class="fs-5 fw-bold text-danger" id="modalSaveAbsent">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="alert alert-primary py-2 px-3 small mb-0">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    <strong>Admin Live Sync:</strong> Your HOD and Principal / College Administrator can now immediately see this attendance record, monitor absentees, and download the official signed PDF report from their Admin Dashboard.
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-success btn-sm fw-bold px-3" data-bs-dismiss="modal">
+                    <i class="bi bi-check2 me-1"></i> Understood
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 1. Occasion Name Modal for Declared Holiday -->
+<div class="modal fade" id="occasionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-navy text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-calendar-heart-fill me-2 text-warning"></i>
+                    Specify Holiday Occasion / Reason
+                </h5>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label for="occasionInput" class="form-label fw-semibold">Occasion / Festival / Event Name:</label>
+                    <input type="text" id="occasionInput" class="form-control" placeholder="e.g. Sankranti Festival, Gandhi Jayanti, Annual Sports Day" required>
+                    <small class="text-muted">This name will appear on official records and the PDF report.</small>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" onclick="cancelHolidayModal()">Cancel</button>
+                <button type="button" class="btn btn-primary fw-bold" onclick="confirmHolidayOccasion()">Apply Holiday</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. WhatsApp Parents Alert Modal -->
+<div class="modal fade" id="whatsAppModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-success text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-whatsapp me-2"></i>
+                    Send Absent Alert to Parents (Single Chat Message)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info py-2 small mb-3">
+                    <i class="bi bi-info-circle-fill me-1"></i>
+                    Clicking <strong>"Send WhatsApp"</strong> opens the parent's WhatsApp chat with the full formal message combined in <strong>one single chat message</strong>!
+                </div>
+
+                <div id="absenteeParentList" class="d-flex flex-column gap-3">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 3. HOD WhatsApp Summary Modal -->
+<div class="modal fade" id="hodSummaryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-person-badge-fill me-2 text-warning"></i>
+                    Send Attendance Summary to HOD
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">DEPARTMENT HEAD (HOD) DETAILS</label>
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="fw-bold text-dark">{{ hod.name }}</div>
+                        <div class="small text-muted">{{ program_info.name }} - {{ dept_info.name }}</div>
+                        <div class="text-success fw-bold small mt-1">
+                            <i class="bi bi-whatsapp me-1"></i> WhatsApp: {{ hod.phone }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">SUMMARY MESSAGE PREVIEW:</label>
+                    <textarea id="hodMessagePreview" class="form-control font-monospace small" rows="8" readonly></textarea>
+                </div>
+
+                <a id="btnSendToHodWhatsApp" href="#" target="_blank" class="btn btn-whatsapp w-100 py-2 fw-bold">
+                    <i class="bi bi-whatsapp me-1"></i> Open WhatsApp & Send to HOD
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 5. Faculty Class Monthly Sheet Modal -->
+<div class="modal fade" id="facultyMonthlyModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-navy text-white py-3">
+                <div>
+                    <h5 class="modal-title fw-bold mb-0">
+                        <i class="bi bi-calendar3 me-2 text-warning"></i> Class Monthly Academic Attendance Report
+                    </h5>
+                    <small class="text-white-50">
+                        {{ dept_info.code }} - {{ year_info.year_name }} (Section {{ section }}) | Working Days vs Attended Days
+                    </small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light rounded-3 border mb-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="form-label small fw-bold text-muted mb-0">SELECT MONTH:</label>
+                        <input type="month" id="facultyMonthPicker" class="form-control form-control-sm fw-bold border-primary" value="{{ today_date[:7] }}" style="width: 170px;">
+                        <button type="button" class="btn btn-sm btn-primary fw-bold" onclick="loadFacultyMonthlyReport()">
+                            <i class="bi bi-arrow-repeat me-1"></i> Compute
+                        </button>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportFacultyMonthlyCSV()">
+                            <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
+                        </button>
+                        <button type="button" class="btn btn-dark btn-sm" onclick="window.print()">
+                            <i class="bi bi-printer me-1"></i> Print
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Monthly KPIs -->
+                <div class="row g-2 text-center mb-4" id="facultyMonthlyKPIs">
+                    <div class="col-4 col-md-2">
+                        <div class="p-2 border rounded bg-light">
+                            <div class="small text-muted fw-bold">CALENDAR DAYS</div>
+                            <h4 class="fw-bold text-dark mb-0" id="facMrepCalDays">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <div class="p-2 border rounded bg-light">
+                            <div class="small text-muted fw-bold">TOTAL WORKING</div>
+                            <h4 class="fw-bold text-primary mb-0" id="facMrepWorkDays">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <div class="p-2 border rounded bg-light">
+                            <div class="small text-muted fw-bold">HOLIDAYS/OFF</div>
+                            <h4 class="fw-bold text-secondary mb-0" id="facMrepHols">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <div class="p-2 border rounded bg-success bg-opacity-10 border-success">
+                            <div class="small text-success fw-bold">ELIGIBLE (&ge; 75%)</div>
+                            <h4 class="fw-bold text-success mb-0" id="facMrepEligible">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <div class="p-2 border rounded bg-warning bg-opacity-10 border-warning">
+                            <div class="small text-warning-emphasis fw-bold">CONDONATION</div>
+                            <h4 class="fw-bold text-warning-emphasis mb-0" id="facMrepCondonation">0</h4>
+                        </div>
+                    </div>
+                    <div class="col-4 col-md-2">
+                        <div class="p-2 border rounded bg-danger bg-opacity-10 border-danger">
+                            <div class="small text-danger fw-bold">DETAINED</div>
+                            <h4 class="fw-bold text-danger mb-0" id="facMrepDetained">0</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 report-matrix-table" id="facultyMonthlyTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 45px;">#</th>
+                                <th style="width: 150px;">ROLL NUMBER</th>
+                                <th>STUDENT NAME</th>
+                                <th>FATHER / GUARDIAN</th>
+                                <th class="text-center" style="width: 120px;">WORKING DAYS</th>
+                                <th class="text-center" style="width: 120px;">DAYS ATTENDED</th>
+                                <th class="text-center" style="width: 110px;">DAYS ABSENT</th>
+                                <th class="text-center" style="width: 120px;">ATTENDANCE %</th>
+                                <th class="text-center" style="width: 150px;">STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="facultyMonthlyTbody">
+                            <!-- Filled dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 6. Faculty Parent Inquiry / Student Daily Tracker Modal -->
+<div class="modal fade" id="facultyParentInquiryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-search-heart text-white me-2"></i> Parent Inquiry - Student Daily Attendance Log
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-muted">SELECT STUDENT FROM CLASS:</label>
+                    <div class="input-group">
+                        <select id="facStudentSelect" class="form-select border-success fw-bold">
+                            <option value="">-- Choose Student --</option>
+                        </select>
+                        <button type="button" class="btn btn-success fw-bold" onclick="loadFacultyStudentDailyHistory()">
+                            <i class="bi bi-search me-1"></i> Get Daily Attendance
+                        </button>
+                    </div>
+                </div>
+
+                <div id="facDossierWrap" style="display: none;">
+                    <!-- Dossier Summary Card -->
+                    <div class="p-3 bg-light rounded-3 border mb-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <h5 class="fw-bold mb-0 text-dark" id="facDossierName">-</h5>
+                                <div class="small text-muted">
+                                    Roll No: <strong class="text-primary" id="facDossierRoll">-</strong> | 
+                                    Parent: <span class="fw-semibold" id="facDossierFather">-</span> (<span class="text-success" id="facDossierPhone">-</span>)
+                                </div>
+                            </div>
+                            <div>
+                                <a id="facDossierWaBtn" href="#" target="_blank" class="btn btn-sm btn-whatsapp fw-bold shadow-sm">
+                                    <i class="bi bi-whatsapp me-1"></i> Send Report to Parent
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 text-center mt-2 pt-2 border-top">
+                            <div class="col-3">
+                                <span class="text-muted small">Sessions Tracked</span>
+                                <div class="fw-bold fs-6 text-dark" id="facDossierTotal">0</div>
+                            </div>
+                            <div class="col-3">
+                                <span class="text-muted small">Present</span>
+                                <div class="fw-bold fs-6 text-success" id="facDossierPresent">0</div>
+                            </div>
+                            <div class="col-3">
+                                <span class="text-muted small">Absent</span>
+                                <div class="fw-bold fs-6 text-danger" id="facDossierAbsent">0</div>
+                            </div>
+                            <div class="col-3">
+                                <span class="text-muted small">Percentage</span>
+                                <div class="fw-bold fs-6 text-primary" id="facDossierPct">0%</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Daily Logs Table -->
+                    <h6 class="fw-bold text-navy mb-2">Detailed Attendance Record (Dates Present & Absent)</h6>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 45px;">#</th>
+                                    <th>DATE</th>
+                                    <th>DAY</th>
+                                    <th class="text-center">MORNING</th>
+                                    <th class="text-center">AFTERNOON</th>
+                                    <th class="text-center">SUMMARY</th>
+                                </tr>
+                            </thead>
+                            <tbody id="facDailyLogsTbody">
+                                <!-- Filled dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    window.COLLEGE_NAME = "Sri Sai Institute of Technology and Science";
+    window.PROGRAM_NAME = "{{ program_info.name }}";
+    window.PROGRAM_CODE = "{{ program_info.code }}";
+    window.PROGRAM_ID = {{ program_info.id }};
+    window.DEPT_CODE = "{{ dept_info.code }}";
+    window.DEPT_NAME = "{{ dept_info.name }}";
+    window.DEPT_ID = {{ dept_info.id }};
+    window.YEAR_NAME = "{{ year_info.year_name }}";
+    window.YEAR_ID = {{ year_info.id }};
+    window.SECTION = "{{ section }}";
+    window.TEACHER_NAME = "{{ teacher.name }}";
+    window.TEACHER_PHONE = "{{ teacher.phone }}";
+    window.HOD_NAME = "{{ hod.name }}";
+    window.HOD_PHONE = "{{ hod.phone }}";
+</script>
+<script src="/static/js/app.js"></script>
+{% endblock %}

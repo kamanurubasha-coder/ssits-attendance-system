@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+
+{% block title %}Institutional Registration - Sri Sai Institute of Technology and Science (SRSR){% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-11 col-lg-9 col-xl-8">
+
+            <!-- Breadcrumb Navigation -->
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none"><i class="bi bi-house-door me-1"></i> Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Institutional Registration</li>
+                </ol>
+            </nav>
+
+            <!-- Registration Master Card -->
+            <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+                <!-- Header Banner -->
+                <div class="card-header bg-navy text-white p-4 text-center position-relative">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-white bg-opacity-10 text-gold rounded-circle p-3 mb-2 shadow-sm">
+                        <i class="bi bi-person-plus-fill fs-2"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1">Institutional Self-Registration Portal</h3>
+                    <p class="text-white-50 small mb-0">
+                        Create and configure official credentials for Sri Sai Institute of Technology and Science
+                    </p>
+                    <div class="mt-2">
+                        <span class="badge bg-warning text-dark fw-bold px-3 py-1">AUTONOMOUS INSTITUTION &bull; SRSR</span>
+                    </div>
+                </div>
+
+                <!-- 3 Role Tabs Switcher -->
+                <ul class="nav nav-pills nav-fill bg-light p-2 border-bottom" id="registrationTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold py-2 rounded-pill d-flex align-items-center justify-content-center gap-2" id="faculty-tab" data-bs-toggle="tab" data-bs-target="#facultyPane" type="button" role="tab">
+                            <i class="bi bi-person-badge-fill text-primary"></i>
+                            <span>1. Faculty / Class Teacher</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold py-2 rounded-pill d-flex align-items-center justify-content-center gap-2" id="hod-tab" data-bs-toggle="tab" data-bs-target="#hodPane" type="button" role="tab">
+                            <i class="bi bi-person-workspace text-warning"></i>
+                            <span>2. Department HOD</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold py-2 rounded-pill d-flex align-items-center justify-content-center gap-2" id="principal-tab" data-bs-toggle="tab" data-bs-target="#principalPane" type="button" role="tab">
+                            <i class="bi bi-building-fill-lock text-danger"></i>
+                            <span>3. Principal Executive</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="card-body p-4 p-md-5 bg-white">
+                    <div class="tab-content" id="registrationTabContent">
+
+                        <!-- ================= TAB 1: FACULTY REGISTRATION ================= -->
+                        <div class="tab-pane fade show active" id="facultyPane" role="tabpanel">
+                            <div class="mb-4 text-center">
+                                <span class="badge bg-primary-subtle text-primary fw-bold px-3 py-1 mb-1">FACULTY DESK</span>
+                                <h5 class="fw-bold text-navy mb-1">Class Coordinator &amp; Attendance Faculty</h5>
+                                <p class="text-muted small mb-0">Register your designated Degree, Branch, Year and Section to mark daily attendance and dispatch parent WhatsApp alerts.</p>
+                            </div>
+
+                            <form method="POST" action="/register" id="facultyRegisterForm" onsubmit="return validateFacultyPasswords();">
+                                <input type="hidden" name="role" value="faculty">
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">1. DEGREE / PROGRAM *</label>
+                                        <select class="form-select fw-bold" name="program_id" id="fac_prog" required>
+                                            <option value="" disabled selected>-- Select Degree --</option>
+                                            {% for p in programs %}
+                                            <option value="{{ p.id }}">{{ p.name }} ({{ p.code }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">2. DEPARTMENT / BRANCH *</label>
+                                        <select class="form-select fw-bold" name="department_id" id="fac_dept" required>
+                                            <option value="" disabled selected>-- Select Branch --</option>
+                                            {% for d in departments %}
+                                            <option value="{{ d.id }}">{{ d.name }} ({{ d.code }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">3. ACADEMIC YEAR *</label>
+                                        <select class="form-select" name="year_id" id="fac_year" required>
+                                            <option value="" disabled selected>-- Select Academic Year --</option>
+                                            {% for y in academic_years %}
+                                            <option value="{{ y.id }}">{{ y.year_name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">4. SECTION *</label>
+                                        <select class="form-select fw-bold" name="section" id="fac_section" required>
+                                            <option value="A" selected>Section A</option>
+                                            <option value="B">Section B</option>
+                                            <option value="C">Section C</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">FACULTY FULL NAME *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-person-fill"></i></span>
+                                            <input type="text" class="form-control" name="name" placeholder="e.g. Dr. K. Rajesh / Smt. Lakshmi" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">OFFICIAL FACULTY GMAIL *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-envelope-at-fill"></i></span>
+                                            <input type="email" class="form-control" name="email" placeholder="faculty_name@gmail.com" required>
+                                        </div>
+                                        <small class="text-muted">Used for login and password reset links.</small>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-navy">CONTACT MOBILE NUMBER *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="bi bi-telephone-fill"></i></span>
+                                        <input type="tel" class="form-control" name="phone" placeholder="10-digit mobile number" pattern="[0-9]{10}" required>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">SET PASSWORD *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-key-fill"></i></span>
+                                            <input type="password" class="form-control" name="password" id="fac_pass" minlength="4" placeholder="Enter password" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">CONFIRM PASSWORD *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-check2-circle"></i></span>
+                                            <input type="password" class="form-control" name="confirm_password" id="fac_confirm" minlength="4" placeholder="Re-type password" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="fac_pass_alert" class="alert alert-danger d-none py-2 small"></div>
+
+                                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold rounded-pill shadow-sm" style="background: #1E3A8A; border-color: #1E3A8A;">
+                                    <i class="bi bi-check2-circle me-2 fs-5"></i> Complete Faculty Registration
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- ================= TAB 2: HOD REGISTRATION ================= -->
+                        <div class="tab-pane fade" id="hodPane" role="tabpanel">
+                            <div class="mb-4 text-center">
+                                <span class="badge bg-warning-subtle text-warning-emphasis fw-bold px-3 py-1 mb-1">DEPARTMENT HEAD</span>
+                                <h5 class="fw-bold text-navy mb-1">Head of Department (HOD) Portal</h5>
+                                <p class="text-muted small mb-0">Register your leadership account to oversee both Diploma and B.Tech batches in your branch.</p>
+                            </div>
+
+                            <form method="POST" action="/register" id="hodRegisterForm" onsubmit="return validateHodPasswords();">
+                                <input type="hidden" name="role" value="hod">
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">ASSIGNED DEPARTMENT / BRANCH *</label>
+                                        <select class="form-select fw-bold" name="department_id" required>
+                                            <option value="" disabled selected>-- Choose Department --</option>
+                                            {% for d in departments %}
+                                            <option value="{{ d.id }}">{{ d.name }} ({{ d.code }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">PRIMARY PROGRAM SCOPE *</label>
+                                        <select class="form-select fw-bold" name="program_id" required>
+                                            <option value="2" selected>B.Tech &bull; Degree Engineering</option>
+                                            <option value="1">Diploma &bull; Polytechnic Engineering</option>
+                                        </select>
+                                        <small class="text-muted">HOD dashboard automatically grants oversight across all levels.</small>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">HOD FULL NAME (WITH SALUTATION) *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-person-fill"></i></span>
+                                            <input type="text" class="form-control" name="name" placeholder="e.g. Dr. P. Mallikarjuna Rao" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">OFFICIAL HOD GMAIL *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-envelope-at-fill"></i></span>
+                                            <input type="email" class="form-control" name="email" placeholder="hod_ece@srisaitech.ac.in or gmail" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-navy">OFFICIAL PHONE NUMBER *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="bi bi-telephone-fill"></i></span>
+                                        <input type="tel" class="form-control" name="phone" placeholder="10-digit phone number" pattern="[0-9]{10}" required>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">SET HOD PASSWORD *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-key-fill"></i></span>
+                                            <input type="password" class="form-control" name="password" id="hod_pass" minlength="4" placeholder="Enter HOD password" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">CONFIRM HOD PASSWORD *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-check2-circle"></i></span>
+                                            <input type="password" class="form-control" name="confirm_password" id="hod_confirm" minlength="4" placeholder="Re-type password" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="hod_pass_alert" class="alert alert-danger d-none py-2 small"></div>
+
+                                <button type="submit" class="btn btn-warning text-dark w-100 py-3 fw-bold rounded-pill shadow-sm">
+                                    <i class="bi bi-shield-check me-2 fs-5"></i> Complete HOD Registration
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- ================= TAB 3: PRINCIPAL REGISTRATION ================= -->
+                        <div class="tab-pane fade" id="principalPane" role="tabpanel">
+                            <div class="mb-4 text-center">
+                                <span class="badge bg-danger-subtle text-danger fw-bold px-3 py-1 mb-1">EXECUTIVE AUTHORITY</span>
+                                <h5 class="fw-bold text-navy mb-1">Principal Executive Desk Registration</h5>
+                                <p class="text-muted small mb-0">Highest institutional administrative account. Requires executive authorization passcode.</p>
+                            </div>
+
+                            <form method="POST" action="/register" id="principalRegisterForm" onsubmit="return validatePrincipalPasswords();">
+                                <input type="hidden" name="role" value="principal">
+
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-navy">PRINCIPAL / DIRECTOR FULL NAME *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light"><i class="bi bi-person-fill"></i></span>
+                                        <input type="text" class="form-control" name="name" placeholder="e.g. Dr. Principal / Director (SSITS)" required>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">OFFICIAL INSTITUTIONAL GMAIL *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-envelope-at-fill"></i></span>
+                                            <input type="email" class="form-control" name="email" placeholder="principal@srisaitech.ac.in or gmail" required>
+                                        </div>
+                                        <small class="text-muted">Password reset links and notifications will be sent here.</small>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">OFFICIAL CONTACT NUMBER *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-telephone-fill"></i></span>
+                                            <input type="tel" class="form-control" name="phone" placeholder="10-digit official number" pattern="[0-9]{10}" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-danger">
+                                        <i class="bi bi-shield-lock-fill me-1"></i> MASTER EXECUTIVE AUTHORIZATION PASSCODE *
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-danger text-white"><i class="bi bi-lock-fill"></i></span>
+                                        <input type="password" class="form-control fw-bold border-danger" name="auth_passcode" placeholder="Enter executive authorization code (Default: SSITS_EXEC_2026)" required>
+                                    </div>
+                                    <small class="text-muted">Confidential code protecting Principal registration (Default: SSITS_EXEC_2026).</small>
+                                </div>
+
+                                <div class="row g-3 mb-4">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">SET PRINCIPAL PASSWORD *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-key-fill"></i></span>
+                                            <input type="password" class="form-control" name="password" id="princ_pass" minlength="4" placeholder="Enter executive password" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-navy">CONFIRM PRINCIPAL PASSWORD *</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light"><i class="bi bi-check2-circle"></i></span>
+                                            <input type="password" class="form-control" name="confirm_password" id="princ_confirm" minlength="4" placeholder="Re-type password" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="princ_pass_alert" class="alert alert-danger d-none py-2 small"></div>
+
+                                <button type="submit" class="btn btn-danger w-100 py-3 fw-bold rounded-pill shadow-sm">
+                                    <i class="bi bi-building-fill-check me-2 fs-5"></i> Complete Principal Registration
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Footer with Login Links -->
+                <div class="card-footer bg-light p-3 text-center border-top">
+                    <span class="small text-muted me-2">Already have registered credentials?</span>
+                    <div class="d-inline-flex gap-2 flex-wrap justify-content-center mt-1">
+                        <a href="/login" class="badge bg-primary text-white text-decoration-none px-2 py-1"><i class="bi bi-box-arrow-in-right"></i> Faculty Login</a>
+                        <a href="/hod/login" class="badge bg-warning text-dark text-decoration-none px-2 py-1"><i class="bi bi-person-workspace"></i> HOD Login</a>
+                        <a href="/principal/login" class="badge bg-danger text-white text-decoration-none px-2 py-1"><i class="bi bi-building-fill-lock"></i> Principal Desk</a>
+                        <a href="/admin" class="badge bg-dark text-white text-decoration-none px-2 py-1"><i class="bi bi-shield-lock"></i> Admin Portal</a>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function validateFacultyPasswords() {
+    const p1 = document.getElementById('fac_pass').value.trim();
+    const p2 = document.getElementById('fac_confirm').value.trim();
+    const alertBox = document.getElementById('fac_pass_alert');
+    if (p1 !== p2) {
+        alertBox.innerText = 'Password and Confirm Password do not match!';
+        alertBox.classList.remove('d-none');
+        return false;
+    }
+    alertBox.classList.add('d-none');
+    return true;
+}
+
+function validateHodPasswords() {
+    const p1 = document.getElementById('hod_pass').value.trim();
+    const p2 = document.getElementById('hod_confirm').value.trim();
+    const alertBox = document.getElementById('hod_pass_alert');
+    if (p1 !== p2) {
+        alertBox.innerText = 'Password and Confirm Password do not match!';
+        alertBox.classList.remove('d-none');
+        return false;
+    }
+    alertBox.classList.add('d-none');
+    return true;
+}
+
+function validatePrincipalPasswords() {
+    const p1 = document.getElementById('princ_pass').value.trim();
+    const p2 = document.getElementById('princ_confirm').value.trim();
+    const alertBox = document.getElementById('princ_pass_alert');
+    if (p1 !== p2) {
+        alertBox.innerText = 'Password and Confirm Password do not match!';
+        alertBox.classList.remove('d-none');
+        return false;
+    }
+    alertBox.classList.add('d-none');
+    return true;
+}
+</script>
+{% endblock %}

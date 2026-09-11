@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F9D423"/>
+      <stop offset="100%" stop-color="#FF4E50"/>
+    </linearGradient>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E3C72"/>
+      <stop offset="100%" stop-color="#2A5298"/>
+    </linearGradient>
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- Outer Ring -->
+  <circle cx="100" cy="100" r="95" fill="url(#blueGrad)" filter="url(#dropShadow)"/>
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#F9D423" stroke-width="2.5" stroke-dasharray="6,3"/>
+  <circle cx="100" cy="100" r="83" fill="#ffffff"/>
+
+  <!-- Inner Crest Shield -->
+  <path d="M 100 40 Q 145 40 145 80 Q 145 130 100 155 Q 55 130 55 80 Q 55 40 100 40 Z" fill="#1E3C72"/>
+  <path d="M 100 45 Q 138 45 138 80 Q 138 124 100 148 Q 62 124 62 80 Q 62 45 100 45 Z" fill="#ffffff"/>
+
+  <!-- Emblems inside shield -->
+  <!-- Gear / Technology -->
+  <circle cx="100" cy="78" r="16" fill="none" stroke="#2A5298" stroke-width="4"/>
+  <circle cx="100" cy="78" r="8" fill="#F9D423"/>
+  <!-- Gear teeth -->
+  <rect x="97" y="58" width="6" height="5" fill="#2A5298" rx="1"/>
+  <rect x="97" y="93" width="6" height="5" fill="#2A5298" rx="1"/>
+  <rect x="80" y="75" width="5" height="6" fill="#2A5298" rx="1"/>
+  <rect x="115" y="75" width="5" height="6" fill="#2A5298" rx="1"/>
+  <rect x="85" y="65" width="6" height="5" fill="#2A5298" rx="1" transform="rotate(45 88 67)"/>
+  <rect x="109" y="86" width="6" height="5" fill="#2A5298" rx="1" transform="rotate(45 112 88)"/>
+  <rect x="85" y="86" width="6" height="5" fill="#2A5298" rx="1" transform="rotate(-45 88 88)"/>
+  <rect x="109" y="65" width="6" height="5" fill="#2A5298" rx="1" transform="rotate(-45 112 67)"/>
+
+  <!-- Open Book of Knowledge -->
+  <path d="M 80 115 Q 100 110 100 125 Q 100 110 120 115 L 120 132 Q 100 127 100 140 Q 100 127 80 132 Z" fill="#F9D423" stroke="#1E3C72" stroke-width="1.5"/>
+
+  <!-- Rays / Laurel leaves at base -->
+  <path d="M 45 150 Q 100 180 155 150 Q 100 170 45 150 Z" fill="#F9D423"/>
+  
+  <!-- Banner with Motto -->
+  <rect x="52" y="160" width="96" height="18" rx="4" fill="#1E3C72"/>
+  <text x="100" y="173" font-family="'Segoe UI', Roboto, sans-serif" font-size="8.5" font-weight="bold" fill="#F9D423" text-anchor="middle" letter-spacing="1">SSITS - ESTD 2001</text>
+  
+  <!-- Top Badge Text -->
+  <text x="100" y="28" font-family="'Segoe UI', Roboto, sans-serif" font-size="7" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1.2">SRI SAI INSTITUTE</text>
+</svg>

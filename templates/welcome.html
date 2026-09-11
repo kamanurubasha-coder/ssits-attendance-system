@@ -1,0 +1,427 @@
+{% extends "base.html" %}
+
+{% block title %}Welcome - Sri Sai Institute of Technology and Science (SRSR){% endblock %}
+
+{% block extra_head %}
+<style>
+    /* Full Page Cyber Background using Desktop OIP Image */
+    body {
+        background-color: #060d17 !important;
+        background-image: 
+            radial-gradient(circle at 50% 10%, rgba(14, 165, 233, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(16, 185, 129, 0.12) 0%, transparent 45%),
+            linear-gradient(180deg, rgba(6, 13, 23, 0.78) 0%, rgba(6, 13, 23, 0.92) 100%),
+            url('/static/images/home_bg.jpg') !important;
+        background-repeat: no-repeat !important;
+        background-position: center top !important;
+        background-size: cover !important;
+        background-attachment: fixed !important;
+        color: #F8FAFC !important;
+    }
+
+    .welcome-page-subnav {
+        background: rgba(6, 13, 23, 0.88) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+    }
+
+    .welcome-main-card {
+        background: rgba(10, 20, 36, 0.82) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.14) !important;
+        border-top: 5px solid #F59E0B !important;
+        box-shadow: 0 30px 70px rgba(0, 0, 0, 0.65) !important;
+    }
+
+    .welcome-motto-card {
+        background: rgba(13, 25, 45, 0.80) !important;
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        border: 1px solid rgba(245, 158, 11, 0.35) !important;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4) !important;
+    }
+
+    .welcome-feature-card {
+        background: rgba(13, 25, 46, 0.82) !important;
+        backdrop-filter: blur(14px) !important;
+        -webkit-backdrop-filter: blur(14px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.10) !important;
+        transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    }
+
+    .welcome-feature-card:hover {
+        transform: translateY(-6px) scale(1.02) !important;
+        background: rgba(18, 35, 62, 0.94) !important;
+        border-color: rgba(56, 189, 248, 0.5) !important;
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.2) !important;
+    }
+
+    .text-light-silver {
+        color: #CBD5E1 !important;
+    }
+</style>
+{% endblock %}
+
+{% block sub_navbar %}
+<!-- Clean Minimalist Sub-Navbar with ONLY the Menu Button -->
+<div class="welcome-page-subnav shadow-sm py-2 px-3 px-md-4 sticky-top" style="z-index: 1020;">
+    <div class="container-fluid d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-primary text-white fw-bold px-3 py-2 rounded-pill fs-6 shadow-sm">
+                <i class="bi bi-mortarboard-fill me-1"></i> SSITS PORTAL
+            </span>
+            <span class="text-light-silver small d-none d-md-inline">
+                Rayachoty Autonomous Institution &bull; College Code: <strong>SRSR</strong>
+            </span>
+        </div>
+
+        <!-- The ONLY Menu Button on the page -->
+        <div>
+            <button class="btn btn-primary fw-bold rounded-pill px-4 py-2 shadow-sm d-flex align-items-center gap-2 btn-menu-trigger" type="button" data-bs-toggle="offcanvas" data-bs-target="#mainMenuOffcanvas" aria-controls="mainMenuOffcanvas" title="Open SSITS Menu">
+                <i class="bi bi-list fs-5"></i> <span>MENU</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <!-- Clean, Prestigious Institutional Welcome Card -->
+    <div class="card border-0 welcome-main-card rounded-4 p-4 p-md-5 text-center">
+        
+        <!-- Institutional Badges -->
+        <div class="d-flex align-items-center justify-content-center gap-2 mb-3 flex-wrap">
+            <span class="badge bg-warning text-dark fw-bold px-3 py-2 text-uppercase letter-spacing-1 shadow-sm">
+                <i class="bi bi-patch-check-fill me-1"></i> AN AUTONOMOUS INSTITUTION
+            </span>
+            <span class="badge bg-primary text-white fw-bold px-3 py-2 shadow-sm">
+                <i class="bi bi-star-fill text-warning me-1"></i> NAAC A+ ACCREDITED
+            </span>
+            <span class="badge bg-danger text-white fw-bold px-3 py-2 shadow-sm">
+                <i class="bi bi-building me-1"></i> COLLEGE CODE: SRSR
+            </span>
+        </div>
+
+        <!-- Prominent Heading: Welcome to SSITS -->
+        <h1 class="display-5 fw-extrabold text-white mb-2">
+            WELCOME TO <span class="text-primary">SSITS</span>
+        </h1>
+        <h5 class="text-light-silver fw-semibold mb-3">
+            SRI SAI INSTITUTE OF TECHNOLOGY AND SCIENCE &bull; RAYACHOTY
+        </h5>
+
+        <!-- College Campus Photo Showcase with Animated Aurora Background -->
+        <div class="my-4 mx-auto campus-showcase-stage" style="max-width: 960px;">
+            <!-- Tech Grid Pattern Overlay -->
+            <div class="campus-showcase-grid-overlay"></div>
+
+            <!-- Floating Ambient Aurora Glowing Orbs -->
+            <div class="ambient-glow-orb ambient-orb-1"></div>
+            <div class="ambient-glow-orb ambient-orb-2"></div>
+            <div class="ambient-glow-orb ambient-orb-3"></div>
+
+            <!-- Foreground Photo Card with Rotating Shimmer Halo -->
+            <div class="campus-photo-card-halo">
+                <div class="campus-photo-inner">
+                    <img src="/static/images/college_campus.jpg" alt="Sri Sai Institute of Technology and Science Campus Building" class="img-fluid w-100" style="max-height: 480px; object-fit: cover; object-position: center;">
+                    <div class="position-absolute bottom-0 start-0 end-0 py-3 px-3 px-md-4 text-white text-start d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: linear-gradient(180deg, transparent 0%, rgba(7, 19, 34, 0.94) 100%);">
+                        <div>
+                            <div class="fw-bold fs-6"><i class="bi bi-geo-alt-fill text-warning me-1"></i> Sri Sai Institute of Technology and Science (Autonomous)</div>
+                            <small class="text-light opacity-75">Main Campus Building &bull; Rayachoty, Annamayya District, Andhra Pradesh</small>
+                        </div>
+                        <span class="badge bg-gold text-dark fw-bold px-3 py-2 shadow-sm">
+                            <i class="bi bi-award-fill me-1"></i> COLLEGE CODE: SRSR
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dignified Institutional Quotation / Motto -->
+        <div class="my-4 p-4 p-md-5 rounded-4 welcome-motto-card text-center mx-auto" style="max-width: 860px;">
+            <i class="bi bi-quote fs-1 text-warning opacity-75 d-block mb-1"></i>
+            <p class="fs-4 fst-italic text-white fw-semibold mb-3 lh-base" style="font-family: 'Georgia', serif;">
+                &ldquo;Education is the most powerful weapon which you can use to change the world. Nurturing technical excellence, intellectual discipline, and character since inception.&rdquo;
+            </p>
+            <div class="text-warning small fw-bold text-uppercase letter-spacing-2">
+                &mdash; Institutional Academic Motto &bull; SSITS Rayachoty
+            </div>
+        </div>
+
+        <!-- Website Features Showcase Section -->
+        <div class="my-5 mx-auto text-start" style="max-width: 1060px;">
+            <div class="text-center mb-4">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-bold text-uppercase letter-spacing-1">
+                    <i class="bi bi-stars me-1"></i> Smart Institutional Platform
+                </span>
+                <h3 class="fw-bold text-white mt-2 mb-1">Portal Features &amp; Core Capabilities</h3>
+                <p class="text-light-silver small mb-0">High-security autonomous attendance tracking, parent communication, and administrative governance.</p>
+            </div>
+
+            <div class="row g-3">
+                <!-- Feature 1 -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 p-3 welcome-feature-card border-top border-3 border-primary">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <div class="bg-primary-subtle text-primary p-2 rounded-3 fs-5">
+                                <i class="bi bi-calendar2-check-fill"></i>
+                            </div>
+                            <h6 class="fw-bold text-white mb-0">Real-Time Attendance</h6>
+                        </div>
+                        <small class="text-light-silver lh-sm">
+                            Dual-session (Morning &amp; Afternoon) recording with automated percentages and instant condonation tracking.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 p-3 welcome-feature-card border-top border-3 border-success">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <div class="bg-success-subtle text-success p-2 rounded-3 fs-5">
+                                <i class="bi bi-whatsapp"></i>
+                            </div>
+                            <h6 class="fw-bold text-white mb-0">Parent WhatsApp Alerts</h6>
+                        </div>
+                        <small class="text-light-silver lh-sm">
+                            One-click direct absentee alerts sent to parent WhatsApp numbers in Telugu and English without communication delays.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 p-3 welcome-feature-card border-top border-3 border-danger">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <div class="bg-danger-subtle text-danger p-2 rounded-3 fs-5">
+                                <i class="bi bi-shield-lock-fill"></i>
+                            </div>
+                            <h6 class="fw-bold text-white mb-0">Google Authenticator (2FA)</h6>
+                        </div>
+                        <small class="text-light-silver lh-sm">
+                            Mandatory TOTP Two-Factor Authentication for Faculty, HOD, Principal, and Admin for airtight security.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 p-3 welcome-feature-card border-top border-3 border-warning">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <div class="bg-warning-subtle text-warning-emphasis p-2 rounded-3 fs-5">
+                                <i class="bi bi-person-workspace"></i>
+                            </div>
+                            <h6 class="fw-bold text-white mb-0">Department HOD Control</h6>
+                        </div>
+                        <small class="text-light-silver lh-sm">
+                            Branch-specific daily absentees summary, live section monitoring, and student dossier cross-checking.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 p-3 welcome-feature-card border-top border-3 border-info">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <div class="bg-info-subtle text-info-emphasis p-2 rounded-3 fs-5">
+                                <i class="bi bi-building-fill-gear"></i>
+                            </div>
+                            <h6 class="fw-bold text-white mb-0">Principal Executive Desk</h6>
+                        </div>
+                        <small class="text-light-silver lh-sm">
+                            Macro-level institutional oversight across all Diploma &amp; B.Tech sections with real-time absentee dashboards.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Feature 6 -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 p-3 welcome-feature-card border-top border-3 border-secondary">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <div class="bg-secondary-subtle text-secondary p-2 rounded-3 fs-5">
+                                <i class="bi bi-file-earmark-pdf-fill"></i>
+                            </div>
+                            <h6 class="fw-bold text-white mb-0">Autonomous PDF Registers</h6>
+                        </div>
+                        <small class="text-light-silver lh-sm">
+                            Instant official stamped session registers and detailed student attendance dossiers for examination eligibility.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Feature 7 -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 p-3 welcome-feature-card border-top border-3 border-success">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <div class="bg-success-subtle text-success p-2 rounded-3 fs-5">
+                                <i class="bi bi-person-check-fill"></i>
+                            </div>
+                            <h6 class="fw-bold text-white mb-0">Admin Faculty Approval</h6>
+                        </div>
+                        <small class="text-light-silver lh-sm">
+                            1-Click Admin "Accept" approval for self-registered faculty with lifetime access and centralized credential oversight.
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Feature 8 -->
+                <div class="col-12 col-md-6 col-lg-3">
+                    <div class="card h-100 border-0 shadow-sm rounded-4 p-3 welcome-feature-card border-top border-3 border-dark">
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <div class="bg-dark-subtle text-dark p-2 rounded-3 fs-5">
+                                <i class="bi bi-shield-check"></i>
+                            </div>
+                            <h6 class="fw-bold text-white mb-0">Strict Role Isolation</h6>
+                        </div>
+                        <small class="text-light-silver lh-sm">
+                            Bi-directional cryptographic guards preventing any cross-department tampering or unauthorized access.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clean Menu Instruction Note -->
+        <div class="mt-4 pt-3 border-top border-white-subtle">
+            <p class="text-light-silver fs-6 mb-2">
+                <i class="bi bi-hand-index-thumb-fill text-primary me-1"></i>
+                All portal desks and registration services are located in the top-right menu.
+            </p>
+            <button class="btn btn-primary fw-bold px-4 py-2 rounded-pill shadow-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#mainMenuOffcanvas">
+                <i class="bi bi-list me-1"></i> Tap to Open MENU (☰)
+            </button>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
+
+{% block offcanvas_menu %}
+<!-- Sliding Offcanvas Navigation Menu (Exclusively on Welcome Page, NO Admin Link) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="mainMenuOffcanvas" aria-labelledby="mainMenuOffcanvasLabel" style="width: 380px;">
+    <div class="offcanvas-header bg-navy text-white p-3">
+        <div class="d-flex align-items-center gap-2">
+            <img src="/static/images/college_logo.png" alt="SSITS Logo" style="width: 38px; height: 38px; object-fit: contain; background: #ffffff; border-radius: 50%; padding: 2px;">
+            <div>
+                <h6 class="offcanvas-title fw-bold mb-0" id="mainMenuOffcanvasLabel">SSITS INSTITUTIONAL DESK</h6>
+                <small class="text-warning extra-small fw-bold">AUTONOMOUS &bull; CODE: SRSR</small>
+            </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+
+    <div class="offcanvas-body p-0 d-flex flex-column justify-content-between">
+        <div class="p-3">
+            <div class="small fw-bold text-muted text-uppercase mb-2 letter-spacing-1">Portal Navigation</div>
+
+            <!-- Role Links Group (Admin Login is EXCLUDED for strict confidentiality) -->
+            <div class="list-group list-group-flush border rounded-3 overflow-hidden shadow-sm mb-3">
+                <!-- 1. Faculty Login -->
+                <a href="/login" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary-subtle text-primary p-2 rounded-circle">
+                            <i class="bi bi-box-arrow-in-right fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-navy">Faculty Sign In</div>
+                            <small class="text-muted">Attendance marking &amp; parent WhatsApp alerts (2FA Protected)</small>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+
+                <!-- 2. HOD Login -->
+                <a href="/hod/login" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-warning-subtle text-warning-emphasis p-2 rounded-circle">
+                            <i class="bi bi-person-workspace fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-navy">Department HOD Login</div>
+                            <small class="text-muted">ECE, CSE, EEE, AIDS, MECH &amp; CIVIL oversight</small>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+
+                <!-- 3. Principal Login -->
+                <a href="/principal/login" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-danger-subtle text-danger p-2 rounded-circle">
+                            <i class="bi bi-building-fill-lock fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-navy">Principal Executive Desk</div>
+                            <small class="text-muted">Autonomous institution command &amp; daily monitoring</small>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+
+                <!-- 4. New Registration (3 Roles) -->
+                <a href="/register" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-success-subtle text-success p-2 rounded-circle">
+                            <i class="bi bi-person-plus-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-navy">New Registration</div>
+                            <small class="text-muted">Self-registration for Faculty, HOD &amp; Principal</small>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+
+                <!-- 5. Faculty Directory -->
+                <a href="/faculty-directory" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-secondary-subtle text-secondary p-2 rounded-circle">
+                            <i class="bi bi-person-lines-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-navy">Faculty Directory</div>
+                            <small class="text-muted">Academic coordinators &amp; branch contacts</small>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+
+                <!-- 6. Administrator Portal -->
+                <a href="/admin" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3 border-top bg-light-subtle">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-dark text-warning p-2 rounded-circle shadow-sm">
+                            <i class="bi bi-shield-lock-fill fs-5"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold text-navy">Administrator Portal</div>
+                            <small class="text-muted">Master control &amp; institutional oversight (2FA Protected)</small>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+            </div>
+
+            <!-- Forgot Password Assistance -->
+            <div class="card border-0 bg-light p-3 rounded-3 text-center">
+                <small class="text-muted mb-1">Forgot portal password?</small>
+                <a href="/forgot-password" class="btn btn-sm btn-outline-secondary fw-semibold rounded-pill">
+                    <i class="bi bi-key me-1"></i> Request Password Reset Link
+                </a>
+            </div>
+        </div>
+
+        <!-- Drawer Footer -->
+        <div class="p-3 bg-light border-top text-center">
+            <small class="text-muted extra-small d-block">
+                &copy; 2026 Sri Sai Institute of Technology and Science
+            </small>
+            <span class="badge bg-gold text-dark mt-1 extra-small">
+                DEVELOPED BY ECE DEPARTMENT
+            </span>
+        </div>
+    </div>
+</div>
+{% endblock %}
