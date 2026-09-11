@@ -1,0 +1,6 @@
+Flask>=3.0.0
+pyotp>=2.9.0
+qrcode>=8.0
+pillow>=10.0.0
+reportlab>=4.0.0
+gunicorn>=21.2.0
