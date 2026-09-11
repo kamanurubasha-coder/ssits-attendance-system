@@ -24,15 +24,18 @@
                     </div>
                 </div>
 
-                <div class="d-flex gap-2">
+                <div class="d-flex flex-wrap gap-2">
                     <button type="button" class="btn btn-warning fw-bold rounded-pill px-3 shadow-sm text-dark" data-bs-toggle="modal" data-bs-target="#changeAdminPasswordModal">
-                        <i class="bi bi-person-lock me-1"></i> Admin Login ID & Password
+                        <i class="bi bi-person-lock me-1"></i> Admin Credentials
+                    </button>
+                    <button type="button" class="btn btn-danger fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#dataResetModal">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Next Month Data Reset
                     </button>
                     <a href="/faculty-directory" class="btn btn-outline-light fw-semibold rounded-pill px-3">
-                        <i class="bi bi-person-lines-fill me-1"></i> Public Directory
+                        <i class="bi bi-person-lines-fill me-1"></i> Directory
                     </a>
-                    <a href="/logout" class="btn btn-danger fw-semibold rounded-pill px-3 shadow-sm">
-                        <i class="bi bi-box-arrow-right me-1"></i> Admin Sign Out
+                    <a href="/logout" class="btn btn-outline-light fw-semibold rounded-pill px-3 shadow-sm">
+                        <i class="bi bi-box-arrow-right me-1"></i> Sign Out
                     </a>
                 </div>
             </div>
@@ -129,6 +132,11 @@
         <li class="nav-item">
             <button class="nav-link fw-bold px-4 py-2" id="hods-tab" data-bs-toggle="pill" data-bs-target="#hodsPane">
                 <i class="bi bi-whatsapp me-1 text-success"></i> HOD Contacts ({{ hods|length }})
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold px-4 py-2 text-danger" id="maintenance-tab" data-bs-toggle="pill" data-bs-target="#dataMaintenancePane">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Academic Data Reset
             </button>
         </li>
     </ul>
@@ -464,6 +472,17 @@
 
             <!-- Monthly Report Results Container (Hidden until generated) -->
             <div id="monthlyReportResultWrap" style="display: none;">
+                <!-- Institutional Print Header -->
+                <div class="print-only-header text-center mb-3">
+                    <h4 class="fw-bold mb-0 text-navy" style="color: #0F2C59;">SRI SAI INSTITUTE OF TECHNOLOGY AND SCIENCE</h4>
+                    <div class="small fw-bold text-danger">(AN AUTONOMOUS INSTITUTION | COLLEGE CODE: SRSR)</div>
+                    <div class="extra-small text-muted mb-1">Approved by AICTE, New Delhi &amp; Affiliated to JNTUA, Ananthapuramu</div>
+                    <div class="fw-bold text-dark border p-1 px-2 d-inline-block mb-2">
+                        MASTER ADMINISTRATIVE MONTHLY ATTENDANCE REGISTER
+                    </div>
+                    <div class="small fw-semibold text-muted" id="printAdminReportSubtitle"></div>
+                </div>
+
                 <!-- Header & Metadata Card -->
                 <div class="card shadow-sm border-0 mb-4 bg-white">
                     <div class="card-body p-3 p-md-4">
@@ -554,6 +573,24 @@
                                     <!-- Dynamic rows -->
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Institutional Print Signatures -->
+                <div class="print-only-signatures mt-4 pt-3">
+                    <div class="d-flex justify-content-between text-center">
+                        <div style="width: 28%;">
+                            <div class="border-top border-dark pt-1 fw-bold small">CLASS COORDINATOR</div>
+                            <div class="extra-small text-muted">Signature</div>
+                        </div>
+                        <div style="width: 28%;">
+                            <div class="border-top border-dark pt-1 fw-bold small">HEAD OF THE DEPARTMENT</div>
+                            <div class="extra-small text-muted">Signature &amp; Seal</div>
+                        </div>
+                        <div style="width: 28%;">
+                            <div class="border-top border-dark pt-1 fw-bold small">ADMINISTRATIVE OFFICER / PRINCIPAL</div>
+                            <div class="extra-small text-muted">Signature &amp; Seal</div>
                         </div>
                     </div>
                 </div>
@@ -1000,6 +1037,88 @@
                     </div>
                 </div>
             </div>
+        <!-- TAB 4: Academic Data Reset & System Maintenance -->
+        <div class="tab-pane fade" id="dataMaintenancePane">
+            <div class="card shadow-sm border-0 mb-4 bg-white">
+                <div class="card-header bg-white py-3 border-0">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h5 class="fw-bold text-navy mb-0">
+                                <i class="bi bi-arrow-counterclockwise text-danger me-2"></i> Academic Data Reset &amp; Semester Maintenance
+                            </h5>
+                            <small class="text-muted">Prepare system for next month's fresh launch or new academic semester with a safe, verified purge</small>
+                        </div>
+                        <span class="badge bg-danger px-3 py-2 text-uppercase fs-7">
+                            <i class="bi bi-shield-lock-fill me-1"></i> Admin Authorization Required
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <!-- Option 1: Attendance Only Reset -->
+                        <div class="col-12 col-lg-6">
+                            <div class="p-4 border border-danger-subtle rounded-4 h-100 bg-light shadow-sm d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="rounded-circle p-3 bg-danger bg-opacity-10 text-danger me-3 fs-3">
+                                            <i class="bi bi-calendar-x-fill"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold text-navy mb-0">Academic Attendance Reset</h5>
+                                            <span class="badge bg-success-subtle text-success border border-success mt-1">Recommended for Next Month</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted small mb-3">
+                                        Clears all daily morning/afternoon attendance records, college day statuses, and temporary OTPs.
+                                    </p>
+                                    <ul class="small text-muted mb-4 ps-3">
+                                        <li><strong class="text-success">SAFE:</strong> All student enrolled profiles (Roll Numbers, Names, Phone Nos) remain intact.</li>
+                                        <li><strong class="text-success">SAFE:</strong> All Class Teacher logins, passwords, and assignments remain active.</li>
+                                        <li><strong class="text-success">SAFE:</strong> All Departments, Programs, and HOD WhatsApp setups remain untouched.</li>
+                                        <li><strong class="text-danger">CLEARED:</strong> All past test attendance entries wiped to 0% for a clean day-1 start.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-danger fw-bold w-100 py-2 shadow-sm" onclick="openResetModal('attendance_only')">
+                                        <i class="bi bi-trash3-fill me-1"></i> Clear Attendance Records for Next Month
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Option 2: Full Factory Reset -->
+                        <div class="col-12 col-lg-6">
+                            <div class="p-4 border border-warning-subtle rounded-4 h-100 bg-light shadow-sm d-flex flex-column justify-content-between">
+                                <div>
+                                    <div class="d-flex align-items-center mb-3">
+                                        <div class="rounded-circle p-3 bg-warning bg-opacity-10 text-warning me-3 fs-3">
+                                            <i class="bi bi-database-fill-gear"></i>
+                                        </div>
+                                        <div>
+                                            <h5 class="fw-bold text-navy mb-0">Full Factory Academic Reset</h5>
+                                            <span class="badge bg-warning-subtle text-warning border border-warning text-dark mt-1">Extreme Caution</span>
+                                        </div>
+                                    </div>
+                                    <p class="text-muted small mb-3">
+                                        Wipes attendance records AND completely resets all student tables back to official institutional sample seed rosters.
+                                    </p>
+                                    <ul class="small text-muted mb-4 ps-3">
+                                        <li><strong class="text-danger">RE-SEEDED:</strong> Re-populates official student rosters across all 27 sections.</li>
+                                        <li><strong class="text-danger">CLEARED:</strong> Any custom students manually registered will be replaced by seed rosters.</li>
+                                        <li><strong class="text-warning">NOTE:</strong> Master Admin credentials and department structures are preserved.</li>
+                                    </ul>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-outline-dark fw-bold w-100 py-2 shadow-sm" onclick="openResetModal('factory')">
+                                        <i class="bi bi-arrow-repeat me-1"></i> Full Factory Reset &amp; Re-seed Rosters
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -1275,6 +1394,53 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+<!-- Data Reset Confirmation Modal -->
+<div class="modal fade" id="dataResetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Confirm Academic Data Reset
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-warning border-0 small mb-3">
+                    <i class="bi bi-info-circle-fill me-1"></i> 
+                    <strong>Attention Admin:</strong> This operation prepares the portal for the new month by clearing test attendance records.
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">SELECT RESET TYPE *</label>
+                    <select class="form-select fw-bold" id="modalResetMode">
+                        <option value="attendance_only" selected>Clear Attendance &amp; Logs Only (Keep Students &amp; Faculty) - Recommended</option>
+                        <option value="factory">Full Factory Reset (Re-seed Original Student Master Roster)</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small">ADMINISTRATOR PASSWORD / MASTER PASSCODE *</label>
+                    <input type="password" class="form-control" id="modalResetAdminPassword" placeholder="Enter Admin Password or Master Passcode">
+                    <div class="form-text small text-muted">
+                        Enter your admin password or emergency passcode <code>SSITS_ADMIN_MASTER_2026</code>.
+                    </div>
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" id="modalResetConfirmCheck">
+                    <label class="form-check-label small fw-semibold text-danger" for="modalResetConfirmCheck">
+                        I confirm that I want to reset this academic data.
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger fw-bold px-4 shadow-sm" id="btnExecuteDataReset" onclick="executeDataReset()">
+                    <i class="bi bi-trash3-fill me-1"></i> Reset Now
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -1783,6 +1949,9 @@ async function generateMonthlyReport() {
             document.getElementById('mrepClassBadge').innerText = `${data.program_code} - ${data.department_code} (${data.year_name}) Section ${data.section || 'A'}`;
             document.getElementById('mrepMonthTitle').innerText = `${data.month_name} Academic Attendance Sheet`;
             document.getElementById('mrepClassTeacher').innerText = `Department: ${data.department_name} | Total Enrolled: ${data.total_students} Students`;
+            if (document.getElementById('printAdminReportSubtitle')) {
+                document.getElementById('printAdminReportSubtitle').innerText = `${data.program_code} - ${data.department_code} (${data.year_name}) Section ${data.section || 'A'} | Month: ${data.month_name} | Total Working Days: ${data.total_working_days}`;
+            }
 
             const calDays = new Date(data.year, data.month, 0).getDate();
             document.getElementById('mrepCalendarDays').innerText = calDays;
@@ -2080,6 +2249,58 @@ function resetHod2FA(hodId, hodName) {
         }
     })
     .catch(err => alert('Network error: ' + err));
+}
+
+function openResetModal(mode) {
+    document.getElementById('modalResetMode').value = mode || 'attendance_only';
+    document.getElementById('modalResetAdminPassword').value = '';
+    document.getElementById('modalResetConfirmCheck').checked = false;
+    const modalEl = document.getElementById('dataResetModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modal.show();
+}
+
+async function executeDataReset() {
+    const mode = document.getElementById('modalResetMode').value;
+    const password = document.getElementById('modalResetAdminPassword').value.trim();
+    const confirmed = document.getElementById('modalResetConfirmCheck').checked;
+
+    if (!confirmed) {
+        alert('Please check the confirmation box to proceed.');
+        return;
+    }
+    if (!password) {
+        alert('Please enter your admin password or emergency passcode.');
+        return;
+    }
+
+    const btn = document.getElementById('btnExecuteDataReset');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Resetting...';
+
+    try {
+        const res = await fetch('/admin/api/reset-data', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ admin_password: password, reset_mode: mode })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            alert('SUCCESS: ' + data.message);
+            const modalEl = document.getElementById('dataResetModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to reset data'));
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Network error while resetting academic data.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-trash3-fill me-1"></i> Reset Now';
+    }
 }
 </script>
 {% endblock %}

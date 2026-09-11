@@ -705,9 +705,17 @@ async function loadHodMonthlyReport() {
         });
 
         container.innerHTML = `
+            <div class="print-only-header text-center mb-3">
+                <h4 class="fw-bold mb-0 text-navy" style="color: #0F2C59;">SRI SAI INSTITUTE OF TECHNOLOGY AND SCIENCE</h4>
+                <div class="small fw-bold text-danger">(AN AUTONOMOUS INSTITUTION | COLLEGE CODE: SRSR)</div>
+                <div class="extra-small text-muted mb-1">Approved by AICTE, New Delhi &amp; Affiliated to JNTUA, Ananthapuramu</div>
+                <div class="fw-bold text-dark border p-1 px-2 d-inline-block mb-2">
+                    DEPARTMENT MONTHLY ATTENDANCE REGISTER &mdash; ${month}
+                </div>
+            </div>
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="fw-bold text-navy mb-0">Total College Conducted Days in Month: <span class="badge bg-purple text-white px-2 py-1">${workingDays} Days</span></h6>
-                <button class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i> Print Report</button>
+                <button class="btn btn-dark btn-sm fw-bold shadow-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i> Print Report</button>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0 student-table">
@@ -727,6 +735,11 @@ async function loadHodMonthlyReport() {
                         ${rowsHtml || '<tr><td colspan="8" class="text-center text-muted py-3">No student records found.</td></tr>'}
                     </tbody>
                 </table>
+            </div>
+            <div class="print-only-signatures mt-4">
+                <div class="sig-box">Head of Department (HOD)<br><small>Verified</small></div>
+                <div class="sig-box">Academic Coordinator</div>
+                <div class="sig-box">Principal / Director<br><small>SSITS (Autonomous)</small></div>
             </div>
         `;
     } catch (e) {

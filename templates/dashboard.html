@@ -428,6 +428,16 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
+                <!-- Print-Only Official Letterhead Header -->
+                <div class="print-only-header">
+                    <h4 class="fw-bold mb-0 text-navy" style="color: #0F2C59;">SRI SAI INSTITUTE OF TECHNOLOGY AND SCIENCE</h4>
+                    <div class="small fw-bold text-danger">(AN AUTONOMOUS INSTITUTION | COLLEGE CODE: SRSR)</div>
+                    <div class="extra-small text-muted mb-2">Approved by AICTE, New Delhi &amp; Affiliated to JNTUA, Ananthapuramu</div>
+                    <div class="p-1 px-2 border rounded fw-bold d-inline-block mb-2">
+                        MONTHLY ATTENDANCE REGISTER &mdash; {{ dept_info.code }} {{ year_info.year_name }} (SEC {{ section }})
+                    </div>
+                </div>
+
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 p-3 bg-light rounded-3 border mb-4">
                     <div class="d-flex align-items-center gap-2">
                         <label class="form-label small fw-bold text-muted mb-0">SELECT MONTH:</label>
@@ -440,7 +450,7 @@
                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportFacultyMonthlyCSV()">
                             <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export CSV
                         </button>
-                        <button type="button" class="btn btn-dark btn-sm" onclick="window.print()">
+                        <button type="button" class="btn btn-dark btn-sm" onclick="printFacultyMonthlyReport()">
                             <i class="bi bi-printer me-1"></i> Print
                         </button>
                     </div>
@@ -507,6 +517,13 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Print-Only Signatures -->
+                <div class="print-only-signatures">
+                    <div class="sig-box">Class Teacher Signature<br><small>({{ session.get('teacher_name', 'Class Teacher') }})</small></div>
+                    <div class="sig-box">Head of Department (HOD)</div>
+                    <div class="sig-box">Principal / Director</div>
+                </div>
             </div>
             <div class="modal-footer bg-light py-2">
                 <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
@@ -549,10 +566,13 @@
                                     Parent: <span class="fw-semibold" id="facDossierFather">-</span> (<span class="text-success" id="facDossierPhone">-</span>)
                                 </div>
                             </div>
-                            <div>
+                            <div class="d-flex gap-1">
                                 <a id="facDossierWaBtn" href="#" target="_blank" class="btn btn-sm btn-whatsapp fw-bold shadow-sm">
-                                    <i class="bi bi-whatsapp me-1"></i> Send Report to Parent
+                                    <i class="bi bi-whatsapp me-1"></i> Send WhatsApp
                                 </a>
+                                <button type="button" class="btn btn-sm btn-outline-danger fw-bold shadow-sm" onclick="downloadStudentDossierPdf()">
+                                    <i class="bi bi-file-earmark-pdf-fill me-1"></i> Official PDF Slip
+                                </button>
                             </div>
                         </div>
 

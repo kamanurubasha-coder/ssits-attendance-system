@@ -1153,4 +1153,182 @@ body {
     transform: scale(1.03);
 }
 
+/* ==========================================================================
+   16. INSTITUTIONAL PRINT ENGINE (@media print)
+   ========================================================================== */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm 12mm 15mm 12mm;
+    }
+
+    body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        font-size: 9.5pt !important;
+        line-height: 1.3 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .navbar, 
+    .college-header, 
+    .sticky-bar-wrapper, 
+    .admin-top-banner,
+    .admin-card-metric,
+    .admin-nav-tabs,
+    #adminTabs,
+    .nav,
+    .nav-pills,
+    .btn, 
+    .btn-action, 
+    .btn-close, 
+    .modal-backdrop, 
+    .modal-footer,
+    .no-print,
+    .breadcrumb,
+    .offcanvas,
+    .d-print-none,
+    #mainMenuOffcanvas,
+    .menu-portal-item,
+    input,
+    select,
+    .filter-box,
+    .pagination,
+    .alert {
+        display: none !important;
+    }
+
+    /* Bootstrap modal full visibility on print */
+    .modal {
+        position: static !important;
+        display: block !important;
+        overflow: visible !important;
+        background: none !important;
+        padding: 0 !important;
+    }
+
+    .modal-dialog {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transform: none !important;
+    }
+
+    .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+    }
+
+    .modal-header {
+        background: none !important;
+        color: #000000 !important;
+        border-bottom: 2px solid #0F2C59 !important;
+        padding: 0 0 8px 0 !important;
+    }
+
+    .modal-header * {
+        color: #0F2C59 !important;
+    }
+
+    .modal-body {
+        padding: 8px 0 !important;
+        overflow: visible !important;
+    }
+
+    .card, .table-responsive {
+        border: none !important;
+        box-shadow: none !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 8.5pt !important;
+        page-break-inside: auto;
+    }
+
+    thead {
+        display: table-header-group !important;
+    }
+
+    tr {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    th, td {
+        border: 1px solid #334155 !important;
+        padding: 4px 6px !important;
+        color: #000000 !important;
+        background-color: transparent !important;
+    }
+
+    th {
+        background-color: #F1F5F9 !important;
+        font-weight: bold !important;
+        text-transform: uppercase;
+        color: #0F2C59 !important;
+    }
+
+    .print-only-header {
+        display: block !important;
+        text-align: center;
+        border-bottom: 2px solid #0F2C59;
+        padding-bottom: 6px;
+        margin-bottom: 12px;
+    }
+
+    .print-only-signatures {
+        display: flex !important;
+        justify-content: space-between;
+        margin-top: 35px;
+        padding-top: 10px;
+        page-break-inside: avoid !important;
+    }
+
+    .print-only-signatures .sig-box {
+        text-align: center;
+        width: 30%;
+        border-top: 1px solid #000;
+        padding-top: 5px;
+        font-size: 8.5pt;
+        font-weight: bold;
+    }
+
+    .badge {
+        border: 1px solid #64748B !important;
+        color: #000000 !important;
+        background: transparent !important;
+        padding: 2px 4px !important;
+        font-size: 7.5pt !important;
+    }
+
+    .badge-eligible {
+        border-color: #166534 !important;
+        color: #166534 !important;
+        font-weight: bold;
+    }
+
+    .badge-shortage {
+        border-color: #DC2626 !important;
+        color: #DC2626 !important;
+        font-weight: bold;
+    }
+}
+
+@media screen {
+    .print-only-header,
+    .print-only-signatures {
+        display: none !important;
+    }
+}
+
+
 

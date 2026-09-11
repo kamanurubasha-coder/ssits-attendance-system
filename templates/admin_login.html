@@ -23,6 +23,16 @@
                         </p>
                     </div>
 
+                    <div class="alert py-2 px-3 small d-flex align-items-center justify-content-between mb-3 border-0 rounded-3" style="background: #F3E8FF; color: #581C87;">
+                        <div>
+                            <i class="bi bi-key-fill text-purple me-1"></i>
+                            <strong>Default Credentials:</strong> Login ID: <code class="text-dark fw-bold">admin</code> | Password: <code class="text-dark fw-bold">admin123</code>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-purple text-white py-0 px-2 fw-bold" onclick="autofillDefaultAdmin()" style="background: #7E22CE; font-size: 11px;">
+                            Auto-Fill
+                        </button>
+                    </div>
+
                     {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
@@ -42,7 +52,7 @@
                             </label>
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
-                                <input type="text" class="form-control border-start-0 ps-0 fw-semibold" id="admin_username" name="username" placeholder="Enter Admin Login ID" required autofocus autocomplete="username">
+                                <input type="text" class="form-control border-start-0 ps-0 fw-semibold" id="admin_username" name="username" placeholder="Enter Admin Login ID (default: admin)" required autofocus autocomplete="username">
                             </div>
                         </div>
 
@@ -58,10 +68,13 @@
                             </div>
                             <div class="input-group">
                                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
-                                <input type="password" class="form-control border-start-0 ps-0 fw-semibold" id="admin_password" name="password" placeholder="Enter Master Password" required autocomplete="current-password">
+                                <input type="password" class="form-control border-start-0 ps-0 fw-semibold" id="admin_password" name="password" placeholder="Enter Master Password (default: admin123)" required autocomplete="current-password">
                                 <button class="btn btn-outline-secondary border-start-0" type="button" onclick="togglePasswordVisibility()">
                                     <i class="bi bi-eye" id="toggleIcon"></i>
                                 </button>
+                            </div>
+                            <div class="extra-small text-muted mt-1">
+                                <i class="bi bi-shield-check text-success me-1"></i> Master Recovery Code <code>SSITS_ADMIN_MASTER_2026</code> also accepted as password.
                             </div>
                         </div>
 
@@ -108,29 +121,39 @@
                 <div class="modal-body p-4">
                     <div id="setCredsAlert" class="alert d-none"></div>
 
-                    <p class="text-muted small mb-3">
-                        Enter current admin password to verify, then set your desired custom <strong>Admin Login ID</strong> and <strong>New Password</strong>.
-                    </p>
+                    <div class="p-2 mb-3 rounded-3 bg-light border small text-muted">
+                        <i class="bi bi-info-circle text-primary me-1"></i>
+                        Verify using either your <strong>Current Password</strong> OR the <strong>Master Recovery Passcode:</strong> <code>SSITS_ADMIN_MASTER_2026</code>.
+                    </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-navy">CURRENT ADMIN PASSWORD *</label>
-                        <input type="password" id="currentAdminPassInput" class="form-control" placeholder="Enter current admin password (default: admin123)" required>
+                        <label class="form-label small fw-bold text-navy">CURRENT PASSWORD OR MASTER RECOVERY CODE *</label>
+                        <input type="password" id="currentAdminPassInput" class="form-control" placeholder="Current password OR SSITS_ADMIN_MASTER_2026" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-navy">NEW ADMIN LOGIN ID / USERNAME *</label>
-                        <input type="text" id="newAdminUsernameInput" class="form-control fw-bold text-primary" placeholder="e.g. admin or my_admin_id" required>
+                        <input type="text" id="newAdminUsernameInput" class="form-control fw-bold text-primary" placeholder="e.g. admin or my_college_admin" required>
                         <small class="text-muted">You will use this Login ID to sign in.</small>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-navy">SET NEW PASSWORD *</label>
-                        <input type="password" id="newAdminPassInput" class="form-control" minlength="4" placeholder="Enter new password" required>
+                        <input type="password" id="newAdminPassInput" class="form-control" minlength="4" placeholder="Enter new password (min 4 chars)" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-navy">CONFIRM NEW PASSWORD *</label>
                         <input type="password" id="confirmAdminPassInput" class="form-control" minlength="4" placeholder="Re-type new password" required>
+                    </div>
+
+                    <hr class="my-3">
+
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small text-muted">Forgot everything?</span>
+                        <button type="button" class="btn btn-sm btn-outline-danger fw-bold" onclick="emergencyResetDefaultAdmin()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset to Default (admin / admin123)
+                        </button>
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -214,6 +237,42 @@ async function handleSetAdminCredentials(e) {
     } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Save Credentials';
+    }
+}
+
+function autofillDefaultAdmin() {
+    document.getElementById("admin_username").value = "admin";
+    document.getElementById("admin_password").value = "admin123";
+    const alertBox = document.getElementById("setCredsAlert");
+    if (alertBox) {
+        alertBox.className = "alert alert-info";
+        alertBox.innerText = "Default credentials filled: admin / admin123";
+        alertBox.classList.remove("d-none");
+    }
+}
+
+async function emergencyResetDefaultAdmin() {
+    const code = prompt("Enter Master Recovery Passcode to confirm emergency reset to default (admin / admin123):", "SSITS_ADMIN_MASTER_2026");
+    if (!code) return;
+
+    try {
+        const res = await fetch('/admin/api/emergency-reset-default', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ master_key: code.trim() })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            alert("✅ " + data.message);
+            autofillDefaultAdmin();
+            const modalEl = document.getElementById('setAdminCredentialsModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        } else {
+            alert("❌ " + (data.message || "Failed to reset credentials."));
+        }
+    } catch (err) {
+        alert("Network error connecting to reset endpoint.");
     }
 }
 </script>

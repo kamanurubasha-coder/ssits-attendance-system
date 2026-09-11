@@ -696,6 +696,23 @@ function exportFacultyMonthlyCSV() {
     link.click();
 }
 
+function printFacultyMonthlyReport() {
+    const monthVal = document.getElementById("facultyMonthPicker") ? document.getElementById("facultyMonthPicker").value : "";
+    const originalTitle = document.title;
+    document.title = `SSITS_Monthly_Attendance_${monthVal || "Report"}`;
+    window.print();
+    setTimeout(() => { document.title = originalTitle; }, 1000);
+}
+
+function downloadStudentDossierPdf() {
+    const sid = document.getElementById("facStudentSelect").value;
+    if (!sid) {
+        alert("Please choose a student from the dropdown first!");
+        return;
+    }
+    window.open(`/api/student-dossier-pdf?student_id=${sid}`, "_blank");
+}
+
 function openFacultyParentInquiryModal() {
     const select = document.getElementById("facStudentSelect");
     select.innerHTML = '<option value="">-- Choose Student --</option>';
