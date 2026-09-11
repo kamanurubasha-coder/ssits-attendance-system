@@ -1,13 +1,15 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
+IST = timezone(timedelta(hours=5, minutes=30))
+
 def generate_attendance_pdf(output_path, college_name, program_name, dept_name, year_name, session_type, date_str, teacher_name, hod_name, total_count, absent_students, day_type='working', occasion_name='', section='A'):
     """
-    Generates a clean, official attendance report in PDF format with accurate real-time timestamp,
+    Generates a clean, official attendance report in PDF format with accurate real-time timestamp in IST,
     college & NAAC logos, Autonomous institution branding, College Code SRSR, and day status.
     """
     doc = SimpleDocTemplate(
@@ -22,8 +24,8 @@ def generate_attendance_pdf(output_path, college_name, program_name, dept_name, 
     story = []
     styles = getSampleStyleSheet()
 
-    # Current accurate timestamp
-    current_time_str = datetime.now().strftime("%A, %d-%b-%Y at %I:%M:%S %p IST")
+    # Current accurate timestamp in Indian Standard Time (IST, UTC+05:30)
+    current_time_str = datetime.now(IST).strftime("%A, %d-%b-%Y at %I:%M:%S %p IST")
 
     # Custom styles
     title_style = ParagraphStyle(
@@ -308,12 +310,17 @@ def generate_attendance_pdf(output_path, college_name, program_name, dept_name, 
         ]
         
         for idx, s in enumerate(absent_students, start=1):
+            r_num = str(s.get('roll_number') or 'N/A')
+            s_name = str(s.get('name') or 'Student')
+            f_name = str(s.get('father_name') or 'Parent / Guardian')
+            f_phone = str(s.get('father_phone') or 'N/A')
+            phone_disp = f"+91 {f_phone}" if f_phone != 'N/A' and not f_phone.startswith("+91") else f_phone
             table_rows.append([
                 Paragraph(str(idx), cell_style),
-                Paragraph(f"<b>{s['roll_number']}</b>", cell_style),
-                Paragraph(s['name'], cell_style),
-                Paragraph(s['father_name'], cell_style),
-                Paragraph(f"+91 {s['father_phone']}", cell_style),
+                Paragraph(f"<b>{r_num}</b>", cell_style),
+                Paragraph(s_name, cell_style),
+                Paragraph(f_name, cell_style),
+                Paragraph(phone_disp, cell_style),
                 Paragraph("<font color='#B91C1C'><b>WhatsApp Sent</b></font>", cell_style)
             ])
             
@@ -355,3 +362,234 @@ def generate_attendance_pdf(output_path, college_name, program_name, dept_name, 
     # Build PDF
     doc.build(story)
     return output_path
+
+
+def generate_parent_student_dossier_pdf(output_path, college_name, student_info, records, stats, teacher_name="Class Teacher", hod_name="Head of Department"):
+    """
+    Generates an official Student Attendance & Condonation Dossier (Parent Copy)
+    featuring complete profile details, session statistics, eligibility verdict,
+    detailed daily attendance table, and signatures.
+    """
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=A4,
+        rightMargin=36,
+        leftMargin=36,
+        topMargin=26,
+        bottomMargin=26
+    )
+    story = []
+    styles = getSampleStyleSheet()
+
+    current_time_str = datetime.now(IST).strftime("%A, %d-%b-%Y at %I:%M:%S %p IST")
+
+    # Header Box
+    title_style = ParagraphStyle('DossierTitle', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=14, leading=17, alignment=1, textColor=colors.HexColor('#0F2C59'))
+    autonomous_style = ParagraphStyle('DossierAuto', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, leading=11, alignment=1, textColor=colors.HexColor('#991B1B'))
+    sub_style = ParagraphStyle('DossierSub', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=9.5, alignment=1, textColor=colors.HexColor('#2D3748'))
+    cell_style = ParagraphStyle('DCell', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10)
+    cell_bold = ParagraphStyle('DCellB', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=10)
+
+    # Timestamp & Code
+    top_table = Table([
+        [
+            Paragraph(f"<b>System Generated:</b> {current_time_str}", ParagraphStyle('TLeft', parent=styles['Normal'], fontName='Helvetica', fontSize=7.5, leading=9, textColor=colors.HexColor('#4A5568'))),
+            Paragraph("<font color='#B7791F'><b>College Code: SRSR</b></font>", ParagraphStyle('TRight', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=9, alignment=2, textColor=colors.HexColor('#B7791F')))
+        ]
+    ], colWidths=[380, 143])
+    top_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(top_table)
+    story.append(Spacer(1, 3))
+
+    # Logos & Header
+    college_logo_path = os.path.join(os.path.dirname(__file__), "static", "images", "college_logo.png")
+    naac_logo_path = os.path.join(os.path.dirname(__file__), "static", "images", "naac_logo.png")
+    left_logo = RLImage(college_logo_path, width=54, height=52) if os.path.exists(college_logo_path) else Paragraph("", cell_style)
+    right_logo = RLImage(naac_logo_path, width=64, height=48) if os.path.exists(naac_logo_path) else Paragraph("", cell_style)
+
+    center_text = [
+        Paragraph(college_name.upper(), title_style),
+        Spacer(1, 2),
+        Paragraph("(AN AUTONOMOUS INSTITUTION)", autonomous_style),
+        Spacer(1, 1),
+        Paragraph("Approved by AICTE, New Delhi & Affiliated to JNTUA, Ananthapuramu", sub_style),
+        Paragraph("Rayachoty, Annamayya District, Andhra Pradesh - 516269", sub_style),
+    ]
+
+    header_table = Table([[left_logo, center_text, right_logo]], colWidths=[65, 393, 65])
+    header_table.setStyle(TableStyle([
+        ('ALIGN', (0,0), (0,0), 'LEFT'),
+        ('ALIGN', (1,0), (1,0), 'CENTER'),
+        ('ALIGN', (2,0), (2,0), 'RIGHT'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 4))
+
+    # Document Banner
+    banner_table = Table([[Paragraph("<font color='#ffffff'><b>PARENT INQUIRY DOSSIER - INDIVIDUAL STUDENT ATTENDANCE CERTIFICATE</b></font>", ParagraphStyle('Banner', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=9, leading=11, alignment=1, textColor=colors.white))]], colWidths=[523])
+    banner_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#0F2C59')),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+    ]))
+    story.append(banner_table)
+    story.append(Spacer(1, 6))
+
+    # Student Profile Matrix
+    st_name = str(student_info.get('name') or 'N/A')
+    st_roll = str(student_info.get('roll_number') or 'N/A')
+    st_prog = str(student_info.get('prog_name') or student_info.get('prog_code') or 'B.Tech')
+    st_dept = str(student_info.get('dept_name') or student_info.get('dept_code') or 'Engineering')
+    st_year = str(student_info.get('year_name') or 'Academic Year')
+    st_sec = str(student_info.get('section') or 'A')
+    st_father = str(student_info.get('father_name') or 'Parent / Guardian')
+    st_phone = str(student_info.get('father_phone') or 'N/A')
+
+    prof_data = [
+        [
+            Paragraph(f"<b>Student Name:</b> {st_name}", cell_style),
+            Paragraph(f"<b>Roll Number:</b> <font color='#0F2C59'><b>{st_roll}</b></font>", cell_style),
+        ],
+        [
+            Paragraph(f"<b>Program / Degree:</b> {st_prog}", cell_style),
+            Paragraph(f"<b>Department / Branch:</b> {st_dept}", cell_style),
+        ],
+        [
+            Paragraph(f"<b>Academic Year & Sec:</b> {st_year} (Section {st_sec})", cell_style),
+            Paragraph(f"<b>Father / Guardian:</b> {st_father} ({st_phone})", cell_style),
+        ]
+    ]
+    prof_table = Table(prof_data, colWidths=[261, 262])
+    prof_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FAFC')),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#CBD5E1')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+    ]))
+    story.append(prof_table)
+    story.append(Spacer(1, 6))
+
+    # Metrics Summary Box
+    tot_sessions = stats.get('total_sessions', 0)
+    pres_sessions = stats.get('present_sessions', 0)
+    abs_sessions = stats.get('absent_sessions', 0)
+    pct = stats.get('percentage', 0.0)
+
+    verdict = "<font color='#166534'><b>ELIGIBLE FOR SEM EXAMS (&ge; 75%)</b></font>" if pct >= 75.0 else ("<font color='#B45309'><b>CONDONATION RANGE (65% - 74.9%)</b></font>" if pct >= 65.0 else "<font color='#B91C1C'><b>CRITICAL ATTENDANCE SHORTAGE (&lt; 65%)</b></font>")
+
+    metric_head = ParagraphStyle('MH', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=7.5, leading=9, alignment=1, textColor=colors.HexColor('#475569'))
+    metric_val = ParagraphStyle('MV', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=12, leading=14, alignment=1)
+
+    stat_data = [
+        [
+            Paragraph("TOTAL SESSIONS", metric_head),
+            Paragraph("SESSIONS ATTENDED", metric_head),
+            Paragraph("SESSIONS MISSED", metric_head),
+            Paragraph("ATTENDANCE %", metric_head),
+        ],
+        [
+            Paragraph(f"<b>{tot_sessions}</b>", ParagraphStyle('M1', parent=metric_val, textColor=colors.HexColor('#0F2C59'))),
+            Paragraph(f"<b>{pres_sessions}</b>", ParagraphStyle('M2', parent=metric_val, textColor=colors.HexColor('#166534'))),
+            Paragraph(f"<b>{abs_sessions}</b>", ParagraphStyle('M3', parent=metric_val, textColor=colors.HexColor('#DC2626'))),
+            Paragraph(f"<b>{pct}%</b>", ParagraphStyle('M4', parent=metric_val, textColor=colors.HexColor('#B45309'))),
+        ],
+        [
+            Paragraph(f"<b>Autonomous University Eligibility Status:</b> {verdict}", ParagraphStyle('Vrd', parent=styles['Normal'], fontName='Helvetica', fontSize=8, leading=10, alignment=1)),
+            "", "", ""
+        ]
+    ]
+    stat_table = Table(stat_data, colWidths=[130, 131, 131, 131])
+    stat_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')),
+        ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#FFFFFF')),
+        ('BACKGROUND', (0,2), (-1,2), colors.HexColor('#FEF3C7')),
+        ('SPAN', (0,2), (3,2)),
+        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#CBD5E1')),
+        ('INNERGRID', (0,0), (-1,1), 0.5, colors.HexColor('#E2E8F0')),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+    ]))
+    story.append(stat_table)
+    story.append(Spacer(1, 6))
+
+    # Daily Records Table
+    story.append(Paragraph("<b>DETAILED SESSION-WISE ATTENDANCE LOG:</b>", ParagraphStyle('RecH', parent=styles['Normal'], fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=colors.HexColor('#0F2C59'))))
+    story.append(Spacer(1, 3))
+
+    rec_rows = [
+        [
+            Paragraph("<b>#</b>", cell_bold),
+            Paragraph("<b>Date</b>", cell_bold),
+            Paragraph("<b>Day</b>", cell_bold),
+            Paragraph("<b>Morning Session</b>", cell_bold),
+            Paragraph("<b>Afternoon Session</b>", cell_bold),
+            Paragraph("<b>Day Result</b>", cell_bold)
+        ]
+    ]
+
+    for idx, r in enumerate(records, start=1):
+        m_stat = r.get('morning', 'Not Marked')
+        a_stat = r.get('afternoon', 'Not Marked')
+        
+        m_disp = f"<font color='#166534'><b>Present</b></font>" if m_stat == 'Present' else (f"<font color='#DC2626'><b>Absent</b></font>" if m_stat == 'Absent' else f"<font color='#6B7280'>{m_stat}</font>")
+        a_disp = f"<font color='#166534'><b>Present</b></font>" if a_stat == 'Present' else (f"<font color='#DC2626'><b>Absent</b></font>" if a_stat == 'Absent' else f"<font color='#6B7280'>{a_stat}</font>")
+        
+        summary = r.get('summary', 'Normal')
+        sum_disp = f"<font color='#166534'>Full Day Present</font>" if summary == 'Full Day Present' else (f"<font color='#DC2626'>Full Day Absent</font>" if summary == 'Full Day Absent' else f"<font color='#B45309'>{summary}</font>")
+
+        rec_rows.append([
+            Paragraph(str(idx), cell_style),
+            Paragraph(str(r.get('date', '-')), cell_style),
+            Paragraph(str(r.get('day_name', '-')), cell_style),
+            Paragraph(m_disp, cell_style),
+            Paragraph(a_disp, cell_style),
+            Paragraph(sum_disp, cell_style),
+        ])
+
+    rec_table = Table(rec_rows, colWidths=[25, 80, 80, 110, 110, 118])
+    rec_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0F2C59')),
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F8FAFC')]),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('ALIGN', (0,0), (0,-1), 'CENTER'),
+        ('ALIGN', (3,0), (-1,-1), 'CENTER'),
+    ]))
+    story.append(rec_table)
+    story.append(Spacer(1, 15))
+
+    # Signatures
+    sig_data = [
+        [
+            Paragraph(f"<b>Class Teacher</b><br/><br/>({teacher_name})", cell_style),
+            Paragraph(f"<b>Head of Department (HOD)</b><br/><br/>({hod_name})", cell_style),
+            Paragraph("<b>Parent / Guardian Signature</b><br/><br/>________________________", cell_style),
+            Paragraph("<b>Principal / Director</b><br/><br/>SSITS (Autonomous)", cell_style),
+        ]
+    ]
+    sig_table = Table(sig_data, colWidths=[130, 131, 131, 131])
+    sig_table.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'BOTTOM')
+    ]))
+    story.append(sig_table)
+
+    doc.build(story)
+    return output_path
+

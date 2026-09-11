@@ -5,7 +5,7 @@ import random
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 import secrets
 import calendar
 import base64
@@ -13,10 +13,35 @@ import pyotp
 import qrcode
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file, flash
 from database import get_db_connection, init_db
-from pdf_generator import generate_attendance_pdf
+from pdf_generator import generate_attendance_pdf, generate_parent_student_dossier_pdf
+
+# Central Indian Standard Time (IST, UTC+05:30)
+IST = timezone(timedelta(hours=5, minutes=30))
+
+def get_ist_now():
+    """Returns current datetime in Indian Standard Time (IST)."""
+    return datetime.now(IST)
+
+def get_ist_date():
+    """Returns current date in Indian Standard Time (IST)."""
+    return datetime.now(IST).date()
+
+def get_ist_date_str():
+    """Returns current date string (YYYY-MM-DD) in Indian Standard Time (IST)."""
+    return datetime.now(IST).strftime("%Y-%m-%d")
 
 app = Flask(__name__)
 app.secret_key = "sri_sai_institute_attendance_secret_key_2026"
+
+# Ultra-fast Keep-Alive endpoint for Render cold-start prevention
+@app.route("/healthz")
+@app.route("/ping")
+def health_check():
+    return jsonify({
+        "status": "healthy",
+        "service": "ssits-attendance-portal",
+        "ist_time": get_ist_now().strftime("%Y-%m-%d %I:%M:%S %p IST")
+    }), 200
 
 # Ensure database tables and initial institutional schemas are created
 try:
@@ -551,10 +576,7 @@ def forgot_password():
 
     role = request.form.get("role", "faculty").strip().lower()
     email = request.form.get("email", "").strip().lower()
-
-    if not email or "@" not in email:
-        flash("Please provide a valid Gmail / Email address.", "error")
-        return render_template("forgot_password.html", default_role=role)
+    master_code = request.form.get("master_code", "").strip()
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -562,56 +584,68 @@ def forgot_password():
     target_user = None
     target_id = None
 
-    if role == "faculty":
-        cursor.execute("SELECT id, name, email FROM teachers WHERE LOWER(email) = LOWER(?)", (email,))
+    # Emergency Master Passcode bypass for Administrator
+    if role == "admin" and master_code == "SSITS_ADMIN_MASTER_2026":
+        cursor.execute("SELECT id, name, email, username FROM admins WHERE role = 'superadmin' OR role IS NULL OR role = '' ORDER BY id ASC LIMIT 1")
+        target_user = cursor.fetchone()
+    elif not email:
+        conn.close()
+        flash("Please provide your registered Gmail or Login ID.", "error")
+        return render_template("forgot_password.html", default_role=role)
+    elif role == "faculty":
+        cursor.execute("SELECT id, name, email FROM teachers WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)", (email, email))
         target_user = cursor.fetchone()
     elif role == "hod":
-        cursor.execute("SELECT id, name, email FROM hods WHERE LOWER(email) = LOWER(?)", (email,))
+        cursor.execute("SELECT id, name, email FROM hods WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)", (email, email))
         target_user = cursor.fetchone()
     elif role == "principal":
-        cursor.execute("SELECT id, name, email FROM admins WHERE LOWER(email) = LOWER(?) AND role = 'principal'", (email,))
+        cursor.execute("SELECT id, name, email FROM admins WHERE (LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)) AND role = 'principal'", (email, email))
         target_user = cursor.fetchone()
-        if not target_user:
-            cursor.execute("SELECT id, name, email FROM admins WHERE LOWER(username) = LOWER(?) AND role = 'principal'", (email,))
-            target_user = cursor.fetchone()
     elif role == "admin":
         cursor.execute("SELECT id, name, email FROM admins WHERE (LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)) AND (role = 'superadmin' OR role IS NULL OR role = '')", (email, email))
         target_user = cursor.fetchone()
 
     if not target_user:
         conn.close()
-        flash(f"No active account found for '{email}' with role '{role.upper()}'. Please check the email address or contact Administrator.", "error")
+        if role == "admin":
+            flash(f"No active account found for '{email}'. Note: Default Admin ID is 'admin' (admin@srisaitech.ac.in). You can also use Emergency Master Recovery Passcode 'SSITS_ADMIN_MASTER_2026' to reset directly.", "error")
+        else:
+            flash(f"No active account found for '{email}' with role '{role.upper()}'. Please check your email or contact Administrator.", "error")
         return render_template("forgot_password.html", default_role=role)
 
     target_id = target_user["id"]
+    target_email = target_user["email"] or email
     token = secrets.token_urlsafe(32)
-    expires_at = (datetime.now() + timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S")
+    expires_at = (get_ist_now() + timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S")
 
     cursor.execute("""
         INSERT INTO password_resets (email, role, target_id, token, expires_at, is_used)
         VALUES (?, ?, ?, ?, ?, 0)
-    """, (email, role, target_id, token, expires_at))
+    """, (target_email, role, target_id, token, expires_at))
     conn.commit()
     conn.close()
 
     reset_link = url_for("reset_password", token=token, _external=True)
 
-    # Attempt sending via SMTP
-    subject = "SSITS Portal - Password Reset Link"
-    body = f"""Dear {target_user['name']},
+    has_smtp = bool(os.environ.get("SMTP_EMAIL", "").strip())
+    if has_smtp:
+        subject = "SSITS Portal - Password Reset Link"
+        body = f"""Dear {target_user['name']},
 
 A password reset request was initiated for your SSITS {role.upper()} account.
 To reset your password, please click the secure link below:
 
 {reset_link}
 
-This link is valid for 1 hour. If you did not make this request, please ignore this email.
+This link is valid for 2 hours. If you did not make this request, please ignore this email.
 
 SSITS Rayachoty - Institutional Attendance & Academic System
 """
-    send_email_smtp(email, subject, body)
+        send_email_smtp(target_email, subject, body)
+        flash(f"Password reset link dispatched to {target_email}! You can also click the instant link below to reset your password.", "success")
+    else:
+        flash("✅ Password reset link generated! Click the button below to set your new password immediately.", "success")
 
-    flash(f"Password reset link generated and dispatched to {email}! Click the link to set your new password.", "success")
     return render_template("forgot_password.html", default_role=role, reset_link=reset_link)
 
 
@@ -627,7 +661,7 @@ def reset_password():
             flash("Missing password reset token.", "error")
             return redirect(url_for("forgot_password"))
 
-        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        now_str = get_ist_now().strftime("%Y-%m-%d %H:%M:%S")
         cursor.execute("""
             SELECT * FROM password_resets
             WHERE token = ? AND is_used = 0 AND expires_at > ?
@@ -680,7 +714,7 @@ def reset_password():
         flash("Password must be at least 4 characters long.", "error")
         return redirect(url_for("reset_password", token=token))
 
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = get_ist_now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute("""
         SELECT * FROM password_resets
         WHERE token = ? AND is_used = 0 AND expires_at > ?
@@ -730,6 +764,20 @@ def admin_portal():
 
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Master Recovery Passcode emergency bypass
+        if password == "SSITS_ADMIN_MASTER_2026":
+            cursor.execute("SELECT * FROM admins WHERE (role = 'superadmin' OR role IS NULL OR role = '') ORDER BY id ASC LIMIT 1")
+            admin = cursor.fetchone()
+            conn.close()
+            if admin:
+                set_admin_session(admin)
+                flash(f"Welcome Administrator {admin['name']}! Master Emergency Bypass Granted.", "warning")
+                return redirect(url_for("admin_dashboard"))
+            else:
+                flash("No administrator record found to unlock.", "error")
+                return redirect(url_for("admin_portal"))
+
         cursor.execute("SELECT * FROM admins WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)) AND password = ? AND (role = 'superadmin' OR role IS NULL OR role = '')", (username, username, password))
         admin = cursor.fetchone()
         conn.close()
@@ -922,7 +970,7 @@ def admin_dashboard():
 
     conn.close()
 
-    today_str = date.today().strftime("%Y-%m-%d")
+    today_str = get_ist_date_str()
 
     return render_template(
         "admin_dashboard.html",
@@ -1155,7 +1203,7 @@ def admin_api_class_attendance():
     if not is_admin():
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
-    req_date = request.args.get("date", date.today().strftime("%Y-%m-%d"))
+    req_date = request.args.get("date", get_ist_date_str())
     req_session = request.args.get("session", "morning").lower()
 
     conn = get_db_connection()
@@ -1416,10 +1464,10 @@ def admin_set_credentials():
         conn.close()
         return jsonify({"status": "error", "message": "Admin account not found."}), 404
 
-    # Verify current password
-    if admin_row["password"] != current_pw:
+    # Verify current password or Emergency Master Passcode
+    if admin_row["password"] != current_pw and current_pw != "SSITS_ADMIN_MASTER_2026":
         conn.close()
-        return jsonify({"status": "error", "message": "Current admin master password is incorrect!"}), 400
+        return jsonify({"status": "error", "message": "Current admin master password or Emergency Recovery Passcode is incorrect!"}), 400
 
     # Verify username uniqueness
     cursor.execute("SELECT id FROM admins WHERE LOWER(username) = LOWER(?) AND id != ?", (new_username, admin_row["id"]))
@@ -1437,6 +1485,76 @@ def admin_set_credentials():
         "username": new_username
     })
 
+@app.route("/admin/api/emergency-reset-default", methods=["POST"])
+def admin_emergency_reset_default():
+    """1-Click Emergency Reset for Administrator credentials back to default admin / admin123."""
+    data = request.get_json(silent=True) or {}
+    master_key = (request.form.get("master_key") or data.get("master_key") or "").strip()
+
+    if master_key != "SSITS_ADMIN_MASTER_2026":
+        return jsonify({"status": "error", "message": "Invalid Master Recovery Passcode! Authorization denied."}), 403
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM admins WHERE (role = 'superadmin' OR role IS NULL OR role = '') ORDER BY id ASC LIMIT 1")
+    admin_row = cursor.fetchone()
+
+    if not admin_row:
+        cursor.execute("INSERT INTO admins (username, password, name, email, phone, role) VALUES ('admin', 'admin123', 'Master System Administrator', 'admin@srisaitech.ac.in', '9848099999', 'superadmin')")
+    else:
+        cursor.execute("UPDATE admins SET username = 'admin', password = 'admin123', totp_secret = NULL, is_2fa_enabled = 0 WHERE id = ?", (admin_row["id"],))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        "status": "success",
+        "message": "Super Admin credentials have been reset to Default! Login ID: 'admin' | Password: 'admin123' (2FA reset to clean state)."
+    })
+
+@app.route("/admin/api/reset-data", methods=["POST"])
+def admin_api_reset_data():
+    """Allows Super Admin to perform a clean academic data purge before the semester/month starts."""
+    if not is_admin():
+        return jsonify({"status": "error", "message": "Unauthorized access. Master Admin required."}), 403
+
+    data = request.get_json(silent=True) or {}
+    admin_password = data.get("admin_password", "").strip()
+    reset_mode = data.get("reset_mode", "attendance_only").strip()
+
+    if not admin_password:
+        return jsonify({"status": "error", "message": "Administrator password is required for confirmation!"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT password FROM admins WHERE id = ?", (session["admin_id"],))
+    admin_row = cursor.fetchone()
+
+    if not admin_row or (admin_row["password"] != admin_password and admin_password != "SSITS_ADMIN_MASTER_2026"):
+        conn.close()
+        return jsonify({"status": "error", "message": "Incorrect Administrator password! Verification failed."}), 400
+
+    try:
+        cursor.execute("DELETE FROM attendance_records")
+        cursor.execute("DELETE FROM day_status")
+        cursor.execute("DELETE FROM email_otps")
+        cursor.execute("DELETE FROM password_resets")
+
+        if reset_mode == "factory":
+            cursor.execute("DELETE FROM students")
+            from database import seed_data
+            seed_data(cursor, conn)
+            msg = "Complete factory reset successful! All test records cleared and fresh academic rosters cleanly initialized."
+        else:
+            conn.commit()
+            msg = "Attendance records and day statuses successfully cleared! Student roster, departments, and faculty accounts remain intact for next month's launch."
+
+        conn.close()
+        return jsonify({"status": "success", "message": msg})
+    except Exception as e:
+        conn.close()
+        return jsonify({"status": "error", "message": f"Database error during reset: {str(e)}"}), 500
+
 # ==============================================================================
 # NEW FEATURE 2: CONSOLIDATED ABSENTEES SUMMARY (ALL DEGREES & BRANCHES)
 # ==============================================================================
@@ -1445,7 +1563,7 @@ def admin_api_summary_absentees():
     if not is_admin():
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
-    req_date = request.args.get("date", date.today().strftime("%Y-%m-%d"))
+    req_date = request.args.get("date", get_ist_date_str())
     req_session = request.args.get("session", "all").lower()
 
     conn = get_db_connection()
@@ -1507,7 +1625,7 @@ def api_monthly_report():
         dept_id = request.args.get("department_id", type=int)
         year_id = request.args.get("year_id", type=int)
         section = request.args.get("section", "A").strip().upper()
-        now = datetime.now()
+        now = get_ist_now()
         rep_year = request.args.get("year", default=now.year, type=int)
         rep_month = request.args.get("month", default=now.month, type=int)
 
@@ -1929,7 +2047,7 @@ def admin_api_class_pdf():
     dept_id = request.args.get("dept_id", type=int)
     year_id = request.args.get("year_id", type=int)
     section = request.args.get("section", "A").upper()
-    req_date = request.args.get("date", date.today().strftime("%Y-%m-%d"))
+    req_date = request.args.get("date", get_ist_date_str())
     req_session = request.args.get("session", "morning").lower()
 
     conn = get_db_connection()
@@ -2080,7 +2198,7 @@ def dashboard():
     dept_info = {"id": dept_id, "code": session["dept_code"], "name": session["dept_name"]}
     year_info = {"id": year_id, "year_name": session["year_name"]}
 
-    today_str = date.today().strftime("%Y-%m-%d")
+    today_str = get_ist_date_str()
 
     return render_template(
         "dashboard.html",
@@ -2099,7 +2217,7 @@ def api_students():
     if not is_authenticated():
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
-    req_date = request.args.get("date", date.today().strftime("%Y-%m-%d"))
+    req_date = request.args.get("date", get_ist_date_str())
     req_session = request.args.get("session", "morning").lower()
     current_section = session.get("section", "A")
 
@@ -2162,7 +2280,7 @@ def api_save_day_status():
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
     data = request.get_json() or {}
-    att_date = data.get("date", date.today().strftime("%Y-%m-%d"))
+    att_date = data.get("date", get_ist_date_str())
     day_type = data.get("day_type", "working")
     occasion_name = data.get("occasion_name", "").strip()
     current_section = session.get("section", "A")
@@ -2196,7 +2314,7 @@ def api_save_attendance():
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
     data = request.get_json() or {}
-    att_date = data.get("date", date.today().strftime("%Y-%m-%d"))
+    att_date = data.get("date", get_ist_date_str())
     session_type = data.get("session", "morning").lower()
     absent_ids = data.get("absent_ids", [])
     day_type = data.get("day_type", "working")
@@ -2240,7 +2358,7 @@ def api_save_attendance():
 
         conn.commit()
 
-        saved_time = datetime.now().strftime("%I:%M:%S %p")
+        saved_time = get_ist_now().strftime("%I:%M:%S %p")
         prog_c = session.get('program_code', '')
         dept_c = session.get('dept_code', '')
         yr_n = session.get('year_name', '')
@@ -2278,7 +2396,7 @@ def api_generate_pdf():
     if not is_authenticated():
         return redirect(url_for("login"))
 
-    req_date = request.args.get("date", date.today().strftime("%Y-%m-%d"))
+    req_date = request.args.get("date", get_ist_date_str())
     req_session = request.args.get("session", "morning")
     absent_ids_str = request.args.get("absent_ids", "")
     day_type = request.args.get("day_type", "working")
@@ -2340,6 +2458,119 @@ def api_generate_pdf():
         day_type=day_type,
         occasion_name=occasion_name,
         section=current_section
+    )
+
+    return send_file(pdf_path, as_attachment=True, download_name=pdf_filename)
+
+@app.route("/api/student-dossier-pdf")
+def api_student_dossier_pdf():
+    if not is_authenticated() and not is_hod() and not is_principal() and not is_admin():
+        return redirect(url_for("login"))
+
+    student_id = request.args.get("student_id", type=int)
+    if not student_id:
+        return "Missing student ID parameter", 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT s.*, p.name as prog_name, p.code as prog_code,
+               d.name as dept_name, d.code as dept_code,
+               y.year_name, y.year_num
+        FROM students s
+        JOIN programs p ON s.program_id = p.id
+        JOIN departments d ON s.department_id = d.id
+        JOIN academic_years y ON s.year_id = y.id
+        WHERE s.id = ?
+    """, (student_id,))
+    student = cursor.fetchone()
+
+    if not student:
+        conn.close()
+        return "Student record not found", 404
+
+    cursor.execute("""
+        SELECT attendance_date, session_type, status, created_at
+        FROM attendance_records
+        WHERE student_id = ?
+        ORDER BY attendance_date ASC
+    """, (student_id,))
+    att_rows = cursor.fetchall()
+
+    records_by_date = {}
+    for r in att_rows:
+        adate = r["attendance_date"]
+        if adate not in records_by_date:
+            try:
+                d_obj = datetime.strptime(adate, "%Y-%m-%d")
+                d_name = d_obj.strftime("%A")
+            except Exception:
+                d_name = "-"
+            records_by_date[adate] = {
+                "date": adate,
+                "day_name": d_name,
+                "morning": "Not Marked",
+                "afternoon": "Not Marked",
+                "summary": "Normal"
+            }
+        records_by_date[adate][r["session_type"].lower()] = r["status"].capitalize()
+
+    total_sessions = 0
+    present_sessions = 0
+    absent_sessions = 0
+
+    formatted_records = []
+    for adate in sorted(records_by_date.keys()):
+        rec = records_by_date[adate]
+        m = rec["morning"]
+        a = rec["afternoon"]
+        
+        if m == "Present": present_sessions += 1
+        elif m == "Absent": absent_sessions += 1
+        if m in ("Present", "Absent"): total_sessions += 1
+
+        if a == "Present": present_sessions += 1
+        elif a == "Absent": absent_sessions += 1
+        if a in ("Present", "Absent"): total_sessions += 1
+
+        if m == "Present" and a == "Present":
+            rec["summary"] = "Full Day Present"
+        elif m == "Absent" and a == "Absent":
+            rec["summary"] = "Full Day Absent"
+        elif "Absent" in (m, a):
+            rec["summary"] = "Half Day Absent"
+        else:
+            rec["summary"] = "Marked"
+        formatted_records.append(rec)
+
+    pct = round((present_sessions / total_sessions * 100), 1) if total_sessions > 0 else 0.0
+    stats = {
+        "total_sessions": total_sessions,
+        "present_sessions": present_sessions,
+        "absent_sessions": absent_sessions,
+        "percentage": pct
+    }
+
+    teacher_name = session.get("teacher_name") or "Class Teacher"
+    cursor.execute("SELECT name FROM hods WHERE program_id = ? AND department_id = ?", (student["program_id"], student["department_id"]))
+    hod_row = cursor.fetchone()
+    hod_name = hod_row["name"] if hod_row else "Head of Department"
+    conn.close()
+
+    reports_dir = os.path.join(os.path.dirname(__file__), "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    pdf_filename = f"Parent_Dossier_{student['roll_number']}_{get_ist_date_str()}.pdf"
+    pdf_path = os.path.join(reports_dir, pdf_filename)
+
+    generate_parent_student_dossier_pdf(
+        output_path=pdf_path,
+        college_name=COLLEGE_NAME,
+        student_info=dict(student),
+        records=formatted_records,
+        stats=stats,
+        teacher_name=teacher_name,
+        hod_name=hod_name
     )
 
     return send_file(pdf_path, as_attachment=True, download_name=pdf_filename)
@@ -2496,7 +2727,7 @@ def download_class_pdf(class_id):
         flash("Please log in to download attendance PDF.", "error")
         return redirect(url_for("welcome"))
 
-    req_date = request.args.get("date", date.today().strftime("%Y-%m-%d"))
+    req_date = request.args.get("date", get_ist_date_str())
     req_session = request.args.get("session", "morning").lower()
 
     conn = get_db_connection()
@@ -2816,7 +3047,7 @@ def hod_dashboard():
         return redirect(url_for("hod_login"))
 
     dept_id = session.get("department_id")
-    selected_date = request.args.get("date", date.today().strftime("%Y-%m-%d"))
+    selected_date = request.args.get("date", get_ist_date_str())
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -2967,7 +3198,7 @@ def hod_dashboard():
             })
 
     dept_attendance_pct = round((total_dept_present / total_dept_students * 100), 1) if total_dept_students > 0 else 0
-    now = datetime.now()
+    now = get_ist_now()
     conn.close()
 
     return render_template(
@@ -3161,7 +3392,7 @@ def principal_dashboard():
         flash("Please log in with Principal Executive credentials.", "error")
         return redirect(url_for("principal_login"))
 
-    selected_date = request.args.get("date", date.today().strftime("%Y-%m-%d"))
+    selected_date = request.args.get("date", get_ist_date_str())
 
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -3313,7 +3544,7 @@ def principal_dashboard():
             })
 
     college_attendance_pct = round((total_college_present / total_college_students * 100), 1) if total_college_students > 0 else 0
-    now = datetime.now()
+    now = get_ist_now()
     conn.close()
 
     return render_template(
