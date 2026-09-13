@@ -1330,5 +1330,87 @@ body {
     }
 }
 
+/* ==========================================================================
+   AUTHENTICATION & LOGIN PAGES - VIBRANT COSMIC WAVE BACKGROUND
+   ========================================================================== */
+body.auth-page-bg {
+    background-color: #040814 !important;
+    background-image: 
+        radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.15) 0%, transparent 55%),
+        radial-gradient(circle at 10% 25%, rgba(239, 68, 68, 0.12) 0%, transparent 45%),
+        linear-gradient(180deg, rgba(4, 8, 20, 0.40) 0%, rgba(4, 8, 20, 0.65) 100%),
+        url('/static/images/login_bg.jpg') !important;
+    background-repeat: no-repeat !important;
+    background-position: center center !important;
+    background-size: cover !important;
+    background-attachment: fixed !important;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+body.auth-page-bg main {
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 1.5rem;
+    padding-bottom: 2.5rem;
+}
+
+/* Glassmorphism & Elevated Card Styles for Login Pages */
+body.auth-page-bg .card {
+    background: rgba(255, 255, 255, 0.96) !important;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, 0.75) !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.60), 0 0 40px rgba(14, 165, 233, 0.22) !important;
+    border-radius: 1.25rem !important;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+body.auth-page-bg .card:hover {
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.70), 0 0 50px rgba(14, 165, 233, 0.30) !important;
+}
+
+/* Light text for breadcrumbs & outer labels on dark background */
+body.auth-page-bg .breadcrumb-item a {
+    color: #F8FAFC !important;
+    font-weight: 500;
+}
+body.auth-page-bg .breadcrumb-item.active {
+    color: #CBD5E1 !important;
+}
+body.auth-page-bg .breadcrumb-item + .breadcrumb-item::before {
+    color: #94A3B8 !important;
+}
+
+/* Outer text visibility on dark background */
+body.auth-page-bg .text-muted {
+    color: #CBD5E1 !important;
+}
+body.auth-page-bg .card .text-muted {
+    color: #64748B !important;
+}
+body.auth-page-bg .card .text-navy {
+    color: #0F172A !important;
+}
+
+/* Seamless Header & Footer integration */
+body.auth-page-bg .college-header {
+    background: rgba(7, 19, 34, 0.94) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-bottom: 3.5px solid #F59E0B !important;
+}
+
+body.auth-page-bg .footer {
+    background: rgba(4, 8, 20, 0.96) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+}
+
+
 
 
