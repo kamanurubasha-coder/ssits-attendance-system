@@ -262,13 +262,25 @@ def init_db():
     """)
     cursor.execute("UPDATE hods SET password = 'hod123' WHERE password IS NULL OR password = ''")
 
-    # Seed Default Super Admin if not exists
-    cursor.execute("SELECT COUNT(*) FROM admins WHERE role = 'superadmin' OR username = 'admin'")
-    if cursor.fetchone()[0] == 0:
+    # Seed / Update Super Admin (Kamanuru Basha)
+    cursor.execute("SELECT id, username, email FROM admins WHERE role = 'superadmin' OR username = 'admin' OR LOWER(email) = 'kamanurubasha@gmail.com' LIMIT 1")
+    admin_match = cursor.fetchone()
+    admin_env_pw = os.getenv("ADMIN_PASSWORD")
+
+    if not admin_match:
+        default_pw = admin_env_pw if admin_env_pw else "admin123"
         cursor.execute("""
             INSERT INTO admins (username, password, name, email, phone, role)
-            VALUES ('admin', 'admin123', 'Master System Administrator', 'admin@srisaitech.ac.in', '9848099999', 'superadmin')
-        """)
+            VALUES ('admin', ?, 'Kamanuru Basha', 'kamanurubasha@gmail.com', '9848099999', 'superadmin')
+        """, (default_pw,))
+    else:
+        cursor.execute("""
+            UPDATE admins 
+            SET name = 'Kamanuru Basha', email = 'kamanurubasha@gmail.com'
+            WHERE id = ? AND (email IS NULL OR email = '' OR email = 'admin@srisaitech.ac.in')
+        """, (admin_match[0],))
+        if admin_env_pw:
+            cursor.execute("UPDATE admins SET password = ? WHERE id = ?", (admin_env_pw, admin_match[0]))
 
     # Seed Principal Account if not exists
     cursor.execute("SELECT COUNT(*) FROM admins WHERE role = 'principal' OR username = 'principal'")

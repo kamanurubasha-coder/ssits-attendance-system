@@ -584,9 +584,13 @@ def forgot_password():
     target_user = None
     target_id = None
 
-    # Emergency Master Passcode bypass for Administrator
-    if role == "admin" and master_code == "SSITS_ADMIN_MASTER_2026":
-        cursor.execute("SELECT id, name, email, username FROM admins WHERE role = 'superadmin' OR role IS NULL OR role = '' ORDER BY id ASC LIMIT 1")
+    # Administrator password recovery
+    if role == "admin":
+        cursor.execute("""
+            SELECT id, name, email FROM admins 
+            WHERE (LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(? || '@gmail.com')) 
+              AND (role = 'superadmin' OR role IS NULL OR role = '')
+        """, (email, email, email))
         target_user = cursor.fetchone()
     elif not email:
         conn.close()
@@ -601,14 +605,11 @@ def forgot_password():
     elif role == "principal":
         cursor.execute("SELECT id, name, email FROM admins WHERE (LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)) AND role = 'principal'", (email, email))
         target_user = cursor.fetchone()
-    elif role == "admin":
-        cursor.execute("SELECT id, name, email FROM admins WHERE (LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)) AND (role = 'superadmin' OR role IS NULL OR role = '')", (email, email))
-        target_user = cursor.fetchone()
 
     if not target_user:
         conn.close()
         if role == "admin":
-            flash(f"No active account found for '{email}'. Note: Default Admin ID is 'admin' (admin@srisaitech.ac.in). You can also use Emergency Master Recovery Passcode 'SSITS_ADMIN_MASTER_2026' to reset directly.", "error")
+            flash(f"No active Administrator account found matching '{email}'. Please check your Login ID or registered Gmail.", "error")
         else:
             flash(f"No active account found for '{email}' with role '{role.upper()}'. Please check your email or contact Administrator.", "error")
         return render_template("forgot_password.html", default_role=role)
@@ -764,47 +765,51 @@ def admin_portal():
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        # Master Recovery Passcode emergency bypass
-        if password == "SSITS_ADMIN_MASTER_2026":
-            cursor.execute("SELECT * FROM admins WHERE (role = 'superadmin' OR role IS NULL OR role = '') ORDER BY id ASC LIMIT 1")
-            admin = cursor.fetchone()
-            conn.close()
-            if admin:
-                set_admin_session(admin)
-                flash(f"Welcome Administrator {admin['name']}! Master Emergency Bypass Granted.", "warning")
-                return redirect(url_for("admin_dashboard"))
-            else:
-                flash("No administrator record found to unlock.", "error")
-                return redirect(url_for("admin_portal"))
 
-        cursor.execute("SELECT * FROM admins WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?)) AND password = ? AND (role = 'superadmin' OR role IS NULL OR role = '')", (username, username, password))
+        # Query admin by username or email
+        cursor.execute(
+            """SELECT * FROM admins 
+               WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?) OR LOWER(email) = LOWER(? || '@gmail.com'))
+                 AND (role = 'superadmin' OR role IS NULL OR role = '')
+               ORDER BY id ASC LIMIT 1""",
+            (username, username, username)
+        )
         admin = cursor.fetchone()
+
+        is_pw_valid = False
+        env_admin_pw = os.getenv("ADMIN_PASSWORD")
+        if admin:
+            if admin["password"] == password:
+                is_pw_valid = True
+            elif env_admin_pw and env_admin_pw == password:
+                is_pw_valid = True
+                # Automatically keep SQLite in sync with environment variable password
+                cursor.execute("UPDATE admins SET password = ? WHERE id = ?", (password, admin["id"]))
+                conn.commit()
+
         conn.close()
 
-        if admin:
+        if admin and is_pw_valid:
             is_2fa = admin["is_2fa_enabled"] if "is_2fa_enabled" in admin.keys() else 0
             totp_secret = admin["totp_secret"] if "totp_secret" in admin.keys() else None
 
-            # If automated testing mode and 2FA not specifically forced, allow direct login
-            if app.config.get('TESTING') and not request.form.get('enforce_2fa') and not session.get('enforce_2fa'):
-                set_admin_session(admin)
-                flash(f"Welcome Administrator {admin['name']}! Master Control unlocked.", "success")
-                return redirect(url_for("admin_dashboard"))
-
-            # LIVE PRODUCTION FLOW (Mandatory Google Authenticator 2FA)
-            if is_2fa and totp_secret:
+            # Google Authenticator 2FA verification if enabled
+            if is_2fa and totp_secret and (not app.config.get('TESTING') or request.form.get('enforce_2fa')):
                 session.clear()
                 session["pending_2fa_admin_id"] = admin["id"]
                 session["pending_2fa_admin_name"] = admin["name"]
                 return redirect(url_for("admin_2fa"))
-            else:
+            elif request.form.get("enforce_2fa"):
                 secret = pyotp.random_base32()
                 session.clear()
                 session["setup_2fa_admin_id"] = admin["id"]
                 session["setup_2fa_admin_name"] = admin["name"]
                 session["setup_2fa_admin_secret"] = secret
                 return redirect(url_for("admin_2fa_setup"))
+            else:
+                set_admin_session(admin)
+                flash(f"Welcome Administrator {admin['name']}! Master Control unlocked.", "success")
+                return redirect(url_for("admin_dashboard"))
         else:
             flash("Invalid Administrator credentials! Please check again.", "error")
             return redirect(url_for("admin_portal"))
@@ -1371,6 +1376,7 @@ def admin_change_password():
     new_pw = (request.form.get("new_password") or data.get("new_password") or "").strip()
     confirm_pw = (request.form.get("confirm_password") or data.get("confirm_password") or "").strip()
     new_username = (request.form.get("new_username") or data.get("new_username") or "").strip()
+    new_email = (request.form.get("new_email") or data.get("new_email") or "").strip()
 
     if not current_pw or not new_pw or not confirm_pw:
         msg = "All password fields are required!"
@@ -1398,7 +1404,8 @@ def admin_change_password():
     cursor.execute("SELECT * FROM admins WHERE id = ?", (session["admin_id"],))
     admin_row = cursor.fetchone()
 
-    if not admin_row or admin_row["password"] != current_pw:
+    env_admin_pw = os.getenv("ADMIN_PASSWORD")
+    if not admin_row or (admin_row["password"] != current_pw and (not env_admin_pw or env_admin_pw != current_pw)):
         conn.close()
         msg = "Current password is incorrect! Credential update failed."
         if is_api:
@@ -1407,7 +1414,9 @@ def admin_change_password():
         return redirect(url_for("admin_dashboard"))
 
     updated_username = admin_row["username"]
-    if new_username and new_username.lower() != admin_row["username"].lower():
+    updated_email = admin_row["email"] or "kamanurubasha@gmail.com"
+
+    if new_username and new_username.lower() != (admin_row["username"] or "").lower():
         cursor.execute("SELECT id FROM admins WHERE LOWER(username) = LOWER(?) AND id != ?", (new_username, session["admin_id"]))
         if cursor.fetchone():
             conn.close()
@@ -1416,101 +1425,24 @@ def admin_change_password():
                 return jsonify({"status": "error", "message": msg}), 400
             flash(msg, "error")
             return redirect(url_for("admin_dashboard"))
-
-        cursor.execute("UPDATE admins SET username = ?, password = ? WHERE id = ?", (new_username, new_pw, session["admin_id"]))
-        session["admin_username"] = new_username
         updated_username = new_username
-    else:
-        cursor.execute("UPDATE admins SET password = ? WHERE id = ?", (new_pw, session["admin_id"]))
+
+    if new_email and "@" in new_email:
+        updated_email = new_email
+
+    cursor.execute("UPDATE admins SET username = ?, email = ?, password = ? WHERE id = ?", (updated_username, updated_email, new_pw, session["admin_id"]))
+    session["admin_username"] = updated_username
+    session["admin_email"] = updated_email
 
     conn.commit()
     conn.close()
 
-    success_msg = f"Administrator credentials updated successfully! Login ID: '{updated_username}'. Please note your new credentials."
+    success_msg = f"Administrator credentials updated successfully! Login ID: '{updated_username}' | Email: '{updated_email}'. Your new password has been securely saved."
     if is_api:
-        return jsonify({"status": "success", "message": success_msg, "username": updated_username})
+        return jsonify({"status": "success", "message": success_msg, "username": updated_username, "email": updated_email})
     flash(success_msg, "success")
     return redirect(url_for("admin_dashboard"))
 
-
-@app.route("/admin/api/set-credentials", methods=["POST"])
-def admin_set_credentials():
-    """Allows Super Admin to set/reset Admin Login ID and Password from the login screen modal."""
-    data = request.get_json(silent=True) or {}
-    current_pw = (request.form.get("current_password") or data.get("current_password") or "").strip()
-    new_username = (request.form.get("new_username") or data.get("new_username") or "").strip()
-    new_pw = (request.form.get("new_password") or data.get("new_password") or "").strip()
-    confirm_pw = (request.form.get("confirm_password") or data.get("confirm_password") or "").strip()
-
-    if not current_pw or not new_username or not new_pw or not confirm_pw:
-        return jsonify({"status": "error", "message": "All fields (Current Password, New Login ID, New Password, Confirm Password) are required!"}), 400
-
-    if new_pw != confirm_pw:
-        return jsonify({"status": "error", "message": "New password and confirm password do not match!"}), 400
-
-    if len(new_username) < 3:
-        return jsonify({"status": "error", "message": "New Login ID must be at least 3 characters long."}), 400
-
-    if len(new_pw) < 4:
-        return jsonify({"status": "error", "message": "New password must be at least 4 characters long."}), 400
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    # Find superadmin account
-    cursor.execute("SELECT * FROM admins WHERE (role = 'superadmin' OR role IS NULL OR role = '') ORDER BY id ASC LIMIT 1")
-    admin_row = cursor.fetchone()
-
-    if not admin_row:
-        conn.close()
-        return jsonify({"status": "error", "message": "Admin account not found."}), 404
-
-    # Verify current password or Emergency Master Passcode
-    if admin_row["password"] != current_pw and current_pw != "SSITS_ADMIN_MASTER_2026":
-        conn.close()
-        return jsonify({"status": "error", "message": "Current admin master password or Emergency Recovery Passcode is incorrect!"}), 400
-
-    # Verify username uniqueness
-    cursor.execute("SELECT id FROM admins WHERE LOWER(username) = LOWER(?) AND id != ?", (new_username, admin_row["id"]))
-    if cursor.fetchone():
-        conn.close()
-        return jsonify({"status": "error", "message": f"Login ID '{new_username}' is already in use. Please select a different Login ID."}), 400
-
-    cursor.execute("UPDATE admins SET username = ?, password = ? WHERE id = ?", (new_username, new_pw, admin_row["id"]))
-    conn.commit()
-    conn.close()
-
-    return jsonify({
-        "status": "success",
-        "message": f"Administrator Login ID updated to '{new_username}' and new password set successfully! You can now sign in.",
-        "username": new_username
-    })
-
-@app.route("/admin/api/emergency-reset-default", methods=["POST"])
-def admin_emergency_reset_default():
-    """1-Click Emergency Reset for Administrator credentials back to default admin / admin123."""
-    data = request.get_json(silent=True) or {}
-    master_key = (request.form.get("master_key") or data.get("master_key") or "").strip()
-
-    if master_key != "SSITS_ADMIN_MASTER_2026":
-        return jsonify({"status": "error", "message": "Invalid Master Recovery Passcode! Authorization denied."}), 403
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id FROM admins WHERE (role = 'superadmin' OR role IS NULL OR role = '') ORDER BY id ASC LIMIT 1")
-    admin_row = cursor.fetchone()
-
-    if not admin_row:
-        cursor.execute("INSERT INTO admins (username, password, name, email, phone, role) VALUES ('admin', 'admin123', 'Master System Administrator', 'admin@srisaitech.ac.in', '9848099999', 'superadmin')")
-    else:
-        cursor.execute("UPDATE admins SET username = 'admin', password = 'admin123', totp_secret = NULL, is_2fa_enabled = 0 WHERE id = ?", (admin_row["id"],))
-
-    conn.commit()
-    conn.close()
-
-    return jsonify({
-        "status": "success",
-        "message": "Super Admin credentials have been reset to Default! Login ID: 'admin' | Password: 'admin123' (2FA reset to clean state)."
-    })
 
 @app.route("/admin/api/reset-data", methods=["POST"])
 def admin_api_reset_data():
@@ -1530,7 +1462,8 @@ def admin_api_reset_data():
     cursor.execute("SELECT password FROM admins WHERE id = ?", (session["admin_id"],))
     admin_row = cursor.fetchone()
 
-    if not admin_row or (admin_row["password"] != admin_password and admin_password != "SSITS_ADMIN_MASTER_2026"):
+    env_pw = os.getenv("ADMIN_PASSWORD")
+    if not admin_row or (admin_row["password"] != admin_password and (not env_pw or env_pw != admin_password)):
         conn.close()
         return jsonify({"status": "error", "message": "Incorrect Administrator password! Verification failed."}), 400
 
