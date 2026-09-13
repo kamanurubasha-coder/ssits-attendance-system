@@ -9,9 +9,8 @@ Official institutional attendance and student management portal for **Sri Sai In
 
 If a faculty member forgets their username or password, or if college management needs to edit student information, the **Super Administrator** has full master override access:
 
-- **Admin Login URL:** `http://127.0.0.1:5000/login` (Switch to the *"Administrator Login"* tab)
-- **Admin Username:** `admin`
-- **Admin Password:** `admin123`
+- **Admin Access URL:** `/admin`
+- **Authorized Controller:** Protected via secure institutional credentials, Gmail OTP recovery, and optional Google Authenticator 2FA.
 
 #### Administrator Capabilities:
 1. **Reset Any Faculty Password:** Select any teacher from the 27 classes and set a new password with 1 click!
@@ -56,10 +55,9 @@ If a faculty member forgets their username or password, or if college management
 
 ---
 
-### 🔑 Demo Login Credentials:
-
-#### 👑 Super Administrator:
-- **Username:** `admin` | **Password:** `admin123`
+### 🔑 Faculty & Portal Access:
+- **Faculty & Teachers Directory:** View assigned usernames and roles at `/faculty-directory`.
+- **Master Administrator:** Confidential credentials managed securely via institutional dashboard or Render `ADMIN_PASSWORD` environment variable.
 
 #### 👨‍🏫 Class Teachers (27 Separate Teachers, Default Password: `123456`):
 - **Diploma ECE:** `dip_ece_1yr`, `dip_ece_2yr`, `dip_ece_3yr`
