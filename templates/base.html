@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="/static/css/style.css">
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="{% if request.endpoint in ['login', 'admin_portal', 'admin_login', 'hod_login', 'principal_login', 'login_2fa', 'login_2fa_setup', 'admin_2fa', 'admin_2fa_setup', 'hod_2fa', 'hod_2fa_setup', 'principal_2fa', 'principal_2fa_setup', 'forgot_password', 'reset_password', 'register'] %}auth-page-bg{% endif %} {% block body_class %}{% endblock %}">
 
     <!-- Top Institution Brand Header -->
     <header class="college-header shadow-sm">

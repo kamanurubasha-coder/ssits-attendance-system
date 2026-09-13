@@ -1367,7 +1367,15 @@
                         <label class="form-label small fw-bold text-navy">ADMIN LOGIN ID / USERNAME *</label>
                         <input type="text" id="adminNewUsername" class="form-control fw-bold text-primary" required value="{{ admin.username }}" placeholder="Enter Admin Login ID">
                         <div class="extra-small text-muted mt-1">
-                            Current Login ID: <strong class="text-dark">{{ admin.username }}</strong>. You can change this to your preferred login username.
+                            Current Login ID: <strong class="text-dark">{{ admin.username }}</strong>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-navy">ADMIN OFFICIAL GMAIL / EMAIL *</label>
+                        <input type="email" id="adminNewEmail" class="form-control fw-semibold" required value="{{ admin.email or 'kamanurubasha@gmail.com' }}" placeholder="e.g. kamanurubasha@gmail.com">
+                        <div class="extra-small text-muted mt-1">
+                            Current Email: <strong class="text-dark">{{ admin.email or 'kamanurubasha@gmail.com' }}</strong>. You can sign in using this email address or your Login ID.
                         </div>
                     </div>
 
@@ -1421,10 +1429,10 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">ADMINISTRATOR PASSWORD / MASTER PASSCODE *</label>
-                    <input type="password" class="form-control" id="modalResetAdminPassword" placeholder="Enter Admin Password or Master Passcode">
+                    <label class="form-label fw-bold small">ADMINISTRATOR PASSWORD *</label>
+                    <input type="password" class="form-control" id="modalResetAdminPassword" placeholder="Enter your Admin Password">
                     <div class="form-text small text-muted">
-                        Enter your admin password or emergency passcode <code>SSITS_ADMIN_MASTER_2026</code>.
+                        Enter your current Administrator password to authorize this action.
                     </div>
                 </div>
 
@@ -1728,6 +1736,7 @@ const masterStudents = {{ all_students|tojson }};
 async function submitChangeAdminPassword(e) {
     e.preventDefault();
     const newUsername = document.getElementById('adminNewUsername').value.trim();
+    const newEmail = document.getElementById('adminNewEmail') ? document.getElementById('adminNewEmail').value.trim() : '';
     const currPass = document.getElementById('adminCurrentPass').value.trim();
     const newPass = document.getElementById('adminNewPass').value.trim();
     const confirmPass = document.getElementById('adminConfirmPass').value.trim();
@@ -1757,6 +1766,7 @@ async function submitChangeAdminPassword(e) {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 new_username: newUsername,
+                new_email: newEmail,
                 current_password: currPass,
                 new_password: newPass,
                 confirm_password: confirmPass
