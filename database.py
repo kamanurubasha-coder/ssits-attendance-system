@@ -396,6 +396,21 @@ def seed_data(cursor, conn):
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, teachers_to_add)
 
+    seed_students(cursor, conn)
+
+def seed_students(cursor, conn):
+    cursor.execute("SELECT id, code FROM programs")
+    prog_map = {row["code"]: row["id"] for row in cursor.fetchall()}
+
+    cursor.execute("SELECT id, code FROM departments")
+    dept_map = {row["code"]: row["id"] for row in cursor.fetchall()}
+
+    cursor.execute("SELECT id, year_num FROM academic_years")
+    year_map = {row["year_num"]: row["id"] for row in cursor.fetchall()}
+
+    diploma_branches = ["ECE", "EEE", "CSE", "MECH", "CIVIL"]
+    btech_branches = ["ECE", "CSE", "AIDS"]
+
     sample_students_data = [
         ("G. Sai Kumar", "G. Narayana Rao", "9849112233"),
         ("P. Venkata Ramana", "P. Subba Rao", "9440223344"),
@@ -446,6 +461,7 @@ def seed_data(cursor, conn):
 
     conn.commit()
     print(f"Added {len(all_students)} students across Diploma (3 Years) and B.Tech (4 Years)!")
+    return len(all_students)
 
 if __name__ == "__main__":
     init_db()

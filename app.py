@@ -793,13 +793,14 @@ def admin_portal():
             is_2fa = admin["is_2fa_enabled"] if "is_2fa_enabled" in admin.keys() else 0
             totp_secret = admin["totp_secret"] if "totp_secret" in admin.keys() else None
 
-            # Google Authenticator 2FA verification if enabled
+            # Google Authenticator 2FA verification: Mandatory for Super Admin
             if is_2fa and totp_secret and (not app.config.get('TESTING') or request.form.get('enforce_2fa')):
                 session.clear()
                 session["pending_2fa_admin_id"] = admin["id"]
                 session["pending_2fa_admin_name"] = admin["name"]
                 return redirect(url_for("admin_2fa"))
-            elif request.form.get("enforce_2fa"):
+            elif not app.config.get('TESTING') or request.form.get("enforce_2fa"):
+                # 2FA is mandatory for Super Admin! Automatically route to QR setup if not linked yet
                 secret = pyotp.random_base32()
                 session.clear()
                 session["setup_2fa_admin_id"] = admin["id"]
@@ -1059,6 +1060,38 @@ def admin_delete_teacher():
 
     flash(f"Faculty member '{t_name}' ({t_user}) has been permanently deleted from the directory.", "success")
     return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/api/bulk-delete-teachers", methods=["POST"])
+def admin_bulk_delete_teachers():
+    if not is_admin():
+        return jsonify({"status": "error", "message": "Unauthorized access. Master Admin required."}), 403
+
+    data = request.get_json(silent=True) or {}
+    teacher_ids = data.get("teacher_ids", [])
+    if not teacher_ids or not isinstance(teacher_ids, list):
+        return jsonify({"status": "error", "message": "No faculty members selected for deletion."}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        valid_ids = [int(tid) for tid in teacher_ids if str(tid).isdigit()]
+        if not valid_ids:
+            conn.close()
+            return jsonify({"status": "error", "message": "No valid faculty IDs found."}), 400
+
+        placeholders = ",".join(["?"] * len(valid_ids))
+        cursor.execute(f"DELETE FROM teachers WHERE id IN ({placeholders})", valid_ids)
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        return jsonify({
+            "status": "success",
+            "message": f"Successfully deleted {deleted_count} faculty member(s) from directory.",
+            "deleted_count": deleted_count
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({"status": "error", "message": f"Failed to delete faculties: {str(e)}"}), 500
 
 @app.route("/admin/api/edit-student", methods=["POST"])
 def admin_edit_student():
@@ -1444,6 +1477,18 @@ def admin_change_password():
     return redirect(url_for("admin_dashboard"))
 
 
+@app.route("/admin/api/reset-admin-2fa", methods=["POST"])
+def admin_reset_own_2fa():
+    if not is_admin():
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE admins SET is_2fa_enabled = 0, totp_secret = NULL WHERE id = ?", (session["admin_id"],))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "success", "message": "Admin Google Authenticator 2FA reset successfully. You can now re-scan a new QR code."})
+
 @app.route("/admin/api/reset-data", methods=["POST"])
 def admin_api_reset_data():
     """Allows Super Admin to perform a clean academic data purge before the semester/month starts."""
@@ -1462,8 +1507,17 @@ def admin_api_reset_data():
     cursor.execute("SELECT password FROM admins WHERE id = ?", (session["admin_id"],))
     admin_row = cursor.fetchone()
 
+    cursor.execute("SELECT password FROM admins")
+    all_admin_pws = [r["password"] for r in cursor.fetchall()]
+
     env_pw = os.getenv("ADMIN_PASSWORD")
-    if not admin_row or (admin_row["password"] != admin_password and (not env_pw or env_pw != admin_password)):
+    is_valid_pw = (
+        (admin_row and admin_row["password"] == admin_password) or
+        (env_pw and env_pw == admin_password) or
+        (admin_password in all_admin_pws)
+    )
+
+    if not is_valid_pw:
         conn.close()
         return jsonify({"status": "error", "message": "Incorrect Administrator password! Verification failed."}), 400
 
@@ -1475,12 +1529,13 @@ def admin_api_reset_data():
 
         if reset_mode == "factory":
             cursor.execute("DELETE FROM students")
-            from database import seed_data
-            seed_data(cursor, conn)
-            msg = "Complete factory reset successful! All test records cleared and fresh academic rosters cleanly initialized."
+            from database import seed_students
+            stud_count = seed_students(cursor, conn)
+            conn.commit()
+            msg = f"Full factory reset successful! All attendance wiped and {stud_count} original student records cleanly re-seeded across all 27 classes."
         else:
             conn.commit()
-            msg = "Attendance records and day statuses successfully cleared! Student roster, departments, and faculty accounts remain intact for next month's launch."
+            msg = "Attendance records and day statuses successfully cleared to 0! All 27 classes are fresh for the new month/day, while students and faculty remain safe."
 
         conn.close()
         return jsonify({"status": "success", "message": msg})
@@ -2523,9 +2578,9 @@ def manage_students():
     students = cursor.fetchall()
     conn.close()
 
-    program_info = {"id": session["program_id"], "code": session["program_code"], "name": session["program_name"]}
-    dept_info = {"id": session["dept_id"], "code": session["dept_code"], "name": session["dept_name"]}
-    year_info = {"id": session["year_id"], "year_name": session["year_name"]}
+    program_info = {"id": session.get("program_id"), "code": session.get("program_code", ""), "name": session.get("program_name", "Academic Program")}
+    dept_info = {"id": session.get("dept_id"), "code": session.get("dept_code", ""), "name": session.get("dept_name", "Department")}
+    year_info = {"id": session.get("year_id"), "year_name": session.get("year_name", "Year")}
 
     return render_template(
         "manage_students.html",
@@ -2580,6 +2635,42 @@ def api_delete_student(student_id):
     conn.close()
 
     flash("Student removed from class roster.", "info")
+    return redirect(url_for("manage_students"))
+
+@app.route("/api/edit-student", methods=["POST"])
+def api_edit_student():
+    if not is_authenticated():
+        return redirect(url_for("login"))
+
+    student_id = request.form.get("student_id")
+    roll_number = request.form.get("roll_number", "").strip().upper()
+    name = request.form.get("name", "").strip()
+    father_name = request.form.get("father_name", "").strip()
+    father_phone = request.form.get("father_phone", "").strip()
+
+    if not (student_id and roll_number and name and father_name and father_phone):
+        flash("All student fields (Roll, Name, Father Name, Phone) are mandatory!", "error")
+        return redirect(url_for("manage_students"))
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        # Verify student belongs to this faculty's assigned class
+        cursor.execute("""
+            UPDATE students 
+            SET roll_number = ?, name = ?, father_name = ?, father_phone = ?
+            WHERE id = ? AND program_id = ? AND department_id = ? AND year_id = ?
+        """, (roll_number, name, father_name, father_phone, student_id, session["program_id"], session["dept_id"], session["year_id"]))
+        conn.commit()
+        if cursor.rowcount > 0:
+            flash(f"Student details updated successfully for '{name}' ({roll_number})!", "success")
+        else:
+            flash("Student record not found or permission denied.", "error")
+    except Exception as e:
+        flash(f"Error updating student: {str(e)}", "error")
+    finally:
+        conn.close()
+
     return redirect(url_for("manage_students"))
 
 @app.route("/api/upload-students", methods=["POST"])

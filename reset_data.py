@@ -15,7 +15,7 @@ import sys
 import os
 import sqlite3
 import argparse
-from database import get_db_connection, DB_PATH, seed_data
+from database import get_db_connection, DB_PATH, seed_data, seed_students
 
 def print_banner():
     print("=" * 70)
@@ -77,7 +77,7 @@ def reset_factory():
         cursor.execute("DELETE FROM password_resets")
         cursor.execute("DELETE FROM students")
 
-        seed_data(cursor, conn)
+        seed_students(cursor, conn)
 
         cursor.execute("SELECT COUNT(*) FROM students")
         stud_count = cursor.fetchone()[0]
