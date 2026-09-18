@@ -1,0 +1,15 @@
+name: Keep Render Alive 24/7
+
+on:
+  schedule:
+    - cron: '*/12 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping SSITS Render Web Service
+        run: |
+          echo "Pinging SSITS Portal to prevent cold start..."
+          curl -s -f -m 30 "https://ssits-edupulse.onrender.com/healthz" || curl -s -f -m 30 "https://ssits-edupulse.onrender.com/ping" || echo "Ping dispatched"
