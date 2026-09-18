@@ -593,3 +593,271 @@ def generate_parent_student_dossier_pdf(output_path, college_name, student_info,
     doc.build(story)
     return output_path
 
+
+def generate_cumulative_monthly_attendance_pdf(output_path, college_name, program_name, dept_name, dept_code, year_name, section, month_name, total_working_days, report_data, teacher_name="Class Teacher", hod_name="Head of Department"):
+    """
+    Generates an official institutional Monthly Cumulative Attendance Report in PDF format.
+    Includes college branding, NAAC B+ accreditation, academic metrics, eligibility status, and official signatures.
+    """
+    doc = SimpleDocTemplate(
+        output_path,
+        pagesize=A4,
+        rightMargin=28,
+        leftMargin=28,
+        topMargin=22,
+        bottomMargin=22
+    )
+
+    story = []
+    styles = getSampleStyleSheet()
+    current_time_str = datetime.now(IST).strftime("%d-%b-%Y at %I:%M %p IST")
+
+    # Typography styles
+    title_style = ParagraphStyle(
+        'CumTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=13.5,
+        leading=16,
+        alignment=1,
+        textColor=colors.HexColor('#0F2C59')
+    )
+
+    autonomous_style = ParagraphStyle(
+        'CumAutonomous',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8.5,
+        leading=11,
+        alignment=1,
+        textColor=colors.HexColor('#991B1B')
+    )
+
+    affiliation_style = ParagraphStyle(
+        'CumAffiliation',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=7.5,
+        leading=9.5,
+        alignment=1,
+        textColor=colors.HexColor('#334155')
+    )
+
+    report_heading_style = ParagraphStyle(
+        'CumHeading',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=11,
+        leading=13,
+        alignment=1,
+        textColor=colors.HexColor('#1E3A8A')
+    )
+
+    cell_style = ParagraphStyle(
+        'CumCell',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=7.5,
+        leading=9.5,
+        alignment=0,
+        textColor=colors.HexColor('#1E293B')
+    )
+
+    cell_bold_style = ParagraphStyle(
+        'CumCellBold',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7.5,
+        leading=9.5,
+        alignment=0,
+        textColor=colors.HexColor('#0F172A')
+    )
+
+    cell_center_style = ParagraphStyle(
+        'CumCellCenter',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=7.5,
+        leading=9.5,
+        alignment=1,
+        textColor=colors.HexColor('#1E293B')
+    )
+
+    header_cell_style = ParagraphStyle(
+        'CumHeaderCell',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=7.5,
+        leading=9.5,
+        alignment=1,
+        textColor=colors.white
+    )
+
+    # 1. Header Banner
+    logo_path = os.path.join(os.path.dirname(__file__), 'static', 'images', 'college_logo.png')
+    naac_path = os.path.join(os.path.dirname(__file__), 'static', 'images', 'naac_logo.png')
+
+    logo_img = RLImage(logo_path, width=46, height=46) if os.path.exists(logo_path) else Paragraph("", styles['Normal'])
+    naac_img = RLImage(naac_path, width=46, height=46) if os.path.exists(naac_path) else Paragraph("", styles['Normal'])
+
+    inst_header = [
+        Paragraph(f"<b>{college_name.upper()}</b>", title_style),
+        Spacer(1, 1),
+        Paragraph("<b>(AN AUTONOMOUS INSTITUTION)</b>", autonomous_style),
+        Paragraph("Approved by AICTE, New Delhi | Affiliated to JNTUA, Ananthapuramu | Accredited by NAAC with 'B+' Grade", affiliation_style),
+        Paragraph("Rayachoty Road, Rayachoty, Y.S.R. Kadapa District, Andhra Pradesh - 516269", affiliation_style),
+    ]
+
+    header_table = Table([[logo_img, inst_header, naac_img]], colWidths=[50, 439, 50])
+    header_table.setStyle(TableStyle([
+        ('ALIGN', (0,0), (0,-1), 'CENTER'),
+        ('ALIGN', (2,0), (2,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+        ('TOPPADDING', (0,0), (-1,-1), 1),
+    ]))
+    story.append(header_table)
+    story.append(Spacer(1, 6))
+
+    # Report Title
+    story.append(Paragraph(f"<b>OFFICIAL MONTHLY CUMULATIVE ATTENDANCE STATEMENT &ndash; {month_name.upper()}</b>", report_heading_style))
+    story.append(Spacer(1, 6))
+
+    # Class & Metadata info table
+    info_data = [
+        [
+            Paragraph(f"<b>Program:</b> {program_name}", cell_style),
+            Paragraph(f"<b>Department:</b> {dept_name} ({dept_code})", cell_style),
+            Paragraph(f"<b>Academic Year:</b> {year_name} (Sec {section})", cell_style),
+        ],
+        [
+            Paragraph(f"<b>Class Teacher:</b> {teacher_name}", cell_style),
+            Paragraph(f"<b>Head of Dept (HOD):</b> {hod_name}", cell_style),
+            Paragraph(f"<b>Generated At:</b> {current_time_str}", cell_style),
+        ]
+    ]
+    info_table = Table(info_data, colWidths=[180, 190, 169])
+    info_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F1F5F9')),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('LEFTPADDING', (0,0), (-1,-1), 6),
+        ('RIGHTPADDING', (0,0), (-1,-1), 6),
+    ]))
+    story.append(info_table)
+    story.append(Spacer(1, 6))
+
+    # Calculate Summary Metrics
+    total_students = len(report_data)
+    eligible_count = sum(1 for r in report_data if r.get('percentage', 0) >= 75.0)
+    condonation_count = sum(1 for r in report_data if 65.0 <= r.get('percentage', 0) < 75.0)
+    detained_count = sum(1 for r in report_data if r.get('percentage', 0) < 65.0)
+    avg_pct = round(sum(r.get('percentage', 0) for r in report_data) / total_students, 1) if total_students > 0 else 0
+
+    stats_data = [
+        [
+            Paragraph("<b>Total Enrolled</b>", cell_center_style),
+            Paragraph("<b>Working Days</b>", cell_center_style),
+            Paragraph("<b>Class Average</b>", cell_center_style),
+            Paragraph("<b>Eligible (&ge;75%)</b>", cell_center_style),
+            Paragraph("<b>Condonation (65-74%)</b>", cell_center_style),
+            Paragraph("<b>Detained (&lt;65%)</b>", cell_center_style),
+        ],
+        [
+            Paragraph(f"<b>{total_students}</b>", cell_center_style),
+            Paragraph(f"<b>{total_working_days}</b>", cell_center_style),
+            Paragraph(f"<b>{avg_pct}%</b>", cell_center_style),
+            Paragraph(f"<font color='#16A34A'><b>{eligible_count}</b></font>", cell_center_style),
+            Paragraph(f"<font color='#D97706'><b>{condonation_count}</b></font>", cell_center_style),
+            Paragraph(f"<font color='#DC2626'><b>{detained_count}</b></font>", cell_center_style),
+        ]
+    ]
+    stats_table = Table(stats_data, colWidths=[85, 90, 90, 92, 92, 90])
+    stats_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#E2E8F0')),
+        ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#F8FAFC')),
+        ('BOX', (0,0), (-1,-1), 0.5, colors.HexColor('#94A3B8')),
+        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+    ]))
+    story.append(stats_table)
+    story.append(Spacer(1, 8))
+
+    # Student Roster Table
+    roster_rows = [
+        [
+            Paragraph("S.NO", header_cell_style),
+            Paragraph("ROLL NUMBER", header_cell_style),
+            Paragraph("STUDENT NAME", header_cell_style),
+            Paragraph("FATHER NAME", header_cell_style),
+            Paragraph("WORKING DAYS", header_cell_style),
+            Paragraph("ATTENDED", header_cell_style),
+            Paragraph("ABSENT", header_cell_style),
+            Paragraph("ATTN %", header_cell_style),
+            Paragraph("ACADEMIC STATUS", header_cell_style),
+        ]
+    ]
+
+    for idx, r in enumerate(report_data, 1):
+        pct = r.get('percentage', 0)
+        if pct >= 75.0:
+            status_text = "<font color='#15803D'><b>Eligible</b></font>"
+            pct_text = f"<font color='#15803D'><b>{pct}%</b></font>"
+        elif pct >= 65.0:
+            status_text = "<font color='#B45309'><b>Condonation</b></font>"
+            pct_text = f"<font color='#B45309'><b>{pct}%</b></font>"
+        else:
+            status_text = "<font color='#B91C1C'><b>Shortage / Detained</b></font>"
+            pct_text = f"<font color='#B91C1C'><b>{pct}%</b></font>"
+
+        roster_rows.append([
+            Paragraph(str(idx), cell_center_style),
+            Paragraph(f"<b>{r.get('roll_number', '-')}</b>", cell_style),
+            Paragraph(r.get('name', '-'), cell_bold_style),
+            Paragraph(r.get('father_name', '-'), cell_style),
+            Paragraph(str(r.get('total_working_days', total_working_days)), cell_center_style),
+            Paragraph(f"<font color='#16A34A'><b>{r.get('attended_days', 0)}</b></font>", cell_center_style),
+            Paragraph(f"<font color='#DC2626'><b>{r.get('absent_days', 0)}</b></font>", cell_center_style),
+            Paragraph(pct_text, cell_center_style),
+            Paragraph(status_text, cell_center_style),
+        ])
+
+    roster_table = Table(roster_rows, colWidths=[24, 66, 115, 95, 52, 46, 42, 46, 53], repeatRows=1)
+    roster_table.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#0F2C59')),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor('#F8FAFC')]),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+        ('LEFTPADDING', (0,0), (-1,-1), 3),
+        ('RIGHTPADDING', (0,0), (-1,-1), 3),
+        ('ALIGN', (0,0), (-1,0), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(roster_table)
+    story.append(Spacer(1, 14))
+
+    # Institutional Signatures Table
+    sig_data = [
+        [
+            Paragraph(f"<b>Class Teacher</b><br/><br/>({teacher_name})", cell_center_style),
+            Paragraph(f"<b>Head of Department (HOD)</b><br/><br/>({hod_name})", cell_center_style),
+            Paragraph("<b>Dean / Academic In-Charge</b><br/><br/>SSITS (Autonomous)", cell_center_style),
+            Paragraph("<b>Principal / Director</b><br/><br/>Sri Sai Institute of Tech & Science", cell_center_style),
+        ]
+    ]
+    sig_table = Table(sig_data, colWidths=[134, 135, 135, 135])
+    sig_table.setStyle(TableStyle([
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'BOTTOM'),
+        ('LINEABOVE', (0,0), (-1,-1), 0.5, colors.HexColor('#94A3B8')),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+    ]))
+    story.append(sig_table)
+
+    doc.build(story)
+    return output_path
+

@@ -263,28 +263,25 @@ def init_db():
     cursor.execute("UPDATE hods SET password = 'hod123' WHERE password IS NULL OR password = ''")
 
     # Seed / Update Super Admin (Kamanuru Basha)
-    cursor.execute("SELECT id, username, email FROM admins WHERE role = 'superadmin' OR username = 'admin' OR LOWER(email) = 'kamanurubasha@gmail.com' LIMIT 1")
+    cursor.execute("SELECT id, username, email FROM admins WHERE role = 'superadmin' OR username = 'admin' OR username = 'reddybashakamanuru18@gmail.com' OR LOWER(email) = 'reddybashakamanuru18@gmail.com' OR LOWER(email) = 'kamanurubasha@gmail.com' LIMIT 1")
     admin_match = cursor.fetchone()
     admin_env_pw = os.getenv("ADMIN_PASSWORD")
+    target_admin_pw = admin_env_pw if admin_env_pw else "Hamza@123"
 
     if not admin_match:
-        default_pw = admin_env_pw if admin_env_pw else "admin123"
         cursor.execute("""
-            INSERT INTO admins (username, password, name, email, phone, role)
-            VALUES ('admin', ?, 'Kamanuru Basha', 'kamanurubasha@gmail.com', '9848099999', 'superadmin')
-        """, (default_pw,))
+            INSERT INTO admins (username, password, name, email, phone, role, is_2fa_enabled, totp_secret)
+            VALUES ('reddybashakamanuru18@gmail.com', ?, 'Kamanuru Basha', 'reddybashakamanuru18@gmail.com', '9848099999', 'superadmin', 0, NULL)
+        """, (target_admin_pw,))
     else:
         cursor.execute("""
             UPDATE admins 
-            SET name = 'Kamanuru Basha', email = 'kamanurubasha@gmail.com'
-            WHERE id = ? AND (email IS NULL OR email = '' OR email = 'admin@srisaitech.ac.in')
-        """, (admin_match[0],))
-        # Only set initial password if none exists in database
-        cursor.execute("SELECT password FROM admins WHERE id = ?", (admin_match[0],))
-        current_pw_row = cursor.fetchone()
-        if not current_pw_row or not current_pw_row[0]:
-            init_pw = admin_env_pw if admin_env_pw else "admin123"
-            cursor.execute("UPDATE admins SET password = ? WHERE id = ?", (init_pw, admin_match[0]))
+            SET username = 'reddybashakamanuru18@gmail.com',
+                email = 'reddybashakamanuru18@gmail.com',
+                name = 'Kamanuru Basha',
+                password = ?
+            WHERE id = ?
+        """, (target_admin_pw, admin_match[0]))
 
     # Seed Principal Account if not exists
     cursor.execute("SELECT COUNT(*) FROM admins WHERE role = 'principal' OR username = 'principal'")

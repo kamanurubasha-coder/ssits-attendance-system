@@ -13,7 +13,7 @@ import pyotp
 import qrcode
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file, flash
 from database import get_db_connection, init_db
-from pdf_generator import generate_attendance_pdf, generate_parent_student_dossier_pdf
+from pdf_generator import generate_attendance_pdf, generate_parent_student_dossier_pdf, generate_cumulative_monthly_attendance_pdf
 
 # Central Indian Standard Time (IST, UTC+05:30)
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -766,13 +766,16 @@ def admin_portal():
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Query admin by username or email
+        # Query admin by username or email (allows reddybashakamanuru18@gmail.com or admin)
         cursor.execute(
             """SELECT * FROM admins 
-               WHERE (LOWER(username) = LOWER(?) OR LOWER(email) = LOWER(?) OR LOWER(email) = LOWER(? || '@gmail.com'))
+               WHERE (LOWER(username) = LOWER(?) 
+                      OR LOWER(email) = LOWER(?) 
+                      OR LOWER(email) = LOWER(? || '@gmail.com')
+                      OR (? IN ('admin', 'superadmin', 'reddybasha') AND (role = 'superadmin' OR id = 1)))
                  AND (role = 'superadmin' OR role IS NULL OR role = '')
                ORDER BY id ASC LIMIT 1""",
-            (username, username, username)
+            (username, username, username, username.lower())
         )
         admin = cursor.fetchone()
 
@@ -1918,6 +1921,202 @@ def api_monthly_report():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/api/cumulative-monthly-pdf")
+def api_cumulative_monthly_pdf():
+    if not (is_admin() or is_principal() or is_hod() or is_authenticated()):
+        return redirect(url_for("login"))
+
+    try:
+        class_id = request.args.get("class_id", type=int)
+        prog_id = request.args.get("program_id", type=int)
+        dept_id = request.args.get("department_id", type=int)
+        year_id = request.args.get("year_id", type=int)
+        section = request.args.get("section", "A").strip().upper()
+        now = get_ist_now()
+        rep_year = request.args.get("year", default=now.year, type=int)
+        rep_month = request.args.get("month", default=now.month, type=int)
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # If faculty is logged in and params not fully passed, default to their session
+        if is_authenticated():
+            if not prog_id: prog_id = session.get("program_id")
+            if not dept_id: dept_id = session.get("dept_id")
+            if not year_id: year_id = session.get("year_id")
+            if not section: section = session.get("section", "A")
+
+        if class_id:
+            cursor.execute("SELECT program_id, department_id, year_id, section, name FROM teachers WHERE id = ?", (class_id,))
+            t_row = cursor.fetchone()
+            if t_row:
+                prog_id = t_row["program_id"]
+                dept_id = t_row["department_id"]
+                year_id = t_row["year_id"]
+                section = (t_row["section"] or "A").strip().upper()
+
+        if not (prog_id and dept_id and year_id):
+            conn.close()
+            return "Program, Department, and Academic Year are required.", 400
+
+        num_days = calendar.monthrange(rep_year, rep_month)[1]
+        month_name = datetime(rep_year, rep_month, 1).strftime("%B %Y")
+
+        cursor.execute("SELECT code, name FROM programs WHERE id = ?", (prog_id,))
+        prog_info = cursor.fetchone()
+        cursor.execute("SELECT code, name FROM departments WHERE id = ?", (dept_id,))
+        dept_info = cursor.fetchone()
+        cursor.execute("SELECT year_name FROM academic_years WHERE id = ?", (year_id,))
+        year_info = cursor.fetchone()
+
+        # Fetch Teacher & HOD name
+        cursor.execute("""
+            SELECT name FROM teachers 
+            WHERE program_id = ? AND department_id = ? AND year_id = ? 
+              AND (section = ? OR section IS NULL OR section = '')
+            LIMIT 1
+        """, (prog_id, dept_id, year_id, section))
+        teacher_row = cursor.fetchone()
+        teacher_name = teacher_row["name"] if teacher_row else session.get("teacher_name", "Class Teacher")
+
+        cursor.execute("SELECT name FROM hods WHERE program_id = ? AND department_id = ? LIMIT 1", (prog_id, dept_id))
+        hod_row = cursor.fetchone()
+        hod_name = hod_row["name"] if hod_row else "Head of Department"
+
+        start_date_str = f"{rep_year:04d}-{rep_month:02d}-01"
+        end_date_str = f"{rep_year:04d}-{rep_month:02d}-{num_days:02d}"
+
+        # Fetch explicitly logged day_status for this class
+        cursor.execute("""
+            SELECT attendance_date, day_type, occasion_name FROM day_status
+            WHERE program_id = ? AND department_id = ? AND year_id = ?
+              AND (section = ? OR section IS NULL OR section = '')
+              AND attendance_date >= ? AND attendance_date <= ?
+        """, (prog_id, dept_id, year_id, section, start_date_str, end_date_str))
+        logged_days = {r["attendance_date"]: dict(r) for r in cursor.fetchall()}
+
+        working_dates = set()
+        for d in range(1, num_days + 1):
+            date_str = f"{rep_year:04d}-{rep_month:02d}-{d:02d}"
+            d_obj = datetime(rep_year, rep_month, d).date()
+            if date_str in logged_days:
+                dtype = logged_days[date_str]["day_type"]
+            else:
+                dtype, _ = get_default_day_type(d_obj)
+
+            if dtype == "working":
+                working_dates.add(date_str)
+
+        total_working_days = len(working_dates)
+
+        # Enrolled students for this class
+        cursor.execute("""
+            SELECT id, roll_number, name, father_name, father_phone
+            FROM students
+            WHERE program_id = ? AND department_id = ? AND year_id = ?
+              AND (section = ? OR section IS NULL OR section = '')
+            ORDER BY roll_number ASC
+        """, (prog_id, dept_id, year_id, section))
+        students_list = [dict(r) for r in cursor.fetchall()]
+
+        # Attendance records for this class in this month
+        cursor.execute("""
+            SELECT a.student_id, a.attendance_date, a.session_type, a.status
+            FROM attendance_records a
+            JOIN students s ON a.student_id = s.id
+            WHERE s.program_id = ? AND s.department_id = ? AND s.year_id = ?
+              AND (s.section = ? OR s.section IS NULL OR s.section = '')
+              AND a.attendance_date >= ? AND a.attendance_date <= ?
+        """, (prog_id, dept_id, year_id, section, start_date_str, end_date_str))
+        records = cursor.fetchall()
+        conn.close()
+
+        # Map student attendance by student_id and date
+        student_records = {}
+        conducted_dates = set()
+        for r in records:
+            sid = r["student_id"]
+            adate = r["attendance_date"]
+            if adate in working_dates:
+                conducted_dates.add(adate)
+                if sid not in student_records:
+                    student_records[sid] = {}
+                if adate not in student_records[sid]:
+                    student_records[sid][adate] = []
+                student_records[sid][adate].append(r["status"])
+
+        total_conducted_days = len(conducted_dates) if conducted_dates else total_working_days
+
+        # Compute per-student attended and absent working days
+        report_data = []
+        for s in students_list:
+            sid = s["id"]
+            rec_map = student_records.get(sid, {})
+            attended_days = 0
+            absent_days = 0
+
+            for wdate in sorted(working_dates):
+                if wdate in rec_map:
+                    statuses = rec_map[wdate]
+                    if all(st == "absent" for st in statuses):
+                        absent_days += 1
+                    elif any(st == "absent" for st in statuses):
+                        attended_days += 0.5
+                        absent_days += 0.5
+                    else:
+                        attended_days += 1
+
+            pct = round((attended_days / total_conducted_days * 100), 1) if total_conducted_days > 0 else 0
+
+            if pct >= 75.0:
+                eligibility = "Eligible"
+            elif pct >= 65.0:
+                eligibility = "Condonation"
+            else:
+                eligibility = "Shortage / Detained"
+
+            report_data.append({
+                "student_id": sid,
+                "roll_number": s["roll_number"],
+                "name": s["name"],
+                "father_name": s["father_name"] or "-",
+                "father_phone": s["father_phone"] or "-",
+                "total_working_days": total_working_days,
+                "attended_days": attended_days,
+                "absent_days": absent_days,
+                "percentage": pct,
+                "eligibility": eligibility
+            })
+
+        prog_name = prog_info["name"] if prog_info else "Program"
+        dept_name = dept_info["name"] if dept_info else "Department"
+        dept_code = dept_info["code"] if dept_info else "DEPT"
+        year_name = year_info["year_name"] if year_info else "Year"
+
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        filename = f"SSITS_Cumulative_Attendance_{dept_code}_{year_name.replace(' ', '')}_Sec{section}_{rep_month}_{rep_year}.pdf"
+        out_file = os.path.join(temp_dir, filename)
+
+        generate_cumulative_monthly_attendance_pdf(
+            output_path=out_file,
+            college_name=COLLEGE_NAME,
+            program_name=prog_name,
+            dept_name=dept_name,
+            dept_code=dept_code,
+            year_name=year_name,
+            section=section,
+            month_name=month_name,
+            total_working_days=total_working_days,
+            report_data=report_data,
+            teacher_name=teacher_name,
+            hod_name=hod_name
+        )
+
+        return send_file(out_file, as_attachment=True, download_name=filename)
+    except Exception as e:
+        return f"Error generating Cumulative Monthly PDF: {str(e)}", 500
+
 # ==============================================================================
 # NEW FEATURE 4: STUDENT DAILY ATTENDANCE HISTORY TRACKER (PARENT INQUIRY)
 # ==============================================================================
@@ -2445,7 +2644,7 @@ def api_save_attendance():
         """, (session["program_id"], session["dept_id"], session["year_id"], current_section, att_date))
 
         cursor.execute("""
-            INSERT INTO day_status (program_id, department_id, year_id, section, attendance_date, day_type, occasion_name, marked_by)
+            INSERT OR REPLACE INTO day_status (program_id, department_id, year_id, section, attendance_date, day_type, occasion_name, marked_by)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (session["program_id"], session["dept_id"], session["year_id"], current_section, att_date, day_type, occasion_name, session["teacher_id"]))
 
@@ -2463,7 +2662,7 @@ def api_save_attendance():
         if day_type == 'working':
             for sid in absent_ids:
                 cursor.execute("""
-                    INSERT INTO attendance_records (student_id, attendance_date, session_type, section, status, marked_by)
+                    INSERT OR REPLACE INTO attendance_records (student_id, attendance_date, session_type, section, status, marked_by)
                     VALUES (?, ?, ?, ?, 'absent', ?)
                 """, (sid, att_date, session_type, current_section, session["teacher_id"]))
 

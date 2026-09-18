@@ -794,7 +794,7 @@
                             <small class="text-muted">All faculty passwords, registered Gmail addresses, and sections are securely stored and viewable by Admin.</small>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <button type="button" id="btnBulkDeleteTeachers" class="btn btn-sm btn-danger fw-bold rounded-pill px-3 shadow-sm d-none" onclick="openBulkDeleteModal()">
+                            <button type="button" id="btnBulkDeleteTeachers" class="btn btn-sm btn-danger fw-bold rounded-pill px-3 shadow-sm d-none" onclick="handleBulkDeleteClick()">
                                 <i class="bi bi-trash3-fill me-1"></i> Delete Selected (<span id="bulkDeleteCount">0</span>)
                             </button>
                             <input type="text" id="teacherSearch" class="form-control form-control-sm w-auto" placeholder="🔍 Search faculty / email / username...">
@@ -1567,7 +1567,9 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block extra_scripts %}
 <script>
 let allClassData = [];
 
@@ -2585,10 +2587,31 @@ function updateSelectedTeachers() {
     }
 }
 
+async function handleBulkDeleteClick() {
+    const selected = document.querySelectorAll('.teacher-cb:checked');
+    const count = selected.length;
+    if (count === 0) {
+        showToastAlert('warning', 'Please select at least one faculty member to delete.');
+        return;
+    }
+
+    const facultyNames = Array.from(selected)
+        .map(cb => cb.getAttribute('data-name') || ('ID #' + cb.value))
+        .slice(0, 5)
+        .join(', ');
+    const moreText = count > 5 ? ` and ${count - 5} more` : '';
+    
+    if (!confirm(`Are you sure you want to permanently delete these ${count} faculty member(s)?\n\nSelected: ${facultyNames}${moreText}\n\nThis will remove their faculty login access while keeping student attendance records safe.`)) {
+        return;
+    }
+
+    await executeBulkDeleteTeachers();
+}
+
 function openBulkDeleteModal() {
     const selected = document.querySelectorAll('.teacher-cb:checked');
     if (selected.length === 0) {
-        alert('Please select at least one faculty member to delete.');
+        showToastAlert('warning', 'Please select at least one faculty member to delete.');
         return;
     }
     const listEl = document.getElementById('bulkSelectedFacultyList');
@@ -2602,8 +2625,12 @@ function openBulkDeleteModal() {
     });
     document.getElementById('bulkModalCount').textContent = selected.length;
     const modalEl = document.getElementById('bulkDeleteTeachersModal');
-    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modal.show();
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    } else {
+        handleBulkDeleteClick();
+    }
 }
 
 async function executeBulkDeleteTeachers() {
@@ -2611,9 +2638,18 @@ async function executeBulkDeleteTeachers() {
     const teacherIds = Array.from(selected).map(cb => cb.value);
     if (teacherIds.length === 0) return;
 
-    const btn = document.getElementById('btnConfirmBulkDelete');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+    const btn = document.getElementById('btnBulkDeleteTeachers');
+    const btnModal = document.getElementById('btnConfirmBulkDelete');
+    const origBtnHtml = btn ? btn.innerHTML : '';
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+    }
+    if (btnModal) {
+        btnModal.disabled = true;
+        btnModal.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+    }
 
     try {
         const res = await fetch('/admin/api/bulk-delete-teachers', {
@@ -2623,9 +2659,13 @@ async function executeBulkDeleteTeachers() {
         });
         const data = await res.json();
         if (data.status === 'success') {
-            const modalEl = document.getElementById('bulkDeleteTeachersModal');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
+            try {
+                const modalEl = document.getElementById('bulkDeleteTeachersModal');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if (modal) modal.hide();
+                }
+            } catch(e) {}
 
             // Animate and remove each selected teacher row smoothly
             teacherIds.forEach(id => {
@@ -2633,8 +2673,8 @@ async function executeBulkDeleteTeachers() {
                 if (row) {
                     row.style.transition = 'all 0.4s ease';
                     row.style.backgroundColor = '#fee2e2';
-                    row.style.opacity = '0.3';
-                    setTimeout(() => row.remove(), 350);
+                    row.style.opacity = '0';
+                    setTimeout(() => { if (row.parentNode) row.remove(); }, 400);
                 }
             });
 
@@ -2643,9 +2683,9 @@ async function executeBulkDeleteTeachers() {
                 updateSelectedTeachers();
                 const selectAll = document.getElementById('selectAllTeachers');
                 if (selectAll) selectAll.checked = false;
-            }, 400);
+            }, 450);
 
-            showToastAlert('success', data.message);
+            showToastAlert('success', data.message || `Successfully deleted ${teacherIds.length} faculty member(s).`);
         } else {
             showToastAlert('danger', data.message || 'Failed to delete faculty members');
         }
@@ -2653,8 +2693,14 @@ async function executeBulkDeleteTeachers() {
         console.error(err);
         showToastAlert('danger', 'Network error while deleting faculty members.');
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-trash3-fill me-1"></i> Yes, Delete Selected Faculty';
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-trash3-fill me-1"></i> Delete Selected (<span id="bulkDeleteCount">0</span>)';
+        }
+        if (btnModal) {
+            btnModal.disabled = false;
+            btnModal.innerHTML = '<i class="bi bi-trash3-fill me-1"></i> Yes, Delete Selected Faculty';
+        }
     }
 }
 

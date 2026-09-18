@@ -263,6 +263,19 @@ function renderStudentTable(filteredStudents = null) {
     tableBody.innerHTML = html;
 }
 
+let autoSaveDebounceTimer = null;
+function triggerAutoSave() {
+    const statusIndicator = document.getElementById("saveStatusIndicator");
+    if (statusIndicator) {
+        statusIndicator.className = "badge badge-db-status bg-info-subtle text-primary border border-info px-3 py-2";
+        statusIndicator.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Auto-saving...`;
+    }
+    clearTimeout(autoSaveDebounceTimer);
+    autoSaveDebounceTimer = setTimeout(() => {
+        saveAttendanceData(true);
+    }, 1200);
+}
+
 // Toggle individual student absent state
 function toggleAbsent(studentId) {
     if (currentDayType !== "working") return;
@@ -285,13 +298,8 @@ function toggleAbsent(studentId) {
         }
     }
 
-    const statusIndicator = document.getElementById("saveStatusIndicator");
-    if (statusIndicator) {
-        statusIndicator.className = "badge badge-db-status bg-warning-subtle text-dark border border-warning px-3 py-2";
-        statusIndicator.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Unsaved Changes`;
-    }
-
     updateStatistics();
+    triggerAutoSave();
 }
 
 // Mark All Absent or Clear All
@@ -304,14 +312,9 @@ function toggleAllAbsent(markAll) {
         absentStudentIds.clear();
     }
 
-    const statusIndicator = document.getElementById("saveStatusIndicator");
-    if (statusIndicator) {
-        statusIndicator.className = "badge badge-db-status bg-warning-subtle text-dark border border-warning px-3 py-2";
-        statusIndicator.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Unsaved Changes`;
-    }
-
     renderStudentTable();
     updateStatistics();
+    triggerAutoSave();
 }
 
 // Update Counters & Percentages (Accurate Daily Attendance Calculation)
@@ -368,13 +371,15 @@ function filterStudentTable(query) {
     renderStudentTable(filtered);
 }
 
-// Save Attendance to Database
-async function saveAttendanceData() {
+// Save Attendance to Database (supports silent auto-save)
+async function saveAttendanceData(silent = false) {
     const dateVal = document.getElementById("attendanceDate").value;
     const btnSave = document.getElementById("btnSaveAttendance");
-    const originalText = btnSave.innerHTML;
-    btnSave.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Saving...`;
-    btnSave.disabled = true;
+    const originalText = btnSave ? btnSave.innerHTML : "";
+    if (btnSave && !silent) {
+        btnSave.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Saving...`;
+        btnSave.disabled = true;
+    }
 
     const payload = {
         date: dateVal,
@@ -399,39 +404,43 @@ async function saveAttendanceData() {
             // Update in-page status badge
             const statusIndicator = document.getElementById("saveStatusIndicator");
             if (statusIndicator) {
-                statusIndicator.className = "badge badge-db-status px-2 py-2";
-                statusIndicator.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i> Saved (${timeStr})`;
+                statusIndicator.className = "badge badge-db-status px-2 py-2 bg-success-subtle text-success border border-success";
+                statusIndicator.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i> All Saved to DB (${timeStr})`;
             }
 
-            // Populate Modal details
-            const modalDateSession = document.getElementById("modalSaveDateSession");
-            const modalTimestamp = document.getElementById("modalSaveTimestamp");
-            const modalTotal = document.getElementById("modalSaveTotal");
-            const modalPresent = document.getElementById("modalSavePresent");
-            const modalAbsent = document.getElementById("modalSaveAbsent");
+            if (!silent) {
+                // Populate Modal details
+                const modalDateSession = document.getElementById("modalSaveDateSession");
+                const modalTimestamp = document.getElementById("modalSaveTimestamp");
+                const modalTotal = document.getElementById("modalSaveTotal");
+                const modalPresent = document.getElementById("modalSavePresent");
+                const modalAbsent = document.getElementById("modalSaveAbsent");
 
-            if (modalDateSession) modalDateSession.innerText = `${dateVal} (${currentSession.toUpperCase()})`;
-            if (modalTimestamp) modalTimestamp.innerText = timeStr;
-            if (modalTotal) modalTotal.innerText = students.length;
-            if (modalPresent) modalPresent.innerText = currentDayType === "working" ? (students.length - absentStudentIds.size) : 0;
-            if (modalAbsent) modalAbsent.innerText = currentDayType === "working" ? absentStudentIds.size : 0;
+                if (modalDateSession) modalDateSession.innerText = `${dateVal} (${currentSession.toUpperCase()})`;
+                if (modalTimestamp) modalTimestamp.innerText = timeStr;
+                if (modalTotal) modalTotal.innerText = students.length;
+                if (modalPresent) modalPresent.innerText = currentDayType === "working" ? (students.length - absentStudentIds.size) : 0;
+                if (modalAbsent) modalAbsent.innerText = currentDayType === "working" ? absentStudentIds.size : 0;
 
-            const modalEl = document.getElementById("saveConfirmModal");
-            if (modalEl) {
-                const modal = new bootstrap.Modal(modalEl);
-                modal.show();
-            } else {
-                alert(`Attendance successfully saved to database for ${dateVal} (${currentSession.toUpperCase()})!`);
+                const modalEl = document.getElementById("saveConfirmModal");
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    modal.show();
+                } else {
+                    alert(`Attendance successfully saved to database for ${dateVal} (${currentSession.toUpperCase()})!`);
+                }
             }
-        } else {
+        } else if (!silent) {
             alert(`Failed to save: ${result.message}`);
         }
     } catch (err) {
         console.error("Save error:", err);
-        alert("Error saving attendance to server.");
+        if (!silent) alert("Error saving attendance to server.");
     } finally {
-        btnSave.innerHTML = originalText;
-        btnSave.disabled = false;
+        if (btnSave && !silent) {
+            btnSave.innerHTML = originalText;
+            btnSave.disabled = false;
+        }
     }
 }
 
@@ -449,11 +458,6 @@ function createParentWhatsAppMessage(student) {
 Dear Parent (Sri/Smt. *${student.father_name}*),
 This is to inform you that your ward *${student.name}* (Roll No: *${student.roll_number}*), Program: *${window.PROGRAM_NAME}*, Branch: *${window.DEPT_CODE}* (${window.YEAR_NAME}) is marked *ABSENT* today (*${dateVal}*) for the *${sessionTextEng}*.
 
-Please ensure their regular attendance and academic discipline.
-
---------------------------------------------------
-*తెలుగు అనువాదం / Telugu Note:*
-గౌరవనీయులైన *${student.father_name}* గారికి,
 మీ అబ్బాయి/అమ్మాయి *${student.name}* (రోల్ నెం: *${student.roll_number}*) ఈరోజు (*${dateVal}*) *${sessionTextTel}* కాలేజీకి రాలేదు (ABSENT). దయచేసి గమనించగలరు.
 --------------------------------------------------
 
@@ -463,11 +467,14 @@ Please ensure their regular attendance and academic discipline.
 }
 
 // Open WhatsApp Modal for Parents
-function openWhatsAppModal() {
+async function openWhatsAppModal() {
     if (currentDayType !== "working") {
         alert("Cannot send parent absence alerts on Sundays, Second Saturdays, or Holidays!");
         return;
     }
+
+    // Always commit marked attendance to Central SQLite DB first!
+    await saveAttendanceData(true);
 
     const modalList = document.getElementById("absenteeParentList");
     const absentList = students.filter(s => absentStudentIds.has(s.id));
@@ -704,28 +711,76 @@ function printFacultyMonthlyReport() {
     setTimeout(() => { document.title = originalTitle; }, 1000);
 }
 
+// Download Official Institutional Monthly Cumulative Attendance Report PDF
+function downloadCumulativeMonthlyPdf() {
+    const monthVal = document.getElementById("facultyMonthPicker") ? document.getElementById("facultyMonthPicker").value : "";
+    if (!monthVal) {
+        alert("Please pick an academic month first!");
+        return;
+    }
+    const [y, m] = monthVal.split("-");
+    const url = `/api/cumulative-monthly-pdf?program_id=${window.PROGRAM_ID}&department_id=${window.DEPT_ID}&year_id=${window.YEAR_ID}&section=${window.SECTION}&year=${y}&month=${parseInt(m)}`;
+    window.open(url, "_blank");
+}
+
 function downloadStudentDossierPdf() {
     const sid = document.getElementById("facStudentSelect").value;
     if (!sid) {
-        alert("Please choose a student from the dropdown first!");
+        alert("Please choose a student from the list first!");
         return;
     }
     window.open(`/api/student-dossier-pdf?student_id=${sid}`, "_blank");
 }
 
-function openFacultyParentInquiryModal() {
+function populateFacStudentDropdown(list) {
     const select = document.getElementById("facStudentSelect");
+    if (!select) return;
+    const currentVal = select.value;
     select.innerHTML = '<option value="">-- Choose Student --</option>';
-    (students || []).forEach(s => {
+    (list || []).forEach(s => {
         const opt = document.createElement("option");
         opt.value = s.id;
         opt.innerText = `${s.roll_number} - ${s.name}`;
         select.appendChild(opt);
     });
+    if (currentVal && Array.from(select.options).some(o => o.value == currentVal)) {
+        select.value = currentVal;
+    }
+}
+
+function onFacStudentSearchInput(query) {
+    query = (query || "").trim().toLowerCase();
+    if (!query) {
+        populateFacStudentDropdown(students);
+        return;
+    }
+    const filtered = (students || []).filter(s => 
+        (s.roll_number && s.roll_number.toLowerCase().includes(query)) ||
+        (s.name && s.name.toLowerCase().includes(query)) ||
+        (s.father_name && s.father_name.toLowerCase().includes(query)) ||
+        (s.father_phone && s.father_phone.includes(query))
+    );
+    populateFacStudentDropdown(filtered);
+
+    // If exact or single match found, automatically load attendance history
+    if (filtered.length === 1) {
+        const select = document.getElementById("facStudentSelect");
+        select.value = filtered[0].id;
+        loadFacultyStudentDailyHistory();
+    }
+}
+
+function openFacultyParentInquiryModal() {
+    const searchInput = document.getElementById("facStudentSearchInput");
+    if (searchInput) searchInput.value = "";
+    populateFacStudentDropdown(students);
 
     document.getElementById("facDossierWrap").style.display = "none";
-    const modal = new bootstrap.Modal(document.getElementById("facultyParentInquiryModal"));
-    modal.show();
+    const modalEl = document.getElementById("facultyParentInquiryModal");
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        modal.show();
+    }
 }
 
 async function loadFacultyStudentDailyHistory() {
