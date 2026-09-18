@@ -62,6 +62,7 @@ def init_db():
             name TEXT NOT NULL,
             phone TEXT NOT NULL,
             email TEXT,
+            is_approved INTEGER DEFAULT 1,
             FOREIGN KEY (program_id) REFERENCES programs(id),
             FOREIGN KEY (department_id) REFERENCES departments(id),
             UNIQUE(program_id, department_id)
@@ -152,6 +153,7 @@ def init_db():
             email TEXT,
             phone TEXT,
             role TEXT DEFAULT 'superadmin',
+            is_approved INTEGER DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
@@ -231,21 +233,25 @@ def init_db():
     if "is_approved" not in t_cols:
         cursor.execute("ALTER TABLE teachers ADD COLUMN is_approved INTEGER DEFAULT 1")
 
-    # Migration: Ensure hods table has Google Authenticator 2FA columns
+    # Migration: Ensure hods table has Google Authenticator 2FA columns and is_approved
     cursor.execute("PRAGMA table_info(hods)")
     h_cols = [r[1] for r in cursor.fetchall()]
     if "totp_secret" not in h_cols:
         cursor.execute("ALTER TABLE hods ADD COLUMN totp_secret TEXT")
     if "is_2fa_enabled" not in h_cols:
         cursor.execute("ALTER TABLE hods ADD COLUMN is_2fa_enabled INTEGER DEFAULT 0")
+    if "is_approved" not in h_cols:
+        cursor.execute("ALTER TABLE hods ADD COLUMN is_approved INTEGER DEFAULT 1")
 
-    # Migration: Ensure admins table has Google Authenticator 2FA columns
+    # Migration: Ensure admins table has Google Authenticator 2FA columns and is_approved
     cursor.execute("PRAGMA table_info(admins)")
     adm_cols = [r[1] for r in cursor.fetchall()]
     if "totp_secret" not in adm_cols:
         cursor.execute("ALTER TABLE admins ADD COLUMN totp_secret TEXT")
     if "is_2fa_enabled" not in adm_cols:
         cursor.execute("ALTER TABLE admins ADD COLUMN is_2fa_enabled INTEGER DEFAULT 0")
+    if "is_approved" not in adm_cols:
+        cursor.execute("ALTER TABLE admins ADD COLUMN is_approved INTEGER DEFAULT 1")
 
     # Backfill default values
     cursor.execute("UPDATE teachers SET section = 'A' WHERE section IS NULL OR section = ''")

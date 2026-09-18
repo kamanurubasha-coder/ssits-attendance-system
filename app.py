@@ -180,7 +180,7 @@ def login():
             is_approved = teacher["is_approved"] if "is_approved" in teacher.keys() else 1
             if not is_approved:
                 conn.close()
-                flash("Your registration is pending approval by the College Administrator. Once accepted by Admin, you will be able to sign in.", "warning")
+                flash(f"Your Faculty account ({teacher['name']}) is pending Administrator acceptance. Please wait for Super Admin approval before signing in.", "warning")
                 return redirect(url_for("login"))
 
             is_2fa = teacher["is_2fa_enabled"] if "is_2fa_enabled" in teacher.keys() else 0
@@ -510,17 +510,17 @@ def register():
             if existing_hod:
                 cursor.execute("""
                     UPDATE hods
-                    SET name = ?, phone = ?, email = ?, password = ?, username = ?
+                    SET name = ?, phone = ?, email = ?, password = ?, username = ?, is_approved = 0
                     WHERE id = ?
                 """, (name, phone, email, password, username, existing_hod["id"]))
             else:
                 cursor.execute("""
-                    INSERT INTO hods (program_id, department_id, name, phone, email, username, password)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO hods (program_id, department_id, name, phone, email, username, password, is_approved)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 0)
                 """, (prog_id, dept_id, name, phone, email, username, password))
             conn.commit()
             conn.close()
-            flash(f"HOD Registration successful for {name}! You can now sign in to your Department Desk using your Gmail ({email}) or username.", "success")
+            flash(f"Registration submitted successfully for HOD {name}! Your leadership account is pending Administrator acceptance. Once approved by Super Admin, you can complete 2FA setup and sign in.", "info")
             return redirect(url_for("hod_login"))
         except Exception as e:
             conn.close()
@@ -542,17 +542,17 @@ def register():
             if existing_princ:
                 cursor.execute("""
                     UPDATE admins
-                    SET name = ?, email = ?, phone = ?, password = ?
+                    SET name = ?, email = ?, phone = ?, password = ?, is_approved = 0
                     WHERE id = ?
                 """, (name, email, phone, password, existing_princ["id"]))
             else:
                 cursor.execute("""
-                    INSERT INTO admins (username, password, name, email, phone, role)
-                    VALUES ('principal', ?, ?, ?, ?, 'principal')
+                    INSERT INTO admins (username, password, name, email, phone, role, is_approved)
+                    VALUES ('principal', ?, ?, ?, ?, 'principal', 0)
                 """, (password, name, email, phone))
             conn.commit()
             conn.close()
-            flash(f"Principal Executive Registration successful for {name}! You can now access the Principal Desk with your credentials.", "success")
+            flash(f"Principal Executive Registration submitted successfully for {name}! Your executive account is pending Super Administrator acceptance. Once approved by Super Admin, you can complete 2FA setup and access the Principal Desk.", "info")
             return redirect(url_for("principal_login"))
         except Exception as e:
             conn.close()
@@ -991,6 +991,10 @@ def admin_dashboard():
     """)
     hods = [dict(r) for r in cursor.fetchall()]
 
+    # Principal Executives
+    cursor.execute("SELECT * FROM admins WHERE role = 'principal' ORDER BY id ASC")
+    principals = [dict(r) for r in cursor.fetchall()]
+
     conn.close()
 
     today_str = get_ist_date_str()
@@ -1005,6 +1009,7 @@ def admin_dashboard():
         departments=departments,
         academic_years=academic_years,
         hods=hods,
+        principals=principals,
         today_date=today_str
     )
 
@@ -1234,6 +1239,56 @@ def admin_approve_teacher():
     if request.is_json:
         return jsonify({"status": "success", "message": f"Faculty '{t_name}' approved successfully! They can now log in."})
     flash(f"Faculty '{t_name}' has been accepted and approved for portal access.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/api/approve-hod", methods=["POST"])
+def admin_approve_hod():
+    if not is_admin():
+        return jsonify({"status": "error", "message": "Unauthorized access. Master Admin required."}), 401
+
+    data = request.get_json(silent=True) or request.form
+    hod_id = data.get("hod_id")
+    if not hod_id:
+        return jsonify({"status": "error", "message": "HOD ID is required."}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE hods SET is_approved = 1 WHERE id = ?", (hod_id,))
+    conn.commit()
+    cursor.execute("SELECT name, username FROM hods WHERE id = ?", (hod_id,))
+    h_row = cursor.fetchone()
+    conn.close()
+
+    h_name = h_row["name"] if h_row else "Department Head"
+    if request.is_json:
+        return jsonify({"status": "success", "message": f"HOD '{h_name}' approved successfully! They can now sign in to Department Desk."})
+    flash(f"HOD '{h_name}' has been accepted and approved for portal access.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/api/approve-principal", methods=["POST"])
+def admin_approve_principal():
+    if not is_admin():
+        return jsonify({"status": "error", "message": "Unauthorized access. Master Admin required."}), 401
+
+    data = request.get_json(silent=True) or request.form
+    principal_id = data.get("principal_id")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    if principal_id:
+        cursor.execute("UPDATE admins SET is_approved = 1 WHERE id = ? AND role = 'principal'", (principal_id,))
+        cursor.execute("SELECT name, username FROM admins WHERE id = ?", (principal_id,))
+    else:
+        cursor.execute("UPDATE admins SET is_approved = 1 WHERE role = 'principal'")
+        cursor.execute("SELECT name, username FROM admins WHERE role = 'principal' LIMIT 1")
+    conn.commit()
+    p_row = cursor.fetchone()
+    conn.close()
+
+    p_name = p_row["name"] if p_row else "Principal Executive"
+    if request.is_json:
+        return jsonify({"status": "success", "message": f"Principal '{p_name}' approved successfully! They can now sign in to Principal Desk."})
+    flash(f"Principal '{p_name}' has been accepted and approved for Executive Desk access.", "success")
     return redirect(url_for("admin_dashboard"))
 
 @app.route("/admin/api/reset-hod-2fa", methods=["POST"])
@@ -3250,9 +3305,18 @@ def hod_login():
             ''', (username, username, password))
 
         hod = cursor.fetchone()
-        conn.close()
-
         if hod:
+            # Check Super Admin Approval
+            is_approved = hod["is_approved"] if "is_approved" in hod.keys() else 1
+            if not is_approved:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM departments ORDER BY id ASC")
+                departments = [dict(r) for r in cursor.fetchall()]
+                conn.close()
+                flash(f"Your HOD account ({hod['name']}) is pending Administrator acceptance. Please wait for Super Admin approval before signing in.", "warning")
+                return render_template("hod_login.html", departments=departments, error="Account pending Admin approval. Please wait for Super Admin acceptance.")
+
             is_2fa = hod["is_2fa_enabled"] if "is_2fa_enabled" in hod.keys() else 0
             totp_secret = hod["totp_secret"] if "totp_secret" in hod.keys() else None
 
@@ -3622,6 +3686,12 @@ def principal_login():
         conn.close()
 
         if princ:
+            # Check Super Admin Approval
+            is_approved = princ["is_approved"] if "is_approved" in princ.keys() else 1
+            if not is_approved:
+                flash(f"Your Principal account ({princ['name']}) is pending Administrator acceptance. Please wait for Super Admin approval before signing in.", "warning")
+                return render_template("principal_login.html", error="Account pending Admin approval. Please wait for Super Admin acceptance.")
+
             is_2fa = princ["is_2fa_enabled"] if "is_2fa_enabled" in princ.keys() else 0
             totp_secret = princ["totp_secret"] if "totp_secret" in princ.keys() else None
 

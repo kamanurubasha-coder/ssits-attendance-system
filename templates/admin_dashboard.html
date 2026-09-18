@@ -997,12 +997,106 @@
 
         <!-- TAB 3: HOD Contacts Management -->
         <div class="tab-pane fade" id="hodsPane">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-white py-3 border-0">
-                    <h5 class="fw-bold text-navy mb-0">
-                        <i class="bi bi-whatsapp text-success me-1"></i> Department Heads (HOD Contacts & WhatsApp Recipients)
-                    </h5>
-                    <small class="text-muted">These numbers receive the daily absentees summary reports.</small>
+            <!-- Section A: Principal Executive Leadership Desk -->
+            <div class="card shadow-sm border-0 mb-4 overflow-hidden">
+                <div class="card-header bg-navy text-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h5 class="fw-bold mb-0">
+                            <i class="bi bi-building-fill-gear text-warning me-2"></i> Principal Executive Desk &amp; Master Authority
+                        </h5>
+                        <small class="text-white-50">Chief Institutional Authority oversight, stored credentials, and 2FA status.</small>
+                    </div>
+                    <span class="badge bg-danger px-3 py-2 text-uppercase fw-bold shadow-sm">
+                        <i class="bi bi-shield-shaded me-1"></i> Executive Portal Access
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 student-table">
+                            <thead>
+                                <tr>
+                                    <th>ROLE</th>
+                                    <th>EXECUTIVE NAME</th>
+                                    <th>OFFICIAL GMAIL</th>
+                                    <th>CONTACT NUMBER</th>
+                                    <th>USERNAME</th>
+                                    <th>STORED PASSWORD</th>
+                                    <th class="text-center" style="width: 150px;">STATUS &amp; APPROVAL</th>
+                                    <th class="text-center" style="width: 160px;">2FA (GOOGLE AUTH)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if principals %}
+                                    {% for p in principals %}
+                                    <tr>
+                                        <td><span class="badge bg-danger text-white px-2 py-1">PRINCIPAL</span></td>
+                                        <td class="fw-bold text-navy fs-6">{{ p.name }}</td>
+                                        <td><span class="text-dark fw-semibold small"><i class="bi bi-envelope-at text-danger me-1"></i>{{ p.email or 'principal@srisaitech.ac.in' }}</span></td>
+                                        <td><span class="text-success small fw-semibold"><i class="bi bi-telephone-fill me-1"></i> {{ p.phone or 'Contact Admin' }}</span></td>
+                                        <td><code class="fw-bold text-primary">{{ p.username }}</code></td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-1">
+                                                <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 font-monospace fs-6">{{ p.password }}</span>
+                                                <button type="button" class="btn btn-sm btn-link text-muted p-0 ms-1" onclick="navigator.clipboard.writeText('{{ p.password }}'); alert('Principal password copied: {{ p.password }}');" title="Copy Password">
+                                                    <i class="bi bi-clipboard"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if p.is_approved %}
+                                                <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                                    <i class="bi bi-check-circle-fill me-1"></i> Approved
+                                                </span>
+                                            {% else %}
+                                                <div class="d-flex flex-column align-items-center gap-1">
+                                                    <span class="badge bg-warning text-dark border border-warning px-2 py-1">
+                                                        <i class="bi bi-hourglass-split me-1"></i> Pending
+                                                    </span>
+                                                    <button type="button" class="btn btn-sm btn-success py-1 px-2 shadow-sm fw-bold d-flex align-items-center gap-1" onclick="approvePrincipalAccount({{ p.id }}, '{{ p.name|escape }}')">
+                                                        <i class="bi bi-check-circle-fill"></i> Accept
+                                                    </button>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if p.is_2fa_enabled %}
+                                                <div class="d-flex flex-column align-items-center gap-1">
+                                                    <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                                        <i class="bi bi-shield-check me-1"></i> Active
+                                                    </span>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 mt-1" style="font-size: 11px;" title="Reset Google Authenticator 2FA" onclick="resetPrincipal2FA({{ p.id }}, '{{ p.name|escape }}')">
+                                                        <i class="bi bi-arrow-counterclockwise"></i> Reset 2FA
+                                                    </button>
+                                                </div>
+                                            {% else %}
+                                                <span class="badge bg-secondary-subtle text-muted border px-2 py-1">
+                                                    Pending Setup
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="8" class="text-center py-3 text-muted">No Principal account registered.</td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section B: Department Heads (HOD Contacts & WhatsApp Recipients) -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-white py-3 border-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <h5 class="fw-bold text-navy mb-0">
+                            <i class="bi bi-whatsapp text-success me-1"></i> Department Heads (HOD Directory &amp; Credentials)
+                        </h5>
+                        <small class="text-muted">Direct oversight of all departmental branches, stored passwords, approval access, and 2FA status.</small>
+                    </div>
+                    <span class="badge bg-primary px-3 py-1">Branch Leadership ({{ hods|length }})</span>
                 </div>
 
                 <div class="card-body p-0">
@@ -1010,14 +1104,17 @@
                         <table class="table table-hover align-middle mb-0 student-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 50px;">S.NO</th>
+                                    <th style="width: 45px;">S.NO</th>
                                     <th>PROGRAM</th>
                                     <th>DEPARTMENT</th>
                                     <th>HOD FULL NAME</th>
                                     <th>WHATSAPP MOBILE</th>
                                     <th>OFFICIAL EMAIL</th>
-                                    <th class="text-center" style="width: 160px;">2FA (GOOGLE AUTH)</th>
-                                    <th class="text-center" style="width: 100px;">ACTION</th>
+                                    <th>USERNAME</th>
+                                    <th>STORED PASSWORD</th>
+                                    <th class="text-center" style="width: 140px;">STATUS &amp; APPROVAL</th>
+                                    <th class="text-center" style="width: 150px;">2FA (GOOGLE AUTH)</th>
+                                    <th class="text-center" style="width: 90px;">ACTION</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1033,6 +1130,31 @@
                                         </a>
                                     </td>
                                     <td><small class="text-muted">{{ h.email }}</small></td>
+                                    <td><code class="fw-bold text-secondary">{{ h.username or 'hod_' ~ h.dept_code|lower }}</code></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 font-monospace fs-6">{{ h.password or 'hod123' }}</span>
+                                            <button type="button" class="btn btn-sm btn-link text-muted p-0 ms-1" onclick="navigator.clipboard.writeText('{{ h.password or 'hod123' }}'); alert('HOD Password copied: {{ h.password or 'hod123' }}');" title="Copy Password">
+                                                <i class="bi bi-clipboard"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if h.is_approved %}
+                                            <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                                                <i class="bi bi-check-circle-fill me-1"></i> Approved
+                                            </span>
+                                        {% else %}
+                                            <div class="d-flex flex-column align-items-center gap-1">
+                                                <span class="badge bg-warning text-dark border border-warning px-2 py-1">
+                                                    <i class="bi bi-hourglass-split me-1"></i> Pending
+                                                </span>
+                                                <button type="button" class="btn btn-sm btn-success py-1 px-2 shadow-sm fw-bold d-flex align-items-center gap-1" onclick="approveHodMember({{ h.id }}, '{{ h.name|escape }}')">
+                                                    <i class="bi bi-check-circle-fill"></i> Accept
+                                                </button>
+                                            </div>
+                                        {% endif %}
+                                    </td>
                                     <td class="text-center">
                                         {% if h.is_2fa_enabled %}
                                             <div class="d-flex flex-column align-items-center gap-1">
@@ -1061,6 +1183,7 @@
                     </div>
                 </div>
             </div>
+        </div>
         <!-- TAB 4: Academic Data Reset & System Maintenance -->
         <div class="tab-pane fade" id="dataMaintenancePane">
             <div class="card shadow-sm border-0 mb-4 bg-white">
@@ -2529,6 +2652,69 @@ function resetHod2FA(hodId, hodName) {
             location.reload();
         } else {
             alert(data.message || 'Error resetting HOD 2FA');
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+}
+
+function approveHodMember(hodId, hodName) {
+    if (!confirm('Approve and grant access to HOD "' + hodName + '"?\n\nOnce approved, this HOD will be allowed to log in and access their Department Desk.')) {
+        return;
+    }
+    fetch('/admin/api/approve-hod', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hod_id: hodId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToastAlert('success', data.message);
+            setTimeout(() => { location.reload(); }, 1200);
+        } else {
+            alert(data.message || 'Error approving HOD');
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+}
+
+function approvePrincipalAccount(principalId, principalName) {
+    if (!confirm('Approve and grant access to Principal Executive "' + principalName + '"?\n\nOnce approved, the Principal will be allowed to log in and access the Executive Desk.')) {
+        return;
+    }
+    fetch('/admin/api/approve-principal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ principal_id: principalId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToastAlert('success', data.message);
+            setTimeout(() => { location.reload(); }, 1200);
+        } else {
+            alert(data.message || 'Error approving Principal');
+        }
+    })
+    .catch(err => alert('Network error: ' + err));
+}
+
+function resetPrincipal2FA(principalId, principalName) {
+    if (!confirm('Are you sure you want to reset Google Authenticator 2FA for Principal ' + principalName + '?\n\nOn their next login, they will scan a new QR code to reconnect their phone.')) {
+        return;
+    }
+    fetch('/admin/api/reset-principal-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ principal_id: principalId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showToastAlert('success', data.message);
+            setTimeout(() => { location.reload(); }, 1200);
+        } else {
+            alert(data.message || 'Error resetting Principal 2FA');
         }
     })
     .catch(err => alert('Network error: ' + err));
