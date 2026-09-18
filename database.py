@@ -279,8 +279,12 @@ def init_db():
             SET name = 'Kamanuru Basha', email = 'kamanurubasha@gmail.com'
             WHERE id = ? AND (email IS NULL OR email = '' OR email = 'admin@srisaitech.ac.in')
         """, (admin_match[0],))
-        if admin_env_pw:
-            cursor.execute("UPDATE admins SET password = ? WHERE id = ?", (admin_env_pw, admin_match[0]))
+        # Only set initial password if none exists in database
+        cursor.execute("SELECT password FROM admins WHERE id = ?", (admin_match[0],))
+        current_pw_row = cursor.fetchone()
+        if not current_pw_row or not current_pw_row[0]:
+            init_pw = admin_env_pw if admin_env_pw else "admin123"
+            cursor.execute("UPDATE admins SET password = ? WHERE id = ?", (init_pw, admin_match[0]))
 
     # Seed Principal Account if not exists
     cursor.execute("SELECT COUNT(*) FROM admins WHERE role = 'principal' OR username = 'principal'")

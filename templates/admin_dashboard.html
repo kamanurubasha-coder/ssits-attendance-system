@@ -5,6 +5,16 @@
 {% block content %}
 <div class="container-fluid px-3 px-md-5 my-3">
 
+    <!-- Floating Live Alert Toast -->
+    <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+        <div id="adminLiveToast" class="toast align-items-center text-white border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body fw-bold" id="toastMessage"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
     <!-- Top Admin Header Banner (Cyber Obsidian & Royal Purple Theme) -->
     <div class="card shadow-sm border-0 mb-4 admin-top-banner overflow-hidden hover-lift">
         <div class="card-body p-4">
@@ -121,7 +131,7 @@
         </li>
         <li class="nav-item">
             <button class="nav-link fw-bold px-4 py-2" id="teachers-tab" data-bs-toggle="pill" data-bs-target="#teachersPane">
-                <i class="bi bi-key-fill me-1 text-warning"></i> Faculty Credentials ({{ teachers|length }})
+                <i class="bi bi-key-fill me-1 text-warning"></i> Faculty Credentials (<span id="facultyTabCount">{{ teachers|length }}</span>)
             </button>
         </li>
         <li class="nav-item">
@@ -817,7 +827,7 @@
                             </thead>
                             <tbody>
                                 {% for t in teachers %}
-                                <tr>
+                                <tr data-teacher-row-id="{{ t.id }}" id="teacher-row-{{ t.id }}">
                                     <td class="text-center">
                                         <input type="checkbox" class="form-check-input teacher-cb" value="{{ t.id }}" data-name="{{ t.name|escape }}" onchange="updateSelectedTeachers()">
                                     </td>
@@ -883,15 +893,18 @@
                                     <td class="text-center">
                                         <div class="d-flex align-items-center justify-content-center gap-1">
                                             <button type="button" class="btn btn-sm btn-outline-primary fw-semibold px-2 py-1" title="Reset Password"
-                                                    onclick="openResetPasswordModal({{ t.id }}, '{{ t.name }}', '{{ t.username }}')">
+                                                    onclick="openResetPasswordModal({{ t.id }}, '{{ t.name|escape }}', '{{ t.username|escape }}')">
                                                 <i class="bi bi-key-fill"></i> Reset
                                             </button>
                                             <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold px-2 py-1" title="Edit Faculty"
-                                                    onclick="openEditTeacherModal({{ t.id }}, '{{ t.name }}', '{{ t.phone }}')">
+                                                    onclick="openEditTeacherModal({{ t.id }}, '{{ t.name|escape }}', '{{ t.phone|escape }}')">
                                                 <i class="bi bi-pencil-square"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-delete-faculty fw-semibold px-2 py-1 shadow-sm" title="Delete Faculty Member"
-                                                    onclick="openDeleteTeacherModal({{ t.id }}, '{{ t.name|escape }}', '{{ t.dept_code }} (Sec {{ t.section }})')">
+                                            <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-2 py-1 shadow-sm btn-delete-faculty" title="Delete Faculty Member"
+                                                    data-id="{{ t.id }}"
+                                                    data-name="{{ t.name|escape }}"
+                                                    data-dept="{{ t.dept_code }} (Sec {{ t.section }})"
+                                                    onclick="openDeleteTeacherModal(this)">
                                                 <i class="bi bi-trash3-fill me-1"></i> Delete
                                             </button>
                                         </div>
@@ -1148,7 +1161,7 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="/admin/api/reset-teacher-password">
+            <form id="resetTeacherPasswordForm" onsubmit="submitResetTeacherPassword(event)">
                 <input type="hidden" name="teacher_id" id="reset_teacher_id">
                 <div class="modal-body p-4">
                     <div class="p-3 bg-light rounded-3 mb-3 border">
@@ -1167,7 +1180,7 @@
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary fw-bold">Save New Password</button>
+                    <button type="submit" class="btn btn-primary fw-bold" id="btnSubmitResetTeacherPass">Save New Password</button>
                 </div>
             </form>
         </div>
@@ -1211,7 +1224,7 @@
                 <h5 class="modal-title fw-bold"><i class="bi bi-trash-fill me-2"></i> Delete Faculty Member</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST" action="/admin/api/delete-teacher">
+            <form id="deleteTeacherForm" onsubmit="confirmDeleteTeacher(event)">
                 <input type="hidden" name="teacher_id" id="delete_teacher_id">
                 <div class="modal-body p-4 text-center">
                     <div class="text-danger mb-3">
@@ -1229,7 +1242,7 @@
                 </div>
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-danger fw-bold"><i class="bi bi-trash me-1"></i> Confirm Delete</button>
+                    <button type="submit" class="btn btn-danger fw-bold" id="btnConfirmDeleteTeacher"><i class="bi bi-trash me-1"></i> Confirm Delete</button>
                 </div>
             </form>
         </div>
@@ -1380,26 +1393,46 @@
                             <span class="small fw-bold text-navy">
                                 <i class="bi bi-shield-check text-primary me-1"></i> TWO-FACTOR AUTHENTICATION (2FA)
                             </span>
-                            {% if admin.is_2fa_enabled %}
-                            <span class="badge bg-success-subtle text-success border border-success">
+                            <span class="badge {% if admin.is_2fa_enabled %}bg-success-subtle text-success border border-success{% else %}bg-warning-subtle text-dark border border-warning{% endif %}" id="admin2FABadge">
+                                {% if admin.is_2fa_enabled %}
                                 <i class="bi bi-check-circle-fill me-1"></i> Active (Google Authenticator)
-                            </span>
-                            {% else %}
-                            <span class="badge bg-warning-subtle text-dark border border-warning">
+                                {% else %}
                                 <i class="bi bi-hourglass-split me-1"></i> Pending Setup
+                                {% endif %}
                             </span>
-                            {% endif %}
                         </div>
                         <div class="extra-small text-muted mb-2">
                             Google Authenticator TOTP secures master administrator access with time-based 6-digit codes.
                         </div>
-                        <div class="d-flex gap-2">
-                            <a href="/admin/2fa-setup" class="btn btn-sm btn-outline-primary fw-semibold">
-                                <i class="bi bi-qr-code-scan me-1"></i> Re-Scan QR Code
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-primary fw-semibold" onclick="openInlineAdmin2FASetup()">
+                                <i class="bi bi-qr-code-scan me-1"></i> Setup / Re-Scan QR Code
+                            </button>
+                            <a href="/admin/2fa-setup" class="btn btn-sm btn-outline-secondary fw-semibold">
+                                <i class="bi bi-box-arrow-up-right me-1"></i> Full Page Setup
                             </a>
                             <button type="button" class="btn btn-sm btn-outline-danger fw-semibold" onclick="resetAdminOwn2FA()">
                                 <i class="bi bi-arrow-counterclockwise me-1"></i> Reset 2FA Key
                             </button>
+                        </div>
+
+                        <!-- In-Dashboard Interactive 2FA Setup Panel -->
+                        <div id="inline2FAContainer" class="d-none mt-3 p-3 bg-white rounded-3 border shadow-sm text-center">
+                            <h6 class="fw-bold text-navy mb-1"><i class="bi bi-phone text-primary me-1"></i> Link Google Authenticator</h6>
+                            <p class="extra-small text-muted mb-2">Scan this barcode using Google Authenticator on your mobile phone:</p>
+                            <div id="inline2FAQR" class="p-2 border rounded-3 d-inline-block bg-light mb-2 shadow-sm">
+                                <span class="spinner-border spinner-border-sm text-primary"></span> Loading QR Code...
+                            </div>
+                            <div class="extra-small text-muted mb-2">
+                                Secret Key: <code id="inline2FASecret" class="user-select-all fw-bold text-primary px-2 py-1 bg-light rounded border"></code>
+                            </div>
+                            <div class="input-group input-group-sm mb-2 mx-auto" style="max-width: 280px;">
+                                <input type="text" id="inline2FACode" class="form-control text-center font-monospace fs-6 fw-bold" placeholder="Enter 6-digit code" maxlength="6">
+                                <button class="btn btn-success fw-bold px-3" type="button" onclick="verifyInlineAdmin2FA()">
+                                    <i class="bi bi-shield-check me-1"></i> Activate
+                                </button>
+                            </div>
+                            <div id="inline2FAAlert" class="small d-none"></div>
                         </div>
                     </div>
 
@@ -1420,8 +1453,8 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">CURRENT ADMIN PASSWORD *</label>
-                        <input type="password" id="adminCurrentPass" class="form-control" required placeholder="Enter current admin password">
+                        <label class="form-label small fw-bold">CURRENT ADMIN PASSWORD <span class="text-muted fw-normal">(Optional if authenticated)</span></label>
+                        <input type="password" id="adminCurrentPass" class="form-control" placeholder="Enter current admin password (optional)">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">SET NEW PASSWORD *</label>
@@ -1770,26 +1803,156 @@ function filterAdminStudents() {
     });
 }
 
+function showToastAlert(type, message) {
+    const toastEl = document.getElementById('adminLiveToast');
+    const msgEl = document.getElementById('toastMessage');
+    if (!toastEl || !msgEl) {
+        alert(message);
+        return;
+    }
+    toastEl.classList.remove('bg-success', 'bg-danger', 'bg-warning', 'bg-info', 'bg-dark');
+    if (type === 'success') toastEl.classList.add('bg-success');
+    else if (type === 'danger' || type === 'error') toastEl.classList.add('bg-danger');
+    else if (type === 'warning') toastEl.classList.add('bg-warning', 'text-dark');
+    else toastEl.classList.add('bg-dark');
+    msgEl.innerHTML = (type === 'success' ? '<i class="bi bi-check-circle-fill me-2"></i>' : '<i class="bi bi-exclamation-triangle-fill me-2"></i>') + message;
+    const toast = bootstrap.Toast.getOrCreateInstance(toastEl, { delay: 4000 });
+    toast.show();
+}
+
+function updateTeacherTabCount() {
+    const rows = document.querySelectorAll('#teachersTable tbody tr[data-teacher-row-id]');
+    const count = rows.length;
+    const badge = document.getElementById('facultyTabCount');
+    if (badge) badge.innerText = count;
+}
+
 function openResetPasswordModal(id, name, username) {
     document.getElementById('reset_teacher_id').value = id;
     document.getElementById('reset_teacher_name').innerText = name;
     document.getElementById('reset_teacher_user').innerText = 'Username: ' + username;
     document.getElementById('new_password').value = '123456';
-    new bootstrap.Modal(document.getElementById('resetPasswordModal')).show();
+    const modalEl = document.getElementById('resetPasswordModal');
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+async function submitResetTeacherPassword(e) {
+    if (e) e.preventDefault();
+    const teacherId = document.getElementById('reset_teacher_id').value;
+    const newPass = document.getElementById('new_password').value.trim();
+    const submitBtn = document.getElementById('btnSubmitResetTeacherPass');
+
+    if (!newPass) {
+        showToastAlert('danger', 'Password cannot be blank!');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+    try {
+        const res = await fetch('/admin/api/reset-teacher-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teacher_id: teacherId, new_password: newPass })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            const modalEl = document.getElementById('resetPasswordModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            // Directly update the badge in the row!
+            const badge = document.getElementById(`pw-display-${teacherId}`);
+            if (badge) {
+                badge.innerText = newPass;
+                badge.classList.remove('bg-warning-subtle', 'text-dark');
+                badge.classList.add('bg-success-subtle', 'text-success');
+                setTimeout(() => {
+                    badge.classList.remove('bg-success-subtle', 'text-success');
+                    badge.classList.add('bg-warning-subtle', 'text-dark');
+                }, 3500);
+            }
+            showToastAlert('success', data.message);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to reset password.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToastAlert('danger', 'Network error while saving faculty password.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Save New Password';
+    }
 }
 
 function openEditTeacherModal(id, name, phone) {
     document.getElementById('edit_teacher_id').value = id;
     document.getElementById('edit_teacher_name_input').value = name;
     document.getElementById('edit_teacher_phone_input').value = phone;
-    new bootstrap.Modal(document.getElementById('editTeacherModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('editTeacherModal')).show();
 }
 
-function openDeleteTeacherModal(id, name, dept) {
+function openDeleteTeacherModal(arg, name, dept) {
+    let id, tName, tDept;
+    if (typeof arg === 'object' && arg !== null && arg.dataset) {
+        id = arg.dataset.id;
+        tName = arg.dataset.name;
+        tDept = arg.dataset.dept;
+    } else {
+        id = arg;
+        tName = name;
+        tDept = dept;
+    }
     document.getElementById('delete_teacher_id').value = id;
-    document.getElementById('delete_teacher_name').innerText = name;
-    document.getElementById('delete_teacher_dept').innerText = dept;
-    new bootstrap.Modal(document.getElementById('deleteTeacherModal')).show();
+    document.getElementById('delete_teacher_name').innerText = tName;
+    document.getElementById('delete_teacher_dept').innerText = tDept;
+    const modalEl = document.getElementById('deleteTeacherModal');
+    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+}
+
+async function confirmDeleteTeacher(e) {
+    if (e) e.preventDefault();
+    const teacherId = document.getElementById('delete_teacher_id').value;
+    const btn = document.getElementById('btnConfirmDeleteTeacher');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+
+    try {
+        const res = await fetch('/admin/api/delete-teacher', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teacher_id: teacherId })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            const modalEl = document.getElementById('deleteTeacherModal');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+
+            // Animate and remove row dynamically from table
+            const row = document.querySelector(`tr[data-teacher-row-id="${teacherId}"]`) || document.getElementById(`teacher-row-${teacherId}`);
+            if (row) {
+                row.style.transition = 'all 0.4s ease';
+                row.style.backgroundColor = '#fee2e2';
+                row.style.opacity = '0.3';
+                setTimeout(() => {
+                    row.remove();
+                    updateTeacherTabCount();
+                    updateSelectedTeachers();
+                }, 350);
+            }
+            showToastAlert('success', data.message || 'Faculty member deleted successfully!');
+        } else {
+            showToastAlert('danger', data.message || 'Failed to delete faculty member.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToastAlert('danger', 'Network error while deleting faculty member.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-trash me-1"></i> Confirm Delete';
+    }
 }
 
 function openEditStudentModal(id, roll, name, father, phone) {
@@ -1798,7 +1961,7 @@ function openEditStudentModal(id, roll, name, father, phone) {
     document.getElementById('edit_student_name').value = name;
     document.getElementById('edit_student_father').value = father;
     document.getElementById('edit_student_phone').value = phone;
-    new bootstrap.Modal(document.getElementById('editStudentModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('editStudentModal')).show();
 }
 
 function openEditHodModal(id, name, phone, email) {
@@ -1806,7 +1969,7 @@ function openEditHodModal(id, name, phone, email) {
     document.getElementById('edit_hod_name').value = name;
     document.getElementById('edit_hod_phone').value = phone;
     document.getElementById('edit_hod_email').value = email;
-    new bootstrap.Modal(document.getElementById('editHodModal')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('editHodModal')).show();
 }
 
 // Master Students Data passed from backend for instant client-side dropdown filtering
@@ -2460,17 +2623,35 @@ async function executeBulkDeleteTeachers() {
         });
         const data = await res.json();
         if (data.status === 'success') {
-            alert('SUCCESS: ' + data.message);
             const modalEl = document.getElementById('bulkDeleteTeachersModal');
             const modal = bootstrap.Modal.getInstance(modalEl);
             if (modal) modal.hide();
-            window.location.reload();
+
+            // Animate and remove each selected teacher row smoothly
+            teacherIds.forEach(id => {
+                const row = document.querySelector(`tr[data-teacher-row-id="${id}"]`) || document.getElementById(`teacher-row-${id}`);
+                if (row) {
+                    row.style.transition = 'all 0.4s ease';
+                    row.style.backgroundColor = '#fee2e2';
+                    row.style.opacity = '0.3';
+                    setTimeout(() => row.remove(), 350);
+                }
+            });
+
+            setTimeout(() => {
+                updateTeacherTabCount();
+                updateSelectedTeachers();
+                const selectAll = document.getElementById('selectAllTeachers');
+                if (selectAll) selectAll.checked = false;
+            }, 400);
+
+            showToastAlert('success', data.message);
         } else {
-            alert('Error: ' + (data.message || 'Failed to delete faculty members'));
+            showToastAlert('danger', data.message || 'Failed to delete faculty members');
         }
     } catch (err) {
         console.error(err);
-        alert('Network error while deleting faculty members.');
+        showToastAlert('danger', 'Network error while deleting faculty members.');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-trash3-fill me-1"></i> Yes, Delete Selected Faculty';
@@ -2478,7 +2659,7 @@ async function executeBulkDeleteTeachers() {
 }
 
 function resetAdminOwn2FA() {
-    if (!confirm('Are you sure you want to reset your Admin Google Authenticator 2FA?\n\nYou will be prompted to scan a fresh QR code on your next login.')) {
+    if (!confirm('Are you sure you want to reset your Admin Google Authenticator 2FA?\n\nYou can re-scan a new QR code immediately in this window or on your next login.')) {
         return;
     }
     fetch('/admin/api/reset-admin-2fa', {
@@ -2488,13 +2669,113 @@ function resetAdminOwn2FA() {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            alert(data.message);
-            window.location.reload();
+            const badge = document.getElementById('admin2FABadge');
+            if (badge) {
+                badge.className = 'badge bg-warning-subtle text-dark border border-warning';
+                badge.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Pending Setup';
+            }
+            showToastAlert('warning', data.message);
+            // Open inline 2FA setup automatically
+            openInlineAdmin2FASetup();
         } else {
-            alert(data.message || 'Error resetting 2FA');
+            showToastAlert('danger', data.message || 'Error resetting 2FA');
         }
     })
-    .catch(err => alert('Network error: ' + err));
+    .catch(err => showToastAlert('danger', 'Network error: ' + err));
 }
+
+async function openInlineAdmin2FASetup() {
+    const container = document.getElementById('inline2FAContainer');
+    const qrBox = document.getElementById('inline2FAQR');
+    const secretCode = document.getElementById('inline2FASecret');
+    const alertBox = document.getElementById('inline2FAAlert');
+
+    if (!container) return;
+    container.classList.remove('d-none');
+    qrBox.innerHTML = '<div class="p-4"><span class="spinner-border spinner-border-sm text-primary me-2"></span> Generating QR Code...</div>';
+    alertBox.className = 'small d-none';
+
+    try {
+        const res = await fetch('/admin/api/get-2fa-qr');
+        const data = await res.json();
+        if (data.status === 'success') {
+            qrBox.innerHTML = `<img src="data:image/png;base64,${data.qr_b64}" class="img-fluid rounded shadow-sm" style="width: 175px; height: 175px;" alt="Google Authenticator QR">`;
+            secretCode.innerText = data.secret;
+        } else {
+            qrBox.innerHTML = '<span class="text-danger small">Failed to load QR code.</span>';
+        }
+    } catch (err) {
+        console.error(err);
+        qrBox.innerHTML = '<span class="text-danger small">Network error loading QR.</span>';
+    }
+}
+
+async function verifyInlineAdmin2FA() {
+    const codeInput = document.getElementById('inline2FACode');
+    const code = codeInput ? codeInput.value.trim() : '';
+    const alertBox = document.getElementById('inline2FAAlert');
+
+    if (!code || code.length !== 6) {
+        alertBox.className = 'alert alert-danger p-2 small mt-2';
+        alertBox.innerText = 'Please enter a valid 6-digit verification code from Google Authenticator.';
+        return;
+    }
+
+    try {
+        const res = await fetch('/admin/api/verify-2fa-setup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            alertBox.className = 'alert alert-success p-2 small mt-2';
+            alertBox.innerText = '✅ ' + data.message;
+            const badge = document.getElementById('admin2FABadge');
+            if (badge) {
+                badge.className = 'badge bg-success-subtle text-success border border-success';
+                badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Active (Google Authenticator)';
+            }
+            showToastAlert('success', data.message);
+            setTimeout(() => {
+                const container = document.getElementById('inline2FAContainer');
+                if (container) container.classList.add('d-none');
+            }, 2500);
+        } else {
+            alertBox.className = 'alert alert-danger p-2 small mt-2';
+            alertBox.innerText = '❌ ' + (data.message || 'Invalid 6-digit verification code!');
+        }
+    } catch (err) {
+        console.error(err);
+        alertBox.className = 'alert alert-danger p-2 small mt-2';
+        alertBox.innerText = 'Network error while verifying 2FA.';
+    }
+}
+
+// -------------------------------------------------------------
+// Tab persistence across page reloads & direct hash deep linking
+// -------------------------------------------------------------
+document.addEventListener('DOMContentLoaded', () => {
+    // Listen for tab changes
+    document.querySelectorAll('#adminTabs button[data-bs-toggle="pill"]').forEach(tabBtn => {
+        tabBtn.addEventListener('shown.bs.tab', (e) => {
+            const targetId = e.target.getAttribute('data-bs-target');
+            if (targetId) {
+                localStorage.setItem('admin_active_tab', targetId);
+                history.replaceState(null, null, targetId);
+            }
+        });
+    });
+
+    // Restore active tab
+    const hash = window.location.hash;
+    const savedTab = hash || localStorage.getItem('admin_active_tab');
+    if (savedTab) {
+        const targetBtn = document.querySelector(`#adminTabs button[data-bs-target="${savedTab}"]`);
+        if (targetBtn) {
+            bootstrap.Tab.getOrCreateInstance(targetBtn).show();
+        }
+    }
+});
 </script>
 {% endblock %}
