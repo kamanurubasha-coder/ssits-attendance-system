@@ -263,17 +263,19 @@ def init_db():
     cursor.execute("UPDATE hods SET password = 'hod123' WHERE password IS NULL OR password = ''")
 
     # Seed / Update Super Admin (Kamanuru Basha)
-    cursor.execute("SELECT id, username, email FROM admins WHERE role = 'superadmin' OR username = 'admin' OR username = 'reddybashakamanuru18@gmail.com' OR LOWER(email) = 'reddybashakamanuru18@gmail.com' OR LOWER(email) = 'kamanurubasha@gmail.com' LIMIT 1")
+    cursor.execute("SELECT id, username, email, password FROM admins WHERE role = 'superadmin' OR username = 'admin' OR username = 'reddybashakamanuru18@gmail.com' OR LOWER(email) = 'reddybashakamanuru18@gmail.com' OR LOWER(email) = 'kamanurubasha@gmail.com' LIMIT 1")
     admin_match = cursor.fetchone()
     admin_env_pw = os.getenv("ADMIN_PASSWORD")
-    target_admin_pw = admin_env_pw if admin_env_pw else "Hamza@123"
 
     if not admin_match:
+        target_admin_pw = admin_env_pw if admin_env_pw else "Hamza@123"
         cursor.execute("""
             INSERT INTO admins (username, password, name, email, phone, role, is_2fa_enabled, totp_secret)
             VALUES ('reddybashakamanuru18@gmail.com', ?, 'Kamanuru Basha', 'reddybashakamanuru18@gmail.com', '9848099999', 'superadmin', 0, NULL)
         """, (target_admin_pw,))
     else:
+        # Keep existing password unless explicitly provided in env
+        new_pw = admin_env_pw if admin_env_pw else (admin_match["password"] or "Hamza@123")
         cursor.execute("""
             UPDATE admins 
             SET username = 'reddybashakamanuru18@gmail.com',
@@ -281,7 +283,7 @@ def init_db():
                 name = 'Kamanuru Basha',
                 password = ?
             WHERE id = ?
-        """, (target_admin_pw, admin_match[0]))
+        """, (new_pw, admin_match["id"]))
 
     # Seed Principal Account if not exists
     cursor.execute("SELECT COUNT(*) FROM admins WHERE role = 'principal' OR username = 'principal'")
@@ -290,6 +292,30 @@ def init_db():
             INSERT INTO admins (username, password, name, email, phone, role)
             VALUES ('principal', 'principal123', 'Dr. Principal / Director (SSITS)', 'principal@srisaitech.ac.in', '9848099901', 'principal')
         """)
+
+    # Permanent preservation of registered faculties (Faizan and Lakshmi Dattatri)
+    cursor.execute("SELECT id FROM teachers WHERE LOWER(username) = 'faizan' OR LOWER(name) LIKE '%faizan%'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO teachers (name, program_id, department_id, year_id, section, email, username, password, phone, is_approved, is_2fa_enabled, totp_secret)
+            VALUES (?, 1, 1, 1, 'A', ?, ?, ?, ?, 1, 1, ?)
+        """, ("Sri. Mohammad Faizan", "faizan@srisaitech.ac.in", "faizan", "Faizan@123", "9848099911", "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP"))
+
+    cursor.execute("SELECT id FROM teachers WHERE LOWER(username) IN ('lakshmidattatri', 'dattatri') OR LOWER(name) LIKE '%dattatri%'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO teachers (name, program_id, department_id, year_id, section, email, username, password, phone, is_approved, is_2fa_enabled, totp_secret)
+            VALUES (?, 1, 1, 2, 'A', ?, ?, ?, ?, 1, 1, ?)
+        """, ("Sri. Lakshmi Dattatri", "lakshmidattatri@srisaitech.ac.in", "lakshmidattatri", "Dattatri@123", "9848099912", "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXQ"))
+
+    # Ensure Faizan & Lakshmi Dattatri always remain approved and 2FA active
+    cursor.execute("""
+        UPDATE teachers 
+        SET is_approved = 1, is_2fa_enabled = 1
+        WHERE LOWER(username) IN ('faizan', 'lakshmidattatri', 'dattatri') 
+           OR LOWER(name) LIKE '%faizan%' 
+           OR LOWER(name) LIKE '%dattatri%'
+    """)
 
     conn.commit()
 

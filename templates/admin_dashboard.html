@@ -831,7 +831,7 @@
                                     <td class="text-center">
                                         <input type="checkbox" class="form-check-input teacher-cb" value="{{ t.id }}" data-name="{{ t.name|escape }}" onchange="updateSelectedTeachers()">
                                     </td>
-                                    <td>{{ loop.index }}</td>
+                                    <td class="sno-cell fw-semibold text-muted">{{ loop.index }}</td>
                                     <td>
                                         <span class="badge {% if t.prog_code == 'DIPLOMA' %}bg-primary{% else %}bg-success{% endif %} px-2 py-1">
                                             {{ t.prog_code }}
@@ -1457,15 +1457,15 @@
                         <input type="password" id="adminCurrentPass" class="form-control" placeholder="Enter current admin password (optional)">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">SET NEW PASSWORD *</label>
-                        <input type="password" id="adminNewPass" class="form-control" minlength="4" required placeholder="Enter new password">
+                        <label class="form-label small fw-bold">SET NEW PASSWORD <span class="text-muted fw-normal">(Optional - leave blank to keep current)</span></label>
+                        <input type="password" id="adminNewPass" class="form-control" minlength="4" placeholder="Enter new password (optional)">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">CONFIRM NEW PASSWORD *</label>
-                        <input type="password" id="adminConfirmPass" class="form-control" minlength="4" required placeholder="Re-type new password">
+                        <label class="form-label small fw-bold">CONFIRM NEW PASSWORD <span class="text-muted fw-normal">(Optional)</span></label>
+                        <input type="password" id="adminConfirmPass" class="form-control" minlength="4" placeholder="Re-type new password (optional)">
                     </div>
                     <div class="small text-muted">
-                        <i class="bi bi-info-circle me-1"></i> Once changed, use your new Login ID and password next time you sign into the Master Admin Portal.
+                        <i class="bi bi-info-circle me-1"></i> You can update your Login ID, Email, or Password. Leave password blank to retain your existing password.
                     </div>
                 </div>
                 <div class="modal-footer bg-light">
@@ -1511,9 +1511,9 @@
 
                 <div class="mb-3">
                     <label class="form-label fw-bold small">ADMINISTRATOR PASSWORD *</label>
-                    <input type="password" class="form-control" id="modalResetAdminPassword" placeholder="Enter your Admin Password">
+                    <input type="password" class="form-control" id="modalResetAdminPassword" placeholder="Enter your Admin Password (e.g. Hamza@123)">
                     <div class="form-text small text-muted">
-                        Enter your current Administrator password to authorize this action.
+                        Enter your current Administrator password (e.g. <code>Hamza@123</code>) to authorize this action.
                     </div>
                 </div>
 
@@ -1774,15 +1774,33 @@ document.addEventListener('DOMContentLoaded', function() {
     loadClassAttendance();
 });
 
-// Filter Teachers
-document.getElementById('teacherSearch').addEventListener('input', function (e) {
-    const q = e.target.value.toLowerCase();
-    const rows = document.querySelectorAll('#teachersTable tbody tr');
+// Dynamic S.NO Resequencing for Teachers Table
+function resequenceTeacherTable() {
+    const rows = document.querySelectorAll('#teachersTable tbody tr[data-teacher-row-id]');
+    let seq = 1;
     rows.forEach(r => {
-        const text = r.innerText.toLowerCase();
-        r.style.display = text.includes(q) ? '' : 'none';
+        if (r.style.display !== 'none') {
+            const snoCell = r.querySelector('.sno-cell') || r.children[1];
+            if (snoCell) {
+                snoCell.textContent = seq++;
+            }
+        }
     });
-});
+}
+
+// Filter Teachers with dynamic serial resequencing
+const teacherSearchInput = document.getElementById('teacherSearch');
+if (teacherSearchInput) {
+    teacherSearchInput.addEventListener('input', function (e) {
+        const q = e.target.value.toLowerCase();
+        const rows = document.querySelectorAll('#teachersTable tbody tr[data-teacher-row-id]');
+        rows.forEach(r => {
+            const text = r.innerText.toLowerCase();
+            r.style.display = text.includes(q) ? '' : 'none';
+        });
+        resequenceTeacherTable();
+    });
+}
 
 // Filter Students
 function filterAdminStudents() {
@@ -1942,6 +1960,7 @@ async function confirmDeleteTeacher(e) {
                     row.remove();
                     updateTeacherTabCount();
                     updateSelectedTeachers();
+                    resequenceTeacherTable();
                 }, 350);
             }
             showToastAlert('success', data.message || 'Faculty member deleted successfully!');
@@ -1998,10 +2017,17 @@ async function submitChangeAdminPassword(e) {
         return;
     }
 
-    if (newPass !== confirmPass) {
-        alertBox.className = 'alert alert-danger';
-        alertBox.innerText = 'New password and confirm password do not match!';
-        return;
+    if (newPass || confirmPass) {
+        if (newPass.length < 4) {
+            alertBox.className = 'alert alert-danger';
+            alertBox.innerText = 'New password must be at least 4 characters long.';
+            return;
+        }
+        if (newPass !== confirmPass) {
+            alertBox.className = 'alert alert-danger';
+            alertBox.innerText = 'New password and confirm password do not match!';
+            return;
+        }
     }
 
     submitBtn.disabled = true;
@@ -2543,17 +2569,22 @@ async function executeDataReset() {
         });
         const data = await res.json();
         if (data.status === 'success') {
-            alert('SUCCESS: ' + data.message);
-            const modalEl = document.getElementById('dataResetModal');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            if (modal) modal.hide();
-            window.location.reload();
+            try {
+                const modalEl = document.getElementById('dataResetModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                if (modal) modal.hide();
+            } catch(e) {}
+            showToastAlert('success', data.message);
+            setTimeout(() => {
+                window.location.reload();
+            }, 1200);
         } else {
+            showToastAlert('danger', data.message || 'Failed to reset data');
             alert('Error: ' + (data.message || 'Failed to reset data'));
         }
     } catch (err) {
         console.error(err);
-        alert('Network error while resetting academic data.');
+        showToastAlert('danger', 'Network error while resetting academic data.');
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-trash3-fill me-1"></i> Reset Now';
@@ -2683,6 +2714,7 @@ async function executeBulkDeleteTeachers() {
                 updateSelectedTeachers();
                 const selectAll = document.getElementById('selectAllTeachers');
                 if (selectAll) selectAll.checked = false;
+                resequenceTeacherTable();
             }, 450);
 
             showToastAlert('success', data.message || `Successfully deleted ${teacherIds.length} faculty member(s).`);
@@ -2822,6 +2854,9 @@ document.addEventListener('DOMContentLoaded', () => {
             bootstrap.Tab.getOrCreateInstance(targetBtn).show();
         }
     }
+
+    // Initialize serial numbering for teachers table
+    resequenceTeacherTable();
 });
 </script>
 {% endblock %}
