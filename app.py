@@ -1103,10 +1103,9 @@ def admin_delete_teacher():
     t_name = t_info["name"]
     t_user = t_info["username"]
 
-    # Reassign marked_by to Master Admin ID to preserve institutional audit and satisfy NOT NULL
-    admin_id = session.get("admin_id", 1)
-    cursor.execute("UPDATE attendance_records SET marked_by = ? WHERE marked_by = ?", (admin_id, teacher_id))
-    cursor.execute("UPDATE day_status SET marked_by = ? WHERE marked_by = ?", (admin_id, teacher_id))
+    # Delete dependent attendance and day_status records first to satisfy FOREIGN KEY constraint
+    cursor.execute("DELETE FROM attendance_records WHERE marked_by = ?", (teacher_id,))
+    cursor.execute("DELETE FROM day_status WHERE marked_by = ?", (teacher_id,))
     cursor.execute("DELETE FROM teachers WHERE id = ?", (teacher_id,))
     conn.commit()
     conn.close()
@@ -1141,11 +1140,10 @@ def admin_bulk_delete_teachers():
             conn.close()
             return jsonify({"status": "error", "message": "No valid faculty IDs found."}), 400
 
-        admin_id = session.get("admin_id", 1)
         placeholders = ",".join(["?"] * len(valid_ids))
-        # Reassign marked_by to Master Admin ID before deleting
-        cursor.execute(f"UPDATE attendance_records SET marked_by = ? WHERE marked_by IN ({placeholders})", [admin_id] + valid_ids)
-        cursor.execute(f"UPDATE day_status SET marked_by = ? WHERE marked_by IN ({placeholders})", [admin_id] + valid_ids)
+        # Delete dependent attendance and day_status records first to satisfy FOREIGN KEY constraint
+        cursor.execute(f"DELETE FROM attendance_records WHERE marked_by IN ({placeholders})", valid_ids)
+        cursor.execute(f"DELETE FROM day_status WHERE marked_by IN ({placeholders})", valid_ids)
         cursor.execute(f"DELETE FROM teachers WHERE id IN ({placeholders})", valid_ids)
         deleted_count = cursor.rowcount
         conn.commit()
