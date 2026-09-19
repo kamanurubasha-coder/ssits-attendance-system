@@ -136,7 +136,7 @@
         </li>
         <li class="nav-item">
             <button class="nav-link fw-bold px-4 py-2" id="students-tab" data-bs-toggle="pill" data-bs-target="#studentsPane">
-                <i class="bi bi-people-fill me-1 text-primary"></i> Master Students ({{ total_students_count }})
+                <i class="bi bi-people-fill me-1 text-primary"></i> Master Students (<span id="studentTabCount">{{ total_students_count }}</span>)
             </button>
         </li>
         <li class="nav-item">
@@ -794,7 +794,7 @@
                             <small class="text-muted">All faculty passwords, registered Gmail addresses, and sections are securely stored and viewable by Admin.</small>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <button type="button" id="btnBulkDeleteTeachers" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="openBulkDeleteModal()" disabled title="Select one or more faculty members using checkboxes to delete">
+                            <button type="button" id="btnBulkDeleteTeachers" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="handleBulkDeleteTeachers()" disabled title="Select one or more faculty members using checkboxes to delete">
                                 <i class="bi bi-trash3-fill me-1"></i> Delete Selected Faculty (<span id="bulkDeleteCount">0</span>)
                             </button>
                             <input type="text" id="teacherSearch" class="form-control form-control-sm w-auto" placeholder="🔍 Search faculty / email / username...">
@@ -813,7 +813,7 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary bg-white" onclick="clearFacultySelection()">
                                 <i class="bi bi-x-circle me-1"></i> Clear Selection
                             </button>
-                            <button type="button" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm" onclick="openBulkDeleteModal()">
+                            <button type="button" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm" onclick="handleBulkDeleteTeachers()">
                                 <i class="bi bi-trash3-fill me-1"></i> Delete Selected Faculty
                             </button>
                         </div>
@@ -943,7 +943,10 @@
                             <small class="text-muted">Edit names, roll numbers, father details and WhatsApp contacts.</small>
                         </div>
                         <div class="col-12 col-md-8 text-md-end">
-                            <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                            <div class="d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
+                                <button type="button" id="btnBulkDeleteStudents" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="handleBulkDeleteStudents()" disabled title="Select one or more students using checkboxes to delete">
+                                    <i class="bi bi-trash3-fill me-1"></i> Delete Selected Students (<span id="bulkDeleteStudentCount">0</span>)
+                                </button>
                                 <select id="adminProgFilter" class="form-select form-select-sm w-auto" onchange="filterAdminStudents()">
                                     <option value="">All Programs</option>
                                     <option value="DIPLOMA">Diploma</option>
@@ -962,10 +965,28 @@
                 </div>
 
                 <div class="card-body p-0">
+                    <!-- Student Bulk Action Alert Banner -->
+                    <div id="studentBulkActionBar" class="alert alert-danger py-2 px-3 mx-3 mt-3 mb-2 d-none d-flex justify-content-between align-items-center shadow-sm rounded-3">
+                        <div>
+                            <i class="bi bi-check-square-fill me-2 text-danger fs-5"></i>
+                            <strong id="studentSelectedMsg" class="text-dark">0 student(s) selected</strong>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary bg-white" onclick="clearStudentSelection()">
+                                <i class="bi bi-x-circle me-1"></i> Clear Selection
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm" onclick="handleBulkDeleteStudents()">
+                                <i class="bi bi-trash3-fill me-1"></i> Delete Selected Students
+                            </button>
+                        </div>
+                    </div>
                     <div class="table-responsive" style="max-height: 550px; overflow-y: auto;">
                         <table class="table table-hover align-middle mb-0 student-table" id="allStudentsTable">
                             <thead class="sticky-top">
                                 <tr>
+                                    <th style="width: 35px;" class="text-center">
+                                        <input type="checkbox" id="selectAllStudents" class="form-check-input" onchange="toggleSelectAllStudents(this)" title="Select All Students">
+                                    </th>
                                     <th style="width: 50px;">S.NO</th>
                                     <th>ROLL NUMBER / PIN</th>
                                     <th>STUDENT FULL NAME</th>
@@ -978,8 +999,11 @@
                             </thead>
                             <tbody id="adminStudentsTbody">
                                 {% for s in all_students %}
-                                <tr data-prog="{{ s.prog_code }}" data-dept="{{ s.dept_code }}" data-roll="{{ s.roll_number.lower() }}" data-name="{{ s.name.lower() }}">
-                                    <td>{{ loop.index }}</td>
+                                <tr data-student-row-id="{{ s.id }}" id="student-row-{{ s.id }}" data-prog="{{ s.prog_code }}" data-dept="{{ s.dept_code }}" data-roll="{{ s.roll_number.lower() }}" data-name="{{ s.name.lower() }}">
+                                    <td class="text-center">
+                                        <input type="checkbox" class="form-check-input student-cb" value="{{ s.id }}" data-name="{{ s.name|escape }}" data-roll="{{ s.roll_number|escape }}" onchange="updateSelectedStudents()">
+                                    </td>
+                                    <td class="student-sno-cell fw-semibold text-muted">{{ loop.index }}</td>
                                     <td><strong class="text-primary">{{ s.roll_number }}</strong></td>
                                     <td class="fw-semibold">{{ s.name }}</td>
                                     <td><span class="badge bg-secondary">{{ s.prog_code }} - {{ s.dept_code }}</span></td>
@@ -995,11 +1019,10 @@
                                                 onclick="openEditStudentModal({{ s.id }}, '{{ s.roll_number }}', '{{ s.name }}', '{{ s.father_name }}', '{{ s.father_phone }}')">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
-                                        <form method="POST" action="/admin/api/delete-student/{{ s.id }}" onsubmit="return confirm('Delete {{ s.name }} ({{ s.roll_number }})?');" style="display:inline;">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger p-1" title="Delete Student">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger p-1" title="Delete Student"
+                                                onclick="deleteSingleStudent({{ s.id }}, '{{ s.name|escape }}', '{{ s.roll_number|escape }}')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -1131,7 +1154,7 @@
                         <small class="text-muted">Direct oversight of all departmental branches, stored passwords, approval access, and 2FA status.</small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" id="btnBulkDeleteHods" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="openBulkDeleteHodModal()" disabled title="Select one or more HODs using checkboxes to delete">
+                        <button type="button" id="btnBulkDeleteHods" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="handleBulkDeleteHods()" disabled title="Select one or more HODs using checkboxes to delete">
                             <i class="bi bi-trash3-fill me-1"></i> Delete Selected HODs (<span id="bulkDeleteHodCount">0</span>)
                         </button>
                         <input type="text" id="hodSearch" class="form-control form-control-sm w-auto" placeholder="🔍 Search HOD / email / dept..." onkeyup="filterHODs()">
@@ -1150,7 +1173,7 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary bg-white" onclick="clearHodSelection()">
                                 <i class="bi bi-x-circle me-1"></i> Clear Selection
                             </button>
-                            <button type="button" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm" onclick="openBulkDeleteHodModal()">
+                            <button type="button" class="btn btn-sm btn-danger fw-bold px-3 shadow-sm" onclick="handleBulkDeleteHods()">
                                 <i class="bi bi-trash3-fill me-1"></i> Delete Selected HODs
                             </button>
                         </div>
@@ -2179,6 +2202,9 @@ function openClassAbsenteeModal(index) {
 // Initial load on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadClassAttendance();
+    resequenceTeacherTable();
+    resequenceStudentTable();
+    if (typeof resequenceHodTable === 'function') resequenceHodTable();
 });
 
 // Dynamic S.NO Resequencing for Teachers Table
@@ -2209,7 +2235,7 @@ if (teacherSearchInput) {
     });
 }
 
-// Filter Students
+// Filter Students with dynamic serial resequencing
 function filterAdminStudents() {
     const prog = document.getElementById('adminProgFilter').value;
     const dept = document.getElementById('adminDeptFilter').value;
@@ -2228,6 +2254,10 @@ function filterAdminStudents() {
 
         r.style.display = (matchProg && matchDept && matchQ) ? '' : 'none';
     });
+    resequenceStudentTable();
+    if (typeof updateSelectedStudents === 'function') {
+        updateSelectedStudents();
+    }
 }
 
 function showToastAlert(type, message) {
@@ -3126,33 +3156,28 @@ function clearFacultySelection() {
     updateSelectedTeachers();
 }
 
-async function handleBulkDeleteClick() {
-    openBulkDeleteModal();
-}
-
-function openBulkDeleteModal() {
+function handleBulkDeleteTeachers() {
     const selected = document.querySelectorAll('.teacher-cb:checked');
     if (selected.length === 0) {
         showToastAlert('warning', 'Please select at least one faculty member using checkboxes to delete.');
+        alert('Please select at least one faculty member using checkboxes to delete.');
         return;
     }
-    const listEl = document.getElementById('bulkSelectedFacultyList');
-    if (listEl) {
-        listEl.innerHTML = '';
-        selected.forEach(cb => {
-            const name = cb.getAttribute('data-name') || 'Faculty ID #' + cb.value;
-            const item = document.createElement('div');
-            item.className = 'py-1 border-bottom d-flex justify-content-between align-items-center';
-            item.innerHTML = `<span><i class="bi bi-person-fill text-danger me-1"></i> <strong>${name}</strong></span><span class="badge bg-secondary">ID: ${cb.value}</span>`;
-            listEl.appendChild(item);
-        });
+    const names = Array.from(selected).map(cb => cb.getAttribute('data-name') || ('Faculty ID #' + cb.value));
+    const confirmMsg = `Are you sure you want to permanently delete these ${selected.length} faculty member(s)?\n\n` +
+                       names.slice(0, 10).join('\n') + (names.length > 10 ? `\n...and ${names.length - 10} more` : '') +
+                       `\n\nThis will remove their credentials and login access.`;
+    if (confirm(confirmMsg)) {
+        executeBulkDeleteTeachers();
     }
-    const countEl = document.getElementById('bulkModalCount');
-    if (countEl) countEl.textContent = selected.length;
-    const modalEl = document.getElementById('bulkDeleteTeachersModal');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
-    }
+}
+
+function handleBulkDeleteClick() {
+    handleBulkDeleteTeachers();
+}
+
+function openBulkDeleteModal() {
+    handleBulkDeleteTeachers();
 }
 
 async function executeBulkDeleteTeachers() {
@@ -3224,6 +3249,203 @@ async function executeBulkDeleteTeachers() {
 }
 
 // -------------------------------------------------------------
+// Bulk Student Selection & Deletion Management
+// -------------------------------------------------------------
+function toggleSelectAllStudents(masterCb) {
+    const checkboxes = document.querySelectorAll('.student-cb');
+    checkboxes.forEach(cb => {
+        const row = cb.closest('tr');
+        if (!row || row.style.display !== 'none') {
+            cb.checked = masterCb.checked;
+        }
+    });
+    updateSelectedStudents();
+}
+
+function updateSelectedStudents() {
+    const selected = document.querySelectorAll('.student-cb:checked');
+    const count = selected.length;
+    const btn = document.getElementById('btnBulkDeleteStudents');
+    const countSpan = document.getElementById('bulkDeleteStudentCount');
+    const actionBar = document.getElementById('studentBulkActionBar');
+    const selectedMsg = document.getElementById('studentSelectedMsg');
+    const selectAllCb = document.getElementById('selectAllStudents');
+
+    if (countSpan) countSpan.textContent = count;
+
+    if (btn) {
+        if (count > 0) {
+            btn.disabled = false;
+            btn.classList.remove('btn-outline-danger', 'd-none');
+            btn.classList.add('btn-danger');
+        } else {
+            btn.disabled = true;
+            btn.classList.remove('btn-danger', 'd-none');
+            btn.classList.add('btn-outline-danger');
+        }
+    }
+
+    if (actionBar) {
+        if (count > 0) {
+            actionBar.classList.remove('d-none');
+            if (selectedMsg) selectedMsg.textContent = `${count} student(s) selected for deletion`;
+        } else {
+            actionBar.classList.add('d-none');
+        }
+    }
+
+    if (selectAllCb) {
+        const visibleCbs = Array.from(document.querySelectorAll('.student-cb')).filter(cb => {
+            const row = cb.closest('tr');
+            return row && row.style.display !== 'none';
+        });
+        selectAllCb.checked = visibleCbs.length > 0 && visibleCbs.every(cb => cb.checked);
+        selectAllCb.indeterminate = count > 0 && count < visibleCbs.length;
+    }
+}
+
+function clearStudentSelection() {
+    document.querySelectorAll('.student-cb').forEach(cb => cb.checked = false);
+    const selectAll = document.getElementById('selectAllStudents');
+    if (selectAll) {
+        selectAll.checked = false;
+        selectAll.indeterminate = false;
+    }
+    updateSelectedStudents();
+}
+
+function handleBulkDeleteStudents() {
+    const selected = document.querySelectorAll('.student-cb:checked');
+    if (selected.length === 0) {
+        showToastAlert('warning', 'Please select at least one student using checkboxes to delete.');
+        alert('Please select at least one student using checkboxes to delete.');
+        return;
+    }
+    const names = Array.from(selected).map(cb => {
+        const name = cb.getAttribute('data-name') || '';
+        const roll = cb.getAttribute('data-roll') || ('ID #' + cb.value);
+        return `${name} (${roll})`;
+    });
+    const confirmMsg = `Are you sure you want to permanently delete these ${selected.length} student record(s)?\n\n` +
+                       names.slice(0, 10).join('\n') + (names.length > 10 ? `\n...and ${names.length - 10} more` : '') +
+                       `\n\nThis will remove their student profiles and attendance records.`;
+    if (confirm(confirmMsg)) {
+        executeBulkDeleteStudents();
+    }
+}
+
+async function executeBulkDeleteStudents() {
+    const selected = document.querySelectorAll('.student-cb:checked');
+    const studentIds = Array.from(selected).map(cb => cb.value);
+    if (studentIds.length === 0) return;
+
+    const btn = document.getElementById('btnBulkDeleteStudents');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+    }
+
+    try {
+        const res = await fetch('/admin/api/bulk-delete-students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_ids: studentIds })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            studentIds.forEach(id => {
+                const row = document.querySelector(`tr[data-student-row-id="${id}"]`) || document.getElementById(`student-row-${id}`);
+                if (row) {
+                    row.style.transition = 'all 0.4s ease';
+                    row.style.backgroundColor = '#fee2e2';
+                    row.style.opacity = '0';
+                    setTimeout(() => { if (row.parentNode) row.remove(); }, 400);
+                }
+            });
+
+            setTimeout(() => {
+                updateStudentTabCount();
+                clearStudentSelection();
+                resequenceStudentTable();
+            }, 450);
+
+            showToastAlert('success', data.message || `Successfully deleted ${studentIds.length} student(s).`);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to delete students.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToastAlert('danger', 'Network error while deleting students.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-trash3-fill me-1"></i> Delete Selected Students (<span id="bulkDeleteStudentCount">0</span>)';
+        }
+    }
+}
+
+async function deleteSingleStudent(studentId, studentName, rollNumber) {
+    if (!confirm(`Are you sure you want to permanently delete student '${studentName}' (${rollNumber})?`)) {
+        return;
+    }
+    try {
+        const res = await fetch('/admin/api/delete-student/' + studentId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            const row = document.querySelector(`tr[data-student-row-id="${studentId}"]`) || document.getElementById(`student-row-${studentId}`);
+            if (row) {
+                row.style.transition = 'all 0.4s ease';
+                row.style.backgroundColor = '#fee2e2';
+                row.style.opacity = '0';
+                setTimeout(() => {
+                    if (row.parentNode) row.remove();
+                    updateStudentTabCount();
+                    updateSelectedStudents();
+                    resequenceStudentTable();
+                }, 400);
+            }
+            showToastAlert('success', data.message || `Student '${studentName}' deleted.`);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to delete student.');
+        }
+    } catch (err) {
+        console.error(err);
+        // Fallback: form submit
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/admin/api/delete-student/' + studentId;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function resequenceStudentTable() {
+    const rows = document.querySelectorAll('#adminStudentsTbody tr');
+    let seq = 1;
+    rows.forEach(r => {
+        if (r.style.display !== 'none') {
+            const snoCell = r.querySelector('.student-sno-cell') || r.children[1];
+            if (snoCell) {
+                snoCell.textContent = seq++;
+            }
+        }
+    });
+}
+
+function updateStudentTabCount() {
+    const rows = document.querySelectorAll('#adminStudentsTbody tr');
+    const count = rows.length;
+    const badge = document.getElementById('studentTabCount');
+    if (badge) badge.innerText = count;
+}
+
+// -------------------------------------------------------------
 // Bulk HOD Selection & Deletion Management
 // -------------------------------------------------------------
 function toggleSelectAllHods(masterCb) {
@@ -3289,29 +3511,24 @@ function clearHodSelection() {
     updateSelectedHods();
 }
 
-function openBulkDeleteHodModal() {
+function handleBulkDeleteHods() {
     const selected = document.querySelectorAll('.hod-cb:checked');
     if (selected.length === 0) {
         showToastAlert('warning', 'Please select at least one HOD using checkboxes to delete.');
+        alert('Please select at least one HOD using checkboxes to delete.');
         return;
     }
-    const listEl = document.getElementById('bulkSelectedHodList');
-    if (listEl) {
-        listEl.innerHTML = '';
-        selected.forEach(cb => {
-            const name = cb.getAttribute('data-name') || 'HOD ID #' + cb.value;
-            const item = document.createElement('div');
-            item.className = 'py-1 border-bottom d-flex justify-content-between align-items-center';
-            item.innerHTML = `<span><i class="bi bi-person-fill text-danger me-1"></i> <strong>${name}</strong></span><span class="badge bg-secondary">ID: ${cb.value}</span>`;
-            listEl.appendChild(item);
-        });
+    const names = Array.from(selected).map(cb => cb.getAttribute('data-name') || ('HOD ID #' + cb.value));
+    const confirmMsg = `Are you sure you want to permanently delete these ${selected.length} HOD account(s)?\n\n` +
+                       names.slice(0, 10).join('\n') + (names.length > 10 ? `\n...and ${names.length - 10} more` : '') +
+                       `\n\nThis will remove their credentials and login access.`;
+    if (confirm(confirmMsg)) {
+        executeBulkDeleteHods();
     }
-    const countEl = document.getElementById('bulkHodModalCount');
-    if (countEl) countEl.textContent = selected.length;
-    const modalEl = document.getElementById('bulkDeleteHodsModal');
-    if (modalEl && typeof bootstrap !== 'undefined') {
-        bootstrap.Modal.getOrCreateInstance(modalEl).show();
-    }
+}
+
+function openBulkDeleteHodModal() {
+    handleBulkDeleteHods();
 }
 
 async function executeBulkDeleteHods() {

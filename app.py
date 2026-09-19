@@ -1191,14 +1191,56 @@ def admin_delete_student(student_id):
     if not is_admin():
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
+    is_api = request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'fetch' in request.headers.get('Sec-Fetch-Mode', '')
     conn = get_db_connection()
     cursor = conn.cursor()
+    cursor.execute("SELECT name, roll_number FROM students WHERE id = ?", (student_id,))
+    st = cursor.fetchone()
+    st_name = st["name"] if st else f"ID {student_id}"
+    cursor.execute("DELETE FROM attendance_records WHERE student_id = ?", (student_id,))
     cursor.execute("DELETE FROM students WHERE id = ?", (student_id,))
     conn.commit()
     conn.close()
 
-    flash("Student permanently removed from database.", "info")
+    msg = f"Student '{st_name}' permanently removed from database."
+    if is_api:
+        return jsonify({"status": "success", "message": msg, "student_id": student_id})
+    flash(msg, "info")
     return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/api/bulk-delete-students", methods=["POST"])
+def admin_bulk_delete_students():
+    if not is_admin():
+        return jsonify({"status": "error", "message": "Unauthorized access. Master Admin required."}), 403
+
+    data = request.get_json(silent=True) or {}
+    student_ids = data.get("student_ids", [])
+    if not student_ids or not isinstance(student_ids, list):
+        return jsonify({"status": "error", "message": "No students selected for deletion."}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        valid_ids = [int(sid) for sid in student_ids if str(sid).isdigit()]
+        if not valid_ids:
+            conn.close()
+            return jsonify({"status": "error", "message": "No valid student IDs found."}), 400
+
+        placeholders = ",".join(["?"] * len(valid_ids))
+        cursor.execute(f"DELETE FROM attendance_records WHERE student_id IN ({placeholders})", valid_ids)
+        cursor.execute(f"DELETE FROM students WHERE id IN ({placeholders})", valid_ids)
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        return jsonify({
+            "status": "success",
+            "message": f"Successfully deleted {deleted_count} student record(s) from database.",
+            "deleted_count": deleted_count,
+            "deleted_ids": valid_ids
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({"status": "error", "message": f"Failed to delete students: {str(e)}"}), 500
 
 @app.route("/admin/api/reset-faculty-2fa", methods=["POST"])
 def admin_reset_faculty_2fa():
