@@ -389,8 +389,8 @@
                     <i class="bi bi-chevron-right text-muted"></i>
                 </a>
 
-                <!-- 6. Administrator Portal -->
-                <a href="/admin" target="_blank" rel="noopener noreferrer" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3 border-top bg-light-subtle">
+                <!-- 6. Administrator Portal (Opens Pop-up Modal) -->
+                <a href="#adminLoginModal" data-bs-toggle="modal" data-bs-dismiss="offcanvas" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3 border-top bg-light-subtle">
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-dark text-warning p-2 rounded-circle shadow-sm">
                             <i class="bi bi-shield-lock-fill fs-5"></i>
@@ -400,7 +400,9 @@
                             <small class="text-muted">Master control &amp; institutional oversight (2FA Protected)</small>
                         </div>
                     </div>
-                    <i class="bi bi-chevron-right text-muted"></i>
+                    <span class="badge bg-warning text-dark fw-bold px-2 py-1 small shadow-sm">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Pop-up Login
+                    </span>
                 </a>
             </div>
 
@@ -424,4 +426,96 @@
         </div>
     </div>
 </div>
+
+<!-- ================= ADMINISTRATOR MASTER LOGIN POP-UP MODAL ================= -->
+<div class="modal fade" id="adminLoginModal" tabindex="-1" aria-labelledby="adminLoginModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <!-- Modal Header (Obsidian & Purple Gradient) -->
+            <div class="modal-header py-3 px-4 border-0 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #3b0764 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle p-2 bg-dark bg-opacity-50 text-warning border border-warning-subtle shadow-sm">
+                        <i class="bi bi-shield-lock-fill fs-4"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-white mb-0" id="adminLoginModalLabel">Administrative Master Login</h5>
+                        <small class="text-warning-emphasis" style="font-size: 0.8rem;">Institutional Control &bull; 2FA Protected</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body p-4 bg-white text-dark">
+                <div class="alert alert-dark border border-warning-subtle small py-2 px-3 mb-3 d-flex align-items-center gap-2 rounded-3" style="background: #1e1b4b; color: #e2e8f0;">
+                    <i class="bi bi-shield-check text-warning fs-5 flex-shrink-0"></i>
+                    <div class="small">
+                        <strong class="text-warning">High-Security Portal:</strong> Google Authenticator TOTP verification will be required after password confirmation.
+                    </div>
+                </div>
+
+                <form method="POST" action="/admin" id="modalAdminLoginForm">
+                    <!-- Admin Username / Email -->
+                    <div class="mb-3">
+                        <label for="modal_admin_username" class="form-label fw-bold small text-navy mb-1">
+                            <i class="bi bi-person-badge me-1 text-primary"></i> ADMINISTRATOR LOGIN ID / EMAIL
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0 fw-semibold" id="modal_admin_username" name="username" placeholder="Enter Login ID or registered Gmail" required autocomplete="username">
+                        </div>
+                    </div>
+
+                    <!-- Admin Password -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label for="modal_admin_password" class="form-label fw-bold small text-navy mb-0">
+                                <i class="bi bi-key-fill me-1 text-primary"></i> MASTER PASSWORD
+                            </label>
+                            <a href="/forgot-password?role=admin" class="extra-small text-danger fw-semibold text-decoration-none">
+                                <i class="bi bi-question-circle me-1"></i> Forgot?
+                            </a>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
+                            <input type="password" class="form-control border-start-0 ps-0 fw-semibold" id="modal_admin_password" name="password" placeholder="••••••••••••" required autocomplete="current-password">
+                            <button class="btn btn-outline-secondary border-start-0" type="button" onclick="toggleModalAdminPassword()">
+                                <i class="bi bi-eye" id="modalToggleIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn w-100 py-2 fw-bold text-white shadow rounded-3" style="background: linear-gradient(135deg, #0F2C59 0%, #4A148C 100%); border: none;">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Authorize &amp; Continue to 2FA
+                    </button>
+                </form>
+
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top extra-small text-muted">
+                    <span>Authorized Admins Only</span>
+                    <a href="/admin" class="text-decoration-none text-secondary">
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Full Page View
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleModalAdminPassword() {
+    const pw = document.getElementById("modal_admin_password");
+    const icon = document.getElementById("modalToggleIcon");
+    if (pw) {
+        if (pw.type === "password") {
+            pw.type = "text";
+            icon.className = "bi bi-eye-slash";
+        } else {
+            pw.type = "password";
+            icon.className = "bi bi-eye";
+        }
+    }
+}
+</script>
 {% endblock %}
