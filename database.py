@@ -1,9 +1,26 @@
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "attendance.db")
+DB_PATH = os.getenv("DB_PATH", os.path.join(os.path.dirname(__file__), "attendance.db"))
+
+TURSO_DEFAULT_URL = "libsql://ssits-attendance-kamanurubasha-coder.aws-ap-south-1.turso.io"
+TURSO_DEFAULT_TOKEN = "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJhIjoicnciLCJpYXQiOjE3ODk4MzM1NTYsImlkIjoiMDFhMGJhNjEtYWIwMS03OWY3LWFkYTEtOTE0NjNlYWRmOGUxIiwia2lkIjoiUkVvNHdUTDktS3VnSWhaMG15X1NDeks3MVVQYzZlTThXQlMtTi01X2Y2WSIsInJpZCI6IjZhNTk2MGU5LTBhZjQtNGUyMy1hMjM3LTEwMWQ1YzMzOGY1YiJ9.B-xFreuAjs80CqWjitoOHnbF6pAVu7E-ET8SjSUSex8mWYVjZok1gp9QrUhsu01hb1Evwn6UsQJx42h91dPKDw"
 
 def get_db_connection():
+    if os.getenv("USE_LOCAL_SQLITE") == "1":
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    turso_url = os.getenv("TURSO_DATABASE_URL", TURSO_DEFAULT_URL)
+    turso_token = os.getenv("TURSO_AUTH_TOKEN", TURSO_DEFAULT_TOKEN)
+    if turso_url and turso_token:
+        try:
+            from turso_client import TursoConnection
+            return TursoConnection(turso_url, turso_token)
+        except Exception as e:
+            print(f"[WARN] Turso connection fallback to SQLite: {e}")
+
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn

@@ -944,8 +944,17 @@
                         </div>
                         <div class="col-12 col-md-8 text-md-end">
                             <div class="d-flex flex-wrap gap-2 justify-content-md-end align-items-center">
+                                <button type="button" class="btn btn-sm btn-success fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#adminUploadStudentsModal" title="Upload Student Roster via CSV Spreadsheet">
+                                    <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Bulk Upload CSV
+                                </button>
+                                <button type="button" class="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#adminAddStudentModal" title="Add Single Student Manually">
+                                    <i class="bi bi-person-plus-fill me-1"></i> + Add Student
+                                </button>
+                                <a href="/admin/api/download-student-template" class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2 shadow-sm" title="Download Sample CSV Spreadsheet Template">
+                                    <i class="bi bi-download me-1"></i> Sample CSV
+                                </a>
                                 <button type="button" id="btnBulkDeleteStudents" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="handleBulkDeleteStudents()" disabled title="Select one or more students using checkboxes to delete">
-                                    <i class="bi bi-trash3-fill me-1"></i> Delete Selected Students (<span id="bulkDeleteStudentCount">0</span>)
+                                    <i class="bi bi-trash3-fill me-1"></i> Delete Selected (<span id="bulkDeleteStudentCount">0</span>)
                                 </button>
                                 <select id="adminProgFilter" class="form-select form-select-sm w-auto" onchange="filterAdminStudents()">
                                     <option value="">All Programs</option>
@@ -1433,7 +1442,7 @@
                                     </ul>
                                 </div>
                                 <div>
-                                    <button type="button" class="btn btn-primary fw-bold w-100 py-2 shadow-sm" onclick="openRestoreModal()">
+                                    <button type="button" class="btn btn-primary fw-bold w-100 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#restoreDbModal" onclick="openRestoreModal()">
                                         <i class="bi bi-cloud-arrow-up-fill me-1"></i> Upload &amp; Restore Database (.db)
                                     </button>
                                 </div>
@@ -1582,6 +1591,173 @@
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary fw-bold">Update Student</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 3B. Admin Bulk Upload Students CSV Modal -->
+<div class="modal fade" id="adminUploadStudentsModal" tabindex="-1" aria-labelledby="adminUploadStudentsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-success text-white py-3">
+                <h5 class="modal-title fw-bold" id="adminUploadStudentsModalLabel">
+                    <i class="bi bi-file-earmark-spreadsheet-fill me-2"></i> Bulk Upload Students (CSV)
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/admin/api/upload-students" enctype="multipart/form-data">
+                <div class="modal-body p-4">
+                    <div class="alert alert-info py-2 px-3 mb-3 small d-flex align-items-center rounded-3">
+                        <i class="bi bi-info-circle-fill me-2 fs-5 text-info"></i>
+                        <div>
+                            Select the target class, year, and upload an Excel/CSV spreadsheet to bulk import students.
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">PROGRAM *</label>
+                            <select name="program_id" id="modalUploadProg" class="form-select" required onchange="handleModalProgChange('modalUploadProg', 'modalUploadYear')">
+                                {% for p in programs %}
+                                <option value="{{ p.id }}">{{ p.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">DEPARTMENT / BRANCH *</label>
+                            <select name="department_id" id="modalUploadDept" class="form-select" required>
+                                {% for d in departments %}
+                                <option value="{{ d.id }}">{{ d.code }} - {{ d.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">ACADEMIC YEAR *</label>
+                            <select name="year_id" id="modalUploadYear" class="form-select" required>
+                                {% for y in academic_years %}
+                                <option value="{{ y.id }}">{{ y.year_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">SECTION</label>
+                            <select name="section" class="form-select">
+                                <option value="A" selected>Section A</option>
+                                <option value="B">Section B</option>
+                                <option value="C">Section C</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">SELECT CSV SPREADSHEET *</label>
+                        <input type="file" name="student_file" accept=".csv" class="form-control" required>
+                        <div class="form-text small text-muted">
+                            Columns: <code>Roll Number</code>, <code>Student Name</code>, <code>Father Name</code>, <code>Father Phone</code>.
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 border d-flex justify-content-between align-items-center">
+                        <small class="text-muted"><i class="bi bi-question-circle me-1"></i> Need sample format?</small>
+                        <a href="/admin/api/download-student-template" class="btn btn-sm btn-outline-success fw-bold">
+                            <i class="bi bi-download me-1"></i> Sample CSV Template
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4">
+                        <i class="bi bi-cloud-arrow-up-fill me-1"></i> Upload & Import Students
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 3C. Admin Add Single Student Modal -->
+<div class="modal fade" id="adminAddStudentModal" tabindex="-1" aria-labelledby="adminAddStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white py-3">
+                <h5 class="modal-title fw-bold" id="adminAddStudentModalLabel">
+                    <i class="bi bi-person-plus-fill me-2"></i> Add Single Student
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="/admin/api/add-student">
+                <div class="modal-body p-4">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">PROGRAM *</label>
+                            <select name="program_id" id="modalAddProg" class="form-select" required onchange="handleModalProgChange('modalAddProg', 'modalAddYear')">
+                                {% for p in programs %}
+                                <option value="{{ p.id }}">{{ p.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">DEPARTMENT / BRANCH *</label>
+                            <select name="department_id" id="modalAddDept" class="form-select" required>
+                                {% for d in departments %}
+                                <option value="{{ d.id }}">{{ d.code }} - {{ d.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">ACADEMIC YEAR *</label>
+                            <select name="year_id" id="modalAddYear" class="form-select" required>
+                                {% for y in academic_years %}
+                                <option value="{{ y.id }}">{{ y.year_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">SECTION</label>
+                            <select name="section" class="form-select">
+                                <option value="A" selected>Section A</option>
+                                <option value="B">Section B</option>
+                                <option value="C">Section C</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">ROLL NUMBER / PIN *</label>
+                        <input type="text" name="roll_number" class="form-control text-uppercase" placeholder="e.g. 22G31A0501 or 22-SSIT-EC-001" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">STUDENT FULL NAME *</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. G. Sai Kumar" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">FATHER / PARENT NAME *</label>
+                        <input type="text" name="father_name" class="form-control" placeholder="e.g. G. Narayana Rao" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">FATHER WHATSAPP MOBILE *</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">+91</span>
+                            <input type="tel" name="father_phone" class="form-control" placeholder="10-digit mobile" pattern="[0-9]{10}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">
+                        <i class="bi bi-person-plus-fill me-1"></i> Save Student to Roster
+                    </button>
                 </div>
             </form>
         </div>
@@ -1850,6 +2026,8 @@
             </div>
         </div>
     </div>
+</div>
+
 <!-- 6. Admin Change Credentials (Login ID & Password) Modal -->
 <div class="modal fade" id="changeAdminPasswordModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -2369,6 +2547,26 @@ if (teacherSearchInput) {
 }
 
 // Filter Students with dynamic serial resequencing
+function handleModalProgChange(progSelectId, yearSelectId) {
+    const progSelect = document.getElementById(progSelectId);
+    const yearSelect = document.getElementById(yearSelectId);
+    if (!progSelect || !yearSelect) return;
+    
+    const selectedText = progSelect.options[progSelect.selectedIndex]?.text?.toLowerCase() || '';
+    const isDiploma = selectedText.includes('diploma');
+    
+    // Diploma has 3 years (1st, 2nd, 3rd Year), B.Tech has 4 years
+    for (let i = 0; i < yearSelect.options.length; i++) {
+        const opt = yearSelect.options[i];
+        if (opt.text.toLowerCase().includes('4th')) {
+            opt.disabled = isDiploma;
+            if (isDiploma && yearSelect.value === opt.value) {
+                yearSelect.selectedIndex = 0;
+            }
+        }
+    }
+}
+
 function filterAdminStudents() {
     const prog = document.getElementById('adminProgFilter').value;
     const dept = document.getElementById('adminDeptFilter').value;
