@@ -32,6 +32,7 @@ def get_ist_date_str():
 
 app = Flask(__name__)
 app.secret_key = "sri_sai_institute_attendance_secret_key_2026"
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 86400  # 24-hour browser caching for static assets
 
 # Ultra-fast Keep-Alive endpoint for Render cold-start prevention
 @app.route("/healthz")
