@@ -1012,9 +1012,10 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 student-table">
+                        <table class="table table-hover align-middle mb-0 student-table" id="principalTable">
                             <thead>
                                 <tr>
+                                    <th style="width: 45px;">S.NO</th>
                                     <th>ROLE</th>
                                     <th>EXECUTIVE NAME</th>
                                     <th>OFFICIAL GMAIL</th>
@@ -1023,20 +1024,22 @@
                                     <th>STORED PASSWORD</th>
                                     <th class="text-center" style="width: 150px;">STATUS &amp; APPROVAL</th>
                                     <th class="text-center" style="width: 160px;">2FA (GOOGLE AUTH)</th>
+                                    <th class="text-center" style="width: 220px; min-width: 205px;">ACTIONS</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% if principals %}
                                     {% for p in principals %}
-                                    <tr>
+                                    <tr data-principal-row-id="{{ p.id }}" id="principal-row-{{ p.id }}">
+                                        <td class="sno-cell fw-semibold text-muted">{{ loop.index }}</td>
                                         <td><span class="badge bg-danger text-white px-2 py-1">PRINCIPAL</span></td>
-                                        <td class="fw-bold text-navy fs-6">{{ p.name }}</td>
-                                        <td><span class="text-dark fw-semibold small"><i class="bi bi-envelope-at text-danger me-1"></i>{{ p.email or 'principal@srisaitech.ac.in' }}</span></td>
-                                        <td><span class="text-success small fw-semibold"><i class="bi bi-telephone-fill me-1"></i> {{ p.phone or 'Contact Admin' }}</span></td>
-                                        <td><code class="fw-bold text-primary">{{ p.username }}</code></td>
+                                        <td class="fw-bold text-navy fs-6" id="princ-name-{{ p.id }}">{{ p.name }}</td>
+                                        <td id="princ-email-{{ p.id }}"><span class="text-dark fw-semibold small"><i class="bi bi-envelope-at text-danger me-1"></i>{{ p.email or 'principal@srisaitech.ac.in' }}</span></td>
+                                        <td id="princ-phone-{{ p.id }}"><span class="text-success small fw-semibold"><i class="bi bi-telephone-fill me-1"></i> {{ p.phone or 'Contact Admin' }}</span></td>
+                                        <td><code class="fw-bold text-primary" id="princ-user-{{ p.id }}">{{ p.username }}</code></td>
                                         <td>
                                             <div class="d-flex align-items-center gap-1">
-                                                <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 font-monospace fs-6">{{ p.password }}</span>
+                                                <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 font-monospace fs-6" id="princ-pw-display-{{ p.id }}">{{ p.password }}</span>
                                                 <button type="button" class="btn btn-sm btn-link text-muted p-0 ms-1" onclick="navigator.clipboard.writeText('{{ p.password }}'); alert('Principal password copied: {{ p.password }}');" title="Copy Password">
                                                     <i class="bi bi-clipboard"></i>
                                                 </button>
@@ -1074,11 +1077,27 @@
                                                 </span>
                                             {% endif %}
                                         </td>
+                                        <td class="text-center">
+                                            <div class="d-flex align-items-center justify-content-center gap-1">
+                                                <button type="button" class="btn btn-sm btn-outline-primary fw-semibold px-2 py-1" title="Reset Password"
+                                                        onclick="openResetPrincipalPasswordModal({{ p.id }}, '{{ p.name|escape }}', '{{ p.username|escape }}')">
+                                                    <i class="bi bi-key-fill"></i> Reset
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold px-2 py-1" title="Edit Principal Details"
+                                                        onclick="openEditPrincipalModal({{ p.id }}, '{{ p.name|escape }}', '{{ p.phone|escape }}', '{{ p.email|escape }}', '{{ p.username|escape }}')">
+                                                    <i class="bi bi-pencil-square"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-2 py-1 shadow-sm" title="Delete Principal Account"
+                                                        onclick="openDeletePrincipalModal({{ p.id }}, '{{ p.name|escape }}')">
+                                                    <i class="bi bi-trash3-fill me-1"></i> Delete
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 {% else %}
                                     <tr>
-                                        <td colspan="8" class="text-center py-3 text-muted">No Principal account registered.</td>
+                                        <td colspan="10" class="text-center py-3 text-muted">No Principal account registered.</td>
                                     </tr>
                                 {% endif %}
                             </tbody>
@@ -1096,12 +1115,15 @@
                         </h5>
                         <small class="text-muted">Direct oversight of all departmental branches, stored passwords, approval access, and 2FA status.</small>
                     </div>
-                    <span class="badge bg-primary px-3 py-1">Branch Leadership ({{ hods|length }})</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text" id="hodSearch" class="form-control form-control-sm w-auto" placeholder="🔍 Search HOD / email / dept..." onkeyup="filterHODs()">
+                        <span class="badge bg-primary px-3 py-1">Branch Leadership ({{ hods|length }})</span>
+                    </div>
                 </div>
 
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0 student-table">
+                        <table class="table table-hover align-middle mb-0 student-table" id="hodsTable">
                             <thead>
                                 <tr>
                                     <th style="width: 45px;">S.NO</th>
@@ -1114,26 +1136,26 @@
                                     <th>STORED PASSWORD</th>
                                     <th class="text-center" style="width: 140px;">STATUS &amp; APPROVAL</th>
                                     <th class="text-center" style="width: 150px;">2FA (GOOGLE AUTH)</th>
-                                    <th class="text-center" style="width: 90px;">ACTION</th>
+                                    <th class="text-center" style="width: 220px; min-width: 205px;">ACTIONS</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for h in hods %}
-                                <tr>
-                                    <td>{{ loop.index }}</td>
+                                <tr data-hod-row-id="{{ h.id }}" id="hod-row-{{ h.id }}">
+                                    <td class="sno-cell fw-semibold text-muted">{{ loop.index }}</td>
                                     <td><span class="badge bg-navy px-2 py-1">{{ h.prog_code }}</span></td>
                                     <td><strong class="text-primary">{{ h.dept_code }}</strong> - {{ h.dept_name }}</td>
-                                    <td class="fw-bold">{{ h.name }}</td>
-                                    <td>
+                                    <td class="fw-bold" id="hod-name-{{ h.id }}">{{ h.name }}</td>
+                                    <td id="hod-phone-{{ h.id }}">
                                         <a href="https://wa.me/91{{ h.phone }}" target="_blank" class="text-success text-decoration-none fw-bold">
                                             <i class="bi bi-whatsapp me-1"></i> {{ h.phone }}
                                         </a>
                                     </td>
-                                    <td><small class="text-muted">{{ h.email }}</small></td>
-                                    <td><code class="fw-bold text-secondary">{{ h.username or 'hod_' ~ h.dept_code|lower }}</code></td>
+                                    <td id="hod-email-{{ h.id }}"><small class="text-muted">{{ h.email }}</small></td>
+                                    <td><code class="fw-bold text-secondary" id="hod-user-{{ h.id }}">{{ h.username or 'hod_' ~ h.dept_code|lower }}</code></td>
                                     <td>
                                         <div class="d-flex align-items-center gap-1">
-                                            <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 font-monospace fs-6">{{ h.password or 'hod123' }}</span>
+                                            <span class="badge bg-warning-subtle text-dark border border-warning px-2 py-1 font-monospace fs-6" id="hod-pw-display-{{ h.id }}">{{ h.password or 'hod123' }}</span>
                                             <button type="button" class="btn btn-sm btn-link text-muted p-0 ms-1" onclick="navigator.clipboard.writeText('{{ h.password or 'hod123' }}'); alert('HOD Password copied: {{ h.password or 'hod123' }}');" title="Copy Password">
                                                 <i class="bi bi-clipboard"></i>
                                             </button>
@@ -1172,9 +1194,20 @@
                                         {% endif %}
                                     </td>
                                     <td class="text-center">
-                                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="openEditHodModal({{ h.id }}, '{{ h.name }}', '{{ h.phone }}', '{{ h.email }}')">
-                                            <i class="bi bi-pencil"></i> Edit
-                                        </button>
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            <button type="button" class="btn btn-sm btn-outline-primary fw-semibold px-2 py-1" title="Reset Password"
+                                                    onclick="openResetHodPasswordModal({{ h.id }}, '{{ h.name|escape }}', '{{ h.username or 'hod_' ~ h.dept_code|lower }}')">
+                                                <i class="bi bi-key-fill"></i> Reset
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary fw-semibold px-2 py-1" title="Edit HOD Details"
+                                                    onclick="openEditHodModal({{ h.id }}, '{{ h.name|escape }}', '{{ h.phone|escape }}', '{{ h.email|escape }}', '{{ h.username or 'hod_' ~ h.dept_code|lower }}')">
+                                                <i class="bi bi-pencil-square"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-danger fw-semibold px-2 py-1 shadow-sm" title="Delete HOD"
+                                                    onclick="openDeleteHodModal({{ h.id }}, '{{ h.name|escape }}', '{{ h.dept_code }}')">
+                                                <i class="bi bi-trash3-fill me-1"></i> Delete
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -1412,12 +1445,48 @@
     </div>
 </div>
 
-<!-- 4. Edit HOD Modal -->
+<!-- 4. Reset HOD Password Modal -->
+<div class="modal fade" id="resetHodPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-navy text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-key-fill text-warning me-2"></i> Reset HOD Password
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="resetHodPasswordForm" onsubmit="submitResetHodPassword(event)">
+                <input type="hidden" name="hod_id" id="reset_hod_id">
+                <div class="modal-body p-4">
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <div class="fw-bold fs-6" id="reset_hod_name"></div>
+                        <div class="small text-muted" id="reset_hod_user"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="new_hod_password" class="form-label fw-bold small">NEW PASSWORD *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="new_password" id="new_hod_password" value="hod123" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('new_hod_password').value = Math.random().toString(36).slice(-6);">Generate Random</button>
+                        </div>
+                        <small class="text-muted">HOD can log in with this new password immediately.</small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary fw-bold" id="btnSubmitResetHodPass">Save New Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 4B. Edit HOD Modal -->
 <div class="modal fade" id="editHodModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-dark text-white py-3">
-                <h5 class="modal-title fw-bold"><i class="bi bi-person-badge-fill me-2 text-warning"></i> Edit HOD Contact Details</h5>
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-badge-fill me-2 text-warning"></i> Edit HOD Details</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="/admin/api/edit-hod">
@@ -1426,6 +1495,10 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold">HOD FULL NAME</label>
                         <input type="text" name="name" id="edit_hod_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">USERNAME / LOGIN ID</label>
+                        <input type="text" name="username" id="edit_hod_username" class="form-control">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">WHATSAPP MOBILE NUMBER</label>
@@ -1439,6 +1512,144 @@
                 <div class="modal-footer bg-light">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" class="btn btn-primary fw-bold">Save HOD Details</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 4C. Delete HOD Confirmation Modal -->
+<div class="modal fade" id="deleteHodModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-trash-fill me-2"></i> Delete HOD Account</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="deleteHodForm" onsubmit="confirmDeleteHod(event)">
+                <input type="hidden" name="hod_id" id="delete_hod_id">
+                <div class="modal-body p-4 text-center">
+                    <div class="text-danger mb-3">
+                        <i class="bi bi-exclamation-triangle-fill fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Are you sure you want to remove this HOD?</h5>
+                    <p class="text-muted mb-3">
+                        HOD Name: <strong class="text-dark fs-6" id="delete_hod_name"></strong><br>
+                        Department: <span class="badge bg-primary" id="delete_hod_dept"></span>
+                    </p>
+                    <div class="alert alert-warning small text-start mb-0">
+                        <i class="bi bi-info-circle-fill me-1"></i>
+                        Removing this HOD will delete their credentials and login access. All student attendance and department data remain safely preserved.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold" id="btnConfirmDeleteHod"><i class="bi bi-trash me-1"></i> Confirm Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 4D. Reset Principal Password Modal -->
+<div class="modal fade" id="resetPrincipalPasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-key-fill text-warning me-2"></i> Reset Principal Password
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="resetPrincipalPasswordForm" onsubmit="submitResetPrincipalPassword(event)">
+                <input type="hidden" name="principal_id" id="reset_principal_id">
+                <div class="modal-body p-4">
+                    <div class="p-3 bg-light rounded-3 mb-3 border">
+                        <div class="fw-bold fs-6" id="reset_principal_name"></div>
+                        <div class="small text-muted" id="reset_principal_user"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="new_principal_password" class="form-label fw-bold small">NEW PASSWORD *</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="new_password" id="new_principal_password" value="principal123" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('new_principal_password').value = Math.random().toString(36).slice(-6);">Generate Random</button>
+                        </div>
+                        <small class="text-muted">Principal can log in with this new password immediately.</small>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold" id="btnSubmitResetPrincipalPass">Save New Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 4E. Edit Principal Modal -->
+<div class="modal fade" id="editPrincipalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-gear me-2 text-warning"></i> Edit Principal Details</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editPrincipalForm" onsubmit="submitEditPrincipal(event)">
+                <input type="hidden" name="principal_id" id="edit_principal_id">
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">PRINCIPAL FULL NAME</label>
+                        <input type="text" name="name" id="edit_principal_name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">USERNAME / LOGIN ID</label>
+                        <input type="text" name="username" id="edit_principal_username" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">CONTACT MOBILE NUMBER</label>
+                        <input type="tel" name="phone" id="edit_principal_phone" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">OFFICIAL EMAIL</label>
+                        <input type="email" name="email" id="edit_principal_email" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold" id="btnSubmitEditPrincipal">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 4F. Delete Principal Confirmation Modal -->
+<div class="modal fade" id="deletePrincipalModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white py-3">
+                <h5 class="modal-title fw-bold"><i class="bi bi-trash-fill me-2"></i> Delete Principal Account</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="deletePrincipalForm" onsubmit="confirmDeletePrincipal(event)">
+                <input type="hidden" name="principal_id" id="delete_principal_id">
+                <div class="modal-body p-4 text-center">
+                    <div class="text-danger mb-3">
+                        <i class="bi bi-exclamation-triangle-fill fs-1"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">Are you sure you want to remove the Principal account?</h5>
+                    <p class="text-muted mb-3">
+                        Principal Name: <strong class="text-dark fs-6" id="delete_principal_name"></strong>
+                    </p>
+                    <div class="alert alert-danger small text-start mb-0">
+                        <i class="bi bi-exclamation-octagon-fill me-1"></i>
+                        Removing this account will revoke executive portal access. A new Principal account can be registered anytime.
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger fw-bold" id="btnConfirmDeletePrincipal"><i class="bi bi-trash me-1"></i> Confirm Delete</button>
                 </div>
             </form>
         </div>
@@ -3013,6 +3224,285 @@ async function verifyInlineAdmin2FA() {
         console.error(err);
         alertBox.className = 'alert alert-danger p-2 small mt-2';
         alertBox.innerText = 'Network error while verifying 2FA.';
+    }
+// -------------------------------------------------------------
+// HOD Credential Management Functions
+// -------------------------------------------------------------
+function openResetHodPasswordModal(id, name, username) {
+    document.getElementById('reset_hod_id').value = id;
+    document.getElementById('reset_hod_name').innerText = name;
+    document.getElementById('reset_hod_user').innerText = 'Username: ' + username;
+    document.getElementById('new_hod_password').value = 'hod123';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('resetHodPasswordModal')).show();
+}
+
+async function submitResetHodPassword(e) {
+    if (e) e.preventDefault();
+    const hodId = document.getElementById('reset_hod_id').value;
+    const newPass = document.getElementById('new_hod_password').value.trim();
+    const submitBtn = document.getElementById('btnSubmitResetHodPass');
+
+    if (!newPass) {
+        showToastAlert('danger', 'Password cannot be blank!');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+    try {
+        const res = await fetch('/admin/api/reset-hod-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hod_id: hodId, new_password: newPass })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            bootstrap.Modal.getInstance(document.getElementById('resetHodPasswordModal'))?.hide();
+            const badge = document.getElementById(`hod-pw-display-${hodId}`);
+            if (badge) {
+                badge.innerText = newPass;
+                badge.classList.remove('bg-warning-subtle', 'text-dark');
+                badge.classList.add('bg-success-subtle', 'text-success');
+                setTimeout(() => {
+                    badge.classList.remove('bg-success-subtle', 'text-success');
+                    badge.classList.add('bg-warning-subtle', 'text-dark');
+                }, 3500);
+            }
+            showToastAlert('success', data.message);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to reset HOD password.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToastAlert('danger', 'Network error while saving HOD password.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Save New Password';
+    }
+}
+
+function openEditHodModal(id, name, phone, email, username) {
+    document.getElementById('edit_hod_id').value = id;
+    document.getElementById('edit_hod_name').value = name;
+    document.getElementById('edit_hod_phone').value = phone;
+    document.getElementById('edit_hod_email').value = email || '';
+    const uField = document.getElementById('edit_hod_username');
+    if (uField) uField.value = username || '';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('editHodModal')).show();
+}
+
+function openDeleteHodModal(id, name, dept) {
+    document.getElementById('delete_hod_id').value = id;
+    document.getElementById('delete_hod_name').innerText = name;
+    document.getElementById('delete_hod_dept').innerText = dept;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('deleteHodModal')).show();
+}
+
+async function confirmDeleteHod(e) {
+    if (e) e.preventDefault();
+    const hodId = document.getElementById('delete_hod_id').value;
+    const btn = document.getElementById('btnConfirmDeleteHod');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+
+    try {
+        const res = await fetch('/admin/api/delete-hod', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ hod_id: hodId })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            bootstrap.Modal.getInstance(document.getElementById('deleteHodModal'))?.hide();
+            const row = document.getElementById(`hod-row-${hodId}`);
+            if (row) {
+                row.style.transition = 'all 0.4s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    row.remove();
+                    resequenceHodTable();
+                }, 400);
+            }
+            showToastAlert('success', data.message);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to delete HOD.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToastAlert('danger', 'Network error while deleting HOD.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-trash me-1"></i> Confirm Delete';
+    }
+}
+
+function resequenceHodTable() {
+    const rows = document.querySelectorAll('#hodsTable tbody tr[data-hod-row-id]');
+    rows.forEach((r, idx) => {
+        const cell = r.querySelector('.sno-cell');
+        if (cell) cell.innerText = idx + 1;
+    });
+}
+
+function filterHODs() {
+    const q = (document.getElementById('hodSearch')?.value || '').toLowerCase();
+    const rows = document.querySelectorAll('#hodsTable tbody tr[data-hod-row-id]');
+    rows.forEach(r => {
+        const text = r.innerText.toLowerCase();
+        r.style.display = text.includes(q) ? '' : 'none';
+    });
+}
+
+// -------------------------------------------------------------
+// Principal Credential Management Functions
+// -------------------------------------------------------------
+function openResetPrincipalPasswordModal(id, name, username) {
+    document.getElementById('reset_principal_id').value = id;
+    document.getElementById('reset_principal_name').innerText = name;
+    document.getElementById('reset_principal_user').innerText = 'Username: ' + username;
+    document.getElementById('new_principal_password').value = 'principal123';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('resetPrincipalPasswordModal')).show();
+}
+
+async function submitResetPrincipalPassword(e) {
+    if (e) e.preventDefault();
+    const principalId = document.getElementById('reset_principal_id').value;
+    const newPass = document.getElementById('new_principal_password').value.trim();
+    const submitBtn = document.getElementById('btnSubmitResetPrincipalPass');
+
+    if (!newPass) {
+        showToastAlert('danger', 'Password cannot be blank!');
+        return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+    try {
+        const res = await fetch('/admin/api/reset-principal-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ principal_id: principalId, new_password: newPass })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            bootstrap.Modal.getInstance(document.getElementById('resetPrincipalPasswordModal'))?.hide();
+            const badge = document.getElementById(`princ-pw-display-${principalId}`);
+            if (badge) {
+                badge.innerText = newPass;
+                badge.classList.remove('bg-warning-subtle', 'text-dark');
+                badge.classList.add('bg-success-subtle', 'text-success');
+                setTimeout(() => {
+                    badge.classList.remove('bg-success-subtle', 'text-success');
+                    badge.classList.add('bg-warning-subtle', 'text-dark');
+                }, 3500);
+            }
+            showToastAlert('success', data.message);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to reset Principal password.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToastAlert('danger', 'Network error while saving Principal password.');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Save New Password';
+    }
+}
+
+function openEditPrincipalModal(id, name, phone, email, username) {
+    document.getElementById('edit_principal_id').value = id;
+    document.getElementById('edit_principal_name').value = name;
+    document.getElementById('edit_principal_phone').value = phone;
+    document.getElementById('edit_principal_email').value = email || '';
+    document.getElementById('edit_principal_username').value = username || '';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('editPrincipalModal')).show();
+}
+
+async function submitEditPrincipal(e) {
+    if (e) e.preventDefault();
+    const id = document.getElementById('edit_principal_id').value;
+    const name = document.getElementById('edit_principal_name').value.trim();
+    const phone = document.getElementById('edit_principal_phone').value.trim();
+    const email = document.getElementById('edit_principal_email').value.trim();
+    const username = document.getElementById('edit_principal_username').value.trim();
+    const btn = document.getElementById('btnSubmitEditPrincipal');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+    try {
+        const res = await fetch('/admin/api/edit-principal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ principal_id: id, name, phone, email, username })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            bootstrap.Modal.getInstance(document.getElementById('editPrincipalModal'))?.hide();
+            const nameEl = document.getElementById(`princ-name-${id}`);
+            if (nameEl) nameEl.innerText = name;
+            const phoneEl = document.getElementById(`princ-phone-${id}`);
+            if (phoneEl) phoneEl.innerHTML = `<span class="text-success small fw-semibold"><i class="bi bi-telephone-fill me-1"></i> ${phone}</span>`;
+            const emailEl = document.getElementById(`princ-email-${id}`);
+            if (emailEl) emailEl.innerHTML = `<span class="text-dark fw-semibold small"><i class="bi bi-envelope-at text-danger me-1"></i>${email}</span>`;
+            const userEl = document.getElementById(`princ-user-${id}`);
+            if (userEl) userEl.innerText = username;
+
+            showToastAlert('success', data.message);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to update Principal details.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToastAlert('danger', 'Network error while updating Principal.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'Save Changes';
+    }
+}
+
+function openDeletePrincipalModal(id, name) {
+    document.getElementById('delete_principal_id').value = id;
+    document.getElementById('delete_principal_name').innerText = name;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('deletePrincipalModal')).show();
+}
+
+async function confirmDeletePrincipal(e) {
+    if (e) e.preventDefault();
+    const id = document.getElementById('delete_principal_id').value;
+    const btn = document.getElementById('btnConfirmDeletePrincipal');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Deleting...';
+
+    try {
+        const res = await fetch('/admin/api/delete-principal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ principal_id: id })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            bootstrap.Modal.getInstance(document.getElementById('deletePrincipalModal'))?.hide();
+            const row = document.getElementById(`principal-row-${id}`);
+            if (row) {
+                row.style.transition = 'all 0.4s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'scale(0.95)';
+                setTimeout(() => row.remove(), 400);
+            }
+            showToastAlert('success', data.message);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to delete Principal.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToastAlert('danger', 'Network error while deleting Principal.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-trash me-1"></i> Confirm Delete';
     }
 }
 

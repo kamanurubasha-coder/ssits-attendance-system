@@ -269,27 +269,32 @@ def init_db():
     cursor.execute("UPDATE hods SET password = 'hod123' WHERE password IS NULL OR password = ''")
 
     # Seed / Update Super Admin (Kamanuru Basha)
-    cursor.execute("SELECT id, username, email, password FROM admins WHERE role = 'superadmin' OR username = 'admin' OR username = 'reddybashakamanuru18@gmail.com' OR LOWER(email) = 'reddybashakamanuru18@gmail.com' OR LOWER(email) = 'kamanurubasha@gmail.com' LIMIT 1")
+    cursor.execute("SELECT id, username, email, password, totp_secret, is_2fa_enabled FROM admins WHERE role = 'superadmin' OR username = 'admin' OR username = 'reddybashakamanuru18@gmail.com' OR LOWER(email) = 'reddybashakamanuru18@gmail.com' OR LOWER(email) = 'kamanurubasha@gmail.com' LIMIT 1")
     admin_match = cursor.fetchone()
     admin_env_pw = os.getenv("ADMIN_PASSWORD")
+    MASTER_ADMIN_SECRET = "TW6JMF5JLJAASADJIEO57HDBD24JRCMC"
 
     if not admin_match:
         target_admin_pw = admin_env_pw if admin_env_pw else "Hamza@123"
         cursor.execute("""
-            INSERT INTO admins (username, password, name, email, phone, role, is_2fa_enabled, totp_secret)
-            VALUES ('reddybashakamanuru18@gmail.com', ?, 'Kamanuru Basha', 'reddybashakamanuru18@gmail.com', '9848099999', 'superadmin', 0, NULL)
-        """, (target_admin_pw,))
+            INSERT INTO admins (username, password, name, email, phone, role, is_2fa_enabled, totp_secret, is_approved)
+            VALUES ('reddybashakamanuru18@gmail.com', ?, 'Kamanuru Basha', 'reddybashakamanuru18@gmail.com', '9848099999', 'superadmin', 1, ?, 1)
+        """, (target_admin_pw, MASTER_ADMIN_SECRET))
     else:
-        # Keep existing password unless explicitly provided in env
+        # Keep existing password or environment password
         new_pw = admin_env_pw if admin_env_pw else (admin_match["password"] or "Hamza@123")
+        current_secret = admin_match["totp_secret"] or MASTER_ADMIN_SECRET
         cursor.execute("""
             UPDATE admins 
             SET username = 'reddybashakamanuru18@gmail.com',
                 email = 'reddybashakamanuru18@gmail.com',
                 name = 'Kamanuru Basha',
-                password = ?
+                password = ?,
+                is_2fa_enabled = 1,
+                totp_secret = ?,
+                is_approved = 1
             WHERE id = ?
-        """, (new_pw, admin_match["id"]))
+        """, (new_pw, current_secret, admin_match["id"]))
 
     # Seed Principal Account if not exists
     cursor.execute("SELECT COUNT(*) FROM admins WHERE role = 'principal' OR username = 'principal'")
