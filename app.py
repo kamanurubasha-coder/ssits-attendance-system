@@ -1975,7 +1975,7 @@ def admin_api_reset_data():
             msg = f"Full factory reset successful! All attendance wiped and {stud_count} original student records cleanly re-seeded across all 27 classes."
         else:
             conn.commit()
-            msg = "Attendance records and day statuses successfully cleared to 0! All 27 classes are fresh for the new month/day, while students and faculty remain safe."
+            msg = "Attendance records and day statuses successfully cleared to 0! All Faculty credentials, Admin logins, and 2FA Authenticator remain 100% safe and untouched."
 
         conn.close()
         return jsonify({"status": "success", "message": msg})

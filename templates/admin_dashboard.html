@@ -39,7 +39,7 @@
                         <i class="bi bi-person-lock me-1"></i> Admin Credentials
                     </button>
                     <button type="button" class="btn btn-danger fw-bold rounded-pill px-3 shadow-sm" onclick="openResetModal('attendance_only')">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i> Next Month Data Reset
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Academic Data Reset
                     </button>
                     <a href="/faculty-directory" class="btn btn-outline-light fw-semibold rounded-pill px-3">
                         <i class="bi bi-person-lines-fill me-1"></i> Directory
@@ -1288,7 +1288,7 @@
                             <h5 class="fw-bold text-navy mb-0">
                                 <i class="bi bi-arrow-counterclockwise text-danger me-2"></i> Academic Data Reset &amp; Semester Maintenance
                             </h5>
-                            <small class="text-muted">Prepare system for next month's fresh launch or new academic semester with a safe, verified purge</small>
+                            <small class="text-muted">Prepare system for a new academic semester or purge test attendance with a safe, verified reset</small>
                         </div>
                         <span class="badge bg-danger px-3 py-2 text-uppercase fs-7">
                             <i class="bi bi-shield-lock-fill me-1"></i> Admin Authorization Required
@@ -1307,23 +1307,23 @@
                                             <i class="bi bi-calendar-x-fill"></i>
                                         </div>
                                         <div>
-                                            <h5 class="fw-bold text-navy mb-0">Academic Attendance Reset</h5>
-                                            <span class="badge bg-success-subtle text-success border border-success mt-1">Recommended for Next Month</span>
+                                            <h5 class="fw-bold text-navy mb-0">New Semester / Test Attendance Reset</h5>
+                                            <span class="badge bg-warning-subtle text-dark border border-warning mt-1"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>End of Semester / Post-Testing Only</span>
                                         </div>
                                     </div>
                                     <p class="text-muted small mb-3">
-                                        Clears all daily morning/afternoon attendance records, college day statuses, and temporary OTPs.
+                                        Clears past attendance records to start a fresh academic semester from 0%. Monthly reports run automatically — do <strong>NOT</strong> reset during regular active months.
                                     </p>
                                     <ul class="small text-muted mb-4 ps-3">
-                                        <li><strong class="text-success">SAFE:</strong> All student enrolled profiles (Roll Numbers, Names, Phone Nos) remain intact.</li>
-                                        <li><strong class="text-success">SAFE:</strong> All Class Teacher logins, passwords, and assignments remain active.</li>
-                                        <li><strong class="text-success">SAFE:</strong> All Departments, Programs, and HOD WhatsApp setups remain untouched.</li>
-                                        <li><strong class="text-danger">CLEARED:</strong> All past test attendance entries wiped to 0% for a clean day-1 start.</li>
+                                        <li><strong class="text-success"><i class="bi bi-shield-check me-1"></i>100% PROTECTED:</strong> All Faculty Logins, Passwords, and Assignments remain permanently active (NEVER changed).</li>
+                                        <li><strong class="text-success"><i class="bi bi-shield-check me-1"></i>100% PROTECTED:</strong> Master Admin credentials, Password, and 2FA Google Authenticator are completely untouched.</li>
+                                        <li><strong class="text-success"><i class="bi bi-shield-check me-1"></i>100% PROTECTED:</strong> All enrolled Student profiles, Roll numbers, and Parent phone numbers remain safe.</li>
+                                        <li><strong class="text-danger"><i class="bi bi-eraser-fill me-1"></i>CLEARED ONLY:</strong> Past attendance logs and temporary OTP tokens wiped to 0% for a clean day-1 start.</li>
                                     </ul>
                                 </div>
                                 <div>
                                     <button type="button" class="btn btn-danger fw-bold w-100 py-2 shadow-sm" onclick="openResetModal('attendance_only')">
-                                        <i class="bi bi-trash3-fill me-1"></i> Clear Attendance Records for Next Month
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Attendance for New Semester / Clear Test Data
                                     </button>
                                 </div>
                             </div>
@@ -1886,11 +1886,16 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <div class="alert alert-warning border-0 small mb-3">
-                    <i class="bi bi-info-circle-fill me-1"></i> 
-                    <strong>Attention Admin:</strong> This operation resets past attendance records.
-                    <div class="mt-2 text-dark">
-                        &bull; <strong>Next Month Attendance Reset (Recommended):</strong> Clears all daily morning/afternoon attendance entries and day status flags to 0. All 27 classes start 100% clean for the new month/day, while keeping all students and faculty accounts intact!
+                <div class="alert alert-warning border border-warning-subtle small mb-3">
+                    <div class="d-flex align-items-center mb-1 text-success fw-bold">
+                        <i class="bi bi-shield-check me-1 fs-5"></i> Safety Guarantee:
+                    </div>
+                    <div class="text-dark small">
+                        <strong>All Faculty Logins &amp; Passwords, Admin Credentials, and 2FA Google Authenticator are 100% PRESERVED &amp; NEVER CHANGED.</strong>
+                    </div>
+                    <hr class="my-2">
+                    <div class="text-dark">
+                        &bull; <strong>New Semester / Test Attendance Reset:</strong> Clears past attendance records and day status flags to 0. (Monthly reports are automatic; use this ONLY at the end of a semester or after testing).
                     </div>
                     <div class="mt-1 text-dark">
                         &bull; <strong>Full Factory Reset:</strong> Clears attendance AND restores original student rosters across all 27 sections.
@@ -1900,7 +1905,7 @@
                 <div class="mb-3">
                     <label class="form-label fw-bold small">SELECT RESET TYPE *</label>
                     <select class="form-select fw-bold" id="modalResetMode">
-                        <option value="attendance_only" selected>Next Month Attendance Reset (Keep Students &amp; Faculty) - Recommended</option>
+                        <option value="attendance_only" selected>New Semester / Test Attendance Reset (Faculty, Admin &amp; 2FA Safe)</option>
                         <option value="factory">Full Factory Reset (Re-seed Original Student Master Roster)</option>
                     </select>
                 </div>
