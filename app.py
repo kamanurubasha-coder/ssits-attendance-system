@@ -831,9 +831,13 @@ def admin_2fa_setup():
         session["setup_2fa_admin_id"] = admin_id
         session["setup_2fa_admin_name"] = admin_name
     else:
-        admin_id = session.get("setup_2fa_admin_id")
+        admin_id = session.get("setup_2fa_admin_id") or session.get("pending_2fa_admin_id")
+        admin_name = session.get("setup_2fa_admin_name") or session.get("pending_2fa_admin_name", "Administrator")
+        if admin_id and not session.get("setup_2fa_admin_secret"):
+            session["setup_2fa_admin_secret"] = pyotp.random_base32()
+            session["setup_2fa_admin_id"] = admin_id
+            session["setup_2fa_admin_name"] = admin_name
         secret = session.get("setup_2fa_admin_secret")
-        admin_name = session.get("setup_2fa_admin_name", "Administrator")
 
     if not admin_id or not secret:
         flash("Session expired. Please sign in with your Administrator credentials first.", "error")
@@ -1422,6 +1426,39 @@ def admin_delete_hod():
         return jsonify({"status": "success", "message": msg, "hod_id": hod_id})
     flash(msg, "success")
     return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/api/bulk-delete-hods", methods=["POST"])
+def admin_bulk_delete_hods():
+    if not is_admin():
+        return jsonify({"status": "error", "message": "Unauthorized access. Master Admin required."}), 403
+
+    data = request.get_json(silent=True) or {}
+    hod_ids = data.get("hod_ids", [])
+    if not hod_ids or not isinstance(hod_ids, list):
+        return jsonify({"status": "error", "message": "No HODs selected for deletion."}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    try:
+        valid_ids = [int(hid) for hid in hod_ids if str(hid).isdigit()]
+        if not valid_ids:
+            conn.close()
+            return jsonify({"status": "error", "message": "No valid HOD IDs found."}), 400
+
+        placeholders = ",".join(["?"] * len(valid_ids))
+        cursor.execute(f"DELETE FROM hods WHERE id IN ({placeholders})", valid_ids)
+        deleted_count = cursor.rowcount
+        conn.commit()
+        conn.close()
+        return jsonify({
+            "status": "success",
+            "message": f"Successfully deleted {deleted_count} HOD account(s) permanently.",
+            "deleted_count": deleted_count,
+            "deleted_ids": valid_ids
+        })
+    except Exception as e:
+        conn.close()
+        return jsonify({"status": "error", "message": f"Database error: {str(e)}"}), 500
 
 @app.route("/admin/api/reset-principal-password", methods=["POST"])
 def admin_reset_principal_password():
