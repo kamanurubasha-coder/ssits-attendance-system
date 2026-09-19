@@ -21,8 +21,11 @@
                         </span>
                     </div>
                     <h2 class="fw-bold mb-1 text-white">Sri Sai Institute of Technology and Science</h2>
+                    <h5 class="fw-bold text-warning mb-1">
+                        <i class="bi bi-person-badge-fill me-1"></i> Principal: {{ session.get('principal_name') or session.get('name') or 'Dr. Principal / Director (SSITS)' }}
+                    </h5>
                     <p class="text-white-50 mb-0 small">
-                        Institutional Authority: <strong class="text-gold-light">Dr. Principal Desk</strong> &bull; Complete academic oversight across all Programs (Diploma & B.Tech), all Departments & all Academic Batches.
+                        Institutional Authority: <strong class="text-gold-light">{{ session.get('principal_name') or session.get('name') or 'Dr. Principal / Director (SSITS)' }}</strong> &bull; Complete academic oversight across all Programs (Diploma &amp; B.Tech), all Departments &amp; all Academic Batches.
                     </p>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2">

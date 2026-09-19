@@ -79,6 +79,7 @@ def set_hod_session(hod):
     session["hod_id"] = hod["id"]
     session["department_id"] = hod["department_id"]
     session["hod_name"] = hod["name"]
+    session["name"] = hod["name"]
     session["username"] = hod["username"]
     session["role"] = "hod"
     session["dept_code"] = hod["dept_code"] if "dept_code" in hod.keys() else ""
@@ -89,6 +90,7 @@ def set_principal_session(princ):
     session["principal_id"] = princ["id"]
     session["username"] = princ["username"]
     session["name"] = princ["name"]
+    session["principal_name"] = princ["name"]
     session["role"] = "principal"
 
 def set_admin_session(admin):
@@ -1982,6 +1984,140 @@ def admin_api_reset_data():
     except Exception as e:
         conn.close()
         return jsonify({"status": "error", "message": f"Database error during reset: {str(e)}"}), 500
+
+# ==============================================================================
+# DISASTER RECOVERY: 1-CLICK DATABASE BACKUP & RESTORE API
+# ==============================================================================
+@app.route("/admin/api/backup-db", methods=["GET"])
+def admin_api_backup_db():
+    """Allows Super Admin to download a complete, consistent snapshot of attendance.db"""
+    if not is_admin():
+        flash("Unauthorized access. Master Administrator required.", "error")
+        return redirect(url_for("admin_portal"))
+
+    from database import DB_PATH
+    import tempfile
+    import sqlite3
+
+    if not os.path.exists(DB_PATH):
+        flash("Database file does not exist yet.", "error")
+        return redirect(url_for("admin_dashboard"))
+
+    temp_dir = tempfile.gettempdir()
+    now_str = get_ist_now().strftime("%Y-%m-%d_%H%M")
+    backup_filename = f"ssits_attendance_backup_{now_str}.db"
+    temp_backup_path = os.path.join(temp_dir, backup_filename)
+
+    try:
+        source_conn = sqlite3.connect(DB_PATH)
+        dest_conn = sqlite3.connect(temp_backup_path)
+        with dest_conn:
+            source_conn.backup(dest_conn)
+        dest_conn.close()
+        source_conn.close()
+
+        return send_file(
+            temp_backup_path,
+            as_attachment=True,
+            download_name=backup_filename,
+            mimetype="application/x-sqlite3"
+        )
+    except Exception as e:
+        flash(f"Error creating backup: {str(e)}", "error")
+        return redirect(url_for("admin_dashboard"))
+
+@app.route("/admin/api/restore-db", methods=["POST"])
+def admin_api_restore_db():
+    """Allows Super Admin to upload and restore a previously saved attendance.db file"""
+    if not is_admin():
+        return jsonify({"status": "error", "message": "Unauthorized access. Master Admin required."}), 403
+
+    admin_password = request.form.get("admin_password", "").strip()
+    if not admin_password:
+        return jsonify({"status": "error", "message": "Administrator password is required for verification!"}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT password FROM admins WHERE id = ?", (session["admin_id"],))
+    admin_row = cursor.fetchone()
+    all_admin_pws = [r["password"] for r in cursor.execute("SELECT password FROM admins").fetchall()]
+    conn.close()
+
+    env_pw = os.getenv("ADMIN_PASSWORD")
+    is_valid_pw = (
+        (admin_row and admin_row["password"] == admin_password) or
+        (env_pw and env_pw == admin_password) or
+        (admin_password in all_admin_pws)
+    )
+    if not is_valid_pw:
+        return jsonify({"status": "error", "message": "Incorrect Administrator password! Restoration aborted."}), 400
+
+    if "backup_file" not in request.files:
+        return jsonify({"status": "error", "message": "No backup file uploaded!"}), 400
+
+    uploaded_file = request.files["backup_file"]
+    if not uploaded_file.filename:
+        return jsonify({"status": "error", "message": "Please select a .db backup file to upload."}), 400
+
+    filename_lower = uploaded_file.filename.lower()
+    if not (filename_lower.endswith(".db") or filename_lower.endswith(".sqlite") or filename_lower.endswith(".sqlite3")):
+        return jsonify({"status": "error", "message": "Invalid file type. Only .db, .sqlite, or .sqlite3 files are accepted."}), 400
+
+    import tempfile
+    import shutil
+    import sqlite3
+    from database import DB_PATH
+
+    temp_path = os.path.join(tempfile.gettempdir(), f"upload_{secrets.token_hex(8)}.db")
+    uploaded_file.save(temp_path)
+
+    # Validate that uploaded file is a valid SQLite DB and contains our required tables
+    try:
+        test_conn = sqlite3.connect(temp_path)
+        test_cursor = test_conn.cursor()
+        test_cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        tables = [r[0] for r in test_cursor.fetchall()]
+        required_tables = ["teachers", "students", "attendance_records", "admins"]
+        missing_tables = [t for t in required_tables if t not in tables]
+
+        if missing_tables:
+            test_conn.close()
+            os.remove(temp_path)
+            return jsonify({
+                "status": "error",
+                "message": f"Corrupted or invalid database backup. Missing required tables: {', '.join(missing_tables)}"
+            }), 400
+
+        test_cursor.execute("SELECT COUNT(*) FROM teachers")
+        t_count = test_cursor.fetchone()[0]
+        test_cursor.execute("SELECT COUNT(*) FROM students")
+        s_count = test_cursor.fetchone()[0]
+        test_cursor.execute("SELECT COUNT(*) FROM attendance_records")
+        a_count = test_cursor.fetchone()[0]
+        test_conn.close()
+
+        # Archive current database before replacing
+        if os.path.exists(DB_PATH):
+            shutil.copy2(DB_PATH, DB_PATH + ".bak")
+
+        # Replace active DB with the verified backup
+        shutil.copy2(temp_path, DB_PATH)
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+        # Run init_db to ensure any schema migrations/columns are up to date
+        from database import init_db
+        init_db()
+
+        return jsonify({
+            "status": "success",
+            "message": f"Database successfully restored! Active data: {t_count} Faculty accounts, {s_count} Students, and {a_count} Attendance records are now 100% active."
+        })
+    except Exception as e:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        return jsonify({"status": "error", "message": f"Restoration failed: {str(e)}"}), 500
+
 
 # ==============================================================================
 # NEW FEATURE 2: CONSOLIDATED ABSENTEES SUMMARY (ALL DEGREES & BRANCHES)

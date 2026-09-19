@@ -304,7 +304,7 @@ def init_db():
             VALUES ('principal', 'principal123', 'Dr. Principal / Director (SSITS)', 'principal@srisaitech.ac.in', '9848099901', 'principal')
         """)
 
-    # Permanent preservation of registered faculties (Faizan and Lakshmi Dattatri)
+    # Permanent preservation of registered faculties (Faizan, Lakshmi Dattatri, Kamanuru Reddy Basha)
     cursor.execute("SELECT id FROM teachers WHERE LOWER(username) = 'faizan' OR LOWER(name) LIKE '%faizan%'")
     if not cursor.fetchone():
         cursor.execute("""
@@ -319,13 +319,21 @@ def init_db():
             VALUES (?, 1, 1, 2, 'A', ?, ?, ?, ?, 1, 1, ?)
         """, ("Sri. Lakshmi Dattatri", "lakshmidattatri@srisaitech.ac.in", "lakshmidattatri", "Dattatri@123", "9848099912", "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXQ"))
 
-    # Ensure Faizan & Lakshmi Dattatri always remain approved and 2FA active
+    cursor.execute("SELECT id FROM teachers WHERE LOWER(username) = 'kamanurubasha' OR LOWER(email) = 'kamanurubasha@gmail.com'")
+    if not cursor.fetchone():
+        cursor.execute("""
+            INSERT INTO teachers (name, program_id, department_id, year_id, section, email, username, password, phone, is_approved, is_2fa_enabled, totp_secret)
+            VALUES (?, 1, 1, 1, 'A', ?, ?, ?, ?, 1, 1, ?)
+        """, ("KAMANURU REDDY BASHA", "kamanurubasha@gmail.com", "kamanurubasha", "Basha@123", "9515139866", "RMKE27SPPKJN5OYFAYYQZ3OC4MBEDOFY"))
+
+    # Ensure Faizan, Lakshmi Dattatri & Kamanuru Reddy Basha always remain approved and active
     cursor.execute("""
         UPDATE teachers 
         SET is_approved = 1, is_2fa_enabled = 1
-        WHERE LOWER(username) IN ('faizan', 'lakshmidattatri', 'dattatri') 
+        WHERE LOWER(username) IN ('faizan', 'lakshmidattatri', 'dattatri', 'kamanurubasha') 
            OR LOWER(name) LIKE '%faizan%' 
            OR LOWER(name) LIKE '%dattatri%'
+           OR LOWER(name) LIKE '%kamanuru%'
     """)
 
     conn.commit()

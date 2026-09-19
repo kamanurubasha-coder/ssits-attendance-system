@@ -21,8 +21,11 @@
                         </span>
                     </div>
                     <h2 class="fw-bold mb-1 text-white">Department of {{ department.name }}</h2>
+                    <h5 class="fw-bold text-warning mb-1">
+                        <i class="bi bi-person-workspace me-1"></i> Head of Department: {{ session.get('hod_name') or session.get('name') or session.get('username') }}
+                    </h5>
                     <p class="text-white-50 mb-0 small">
-                        HOD Portal &bull; Head: <strong class="text-gold-light">{{ session.get('hod_name', session.get('username')) }}</strong> &bull; Complete academic oversight over all Diploma (3 Yrs) & B.Tech (4 Yrs) sections.
+                        HOD Portal &bull; Head: <strong class="text-gold-light">{{ session.get('hod_name') or session.get('name') or session.get('username') }}</strong> &bull; Complete academic oversight over all Diploma (3 Yrs) &amp; B.Tech (4 Yrs) sections.
                     </p>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2">
