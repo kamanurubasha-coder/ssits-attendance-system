@@ -113,6 +113,53 @@ def is_principal():
 def is_hod():
     return "hod_id" in session or session.get("role") == "hod"
 
+# In-memory cache for static catalog data (Programs, Departments, Academic Years, Mappings)
+_CATALOG_CACHE = {
+    "programs": None,
+    "departments": None,
+    "academic_years": None,
+    "prog_dept_map": None,
+    "last_fetched": None
+}
+
+def get_static_catalog(conn=None):
+    """Returns (programs, departments, academic_years, prog_dept_map) with in-memory caching (TTL 10 min)."""
+    now = datetime.now()
+    if (_CATALOG_CACHE["programs"] is not None and 
+        _CATALOG_CACHE["last_fetched"] is not None and 
+        (now - _CATALOG_CACHE["last_fetched"]).total_seconds() < 600):
+        return (_CATALOG_CACHE["programs"], _CATALOG_CACHE["departments"], 
+                _CATALOG_CACHE["academic_years"], _CATALOG_CACHE["prog_dept_map"])
+    
+    close_after = False
+    if conn is None:
+        conn = get_db_connection()
+        close_after = True
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM programs ORDER BY id ASC")
+    programs = [dict(r) for r in cur.fetchall()]
+    cur.execute("SELECT * FROM departments ORDER BY id ASC")
+    departments = [dict(r) for r in cur.fetchall()]
+    cur.execute("SELECT * FROM academic_years ORDER BY year_num ASC")
+    academic_years = [dict(r) for r in cur.fetchall()]
+    cur.execute("SELECT program_id, department_id FROM program_departments")
+    mappings = cur.fetchall()
+    prog_dept_map = {}
+    for m in mappings:
+        pid = m[0] if isinstance(m, (tuple, list)) else m["program_id"]
+        did = m[1] if isinstance(m, (tuple, list)) else m["department_id"]
+        prog_dept_map.setdefault(pid, []).append(did)
+
+    if close_after:
+        conn.close()
+        
+    _CATALOG_CACHE["programs"] = programs
+    _CATALOG_CACHE["departments"] = departments
+    _CATALOG_CACHE["academic_years"] = academic_years
+    _CATALOG_CACHE["prog_dept_map"] = prog_dept_map
+    _CATALOG_CACHE["last_fetched"] = now
+    return programs, departments, academic_years, prog_dept_map
+
 # Helper: check default day type for a date (Sunday or 2nd Saturday)
 def get_default_day_type(date_obj):
     if date_obj.weekday() == 6:
@@ -214,22 +261,7 @@ def login():
         else:
             flash("Invalid credentials or selection mismatch! Please check Program, Branch, Year, Section and Password.", "error")
 
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM programs ORDER BY id ASC")
-    programs = [dict(r) for r in cursor.fetchall()]
-
-    cursor.execute("SELECT * FROM departments ORDER BY id ASC")
-    departments = [dict(r) for r in cursor.fetchall()]
-
-    cursor.execute("SELECT * FROM academic_years ORDER BY year_num ASC")
-    academic_years = [dict(r) for r in cursor.fetchall()]
-
-    cursor.execute("SELECT program_id, department_id FROM program_departments")
-    mappings = cursor.fetchall()
-    prog_dept_map = {}
-    for m in mappings:
-        prog_dept_map.setdefault(m["program_id"], []).append(m["department_id"])
-
+    programs, departments, academic_years, prog_dept_map = get_static_catalog(conn)
     conn.close()
 
     return render_template(
@@ -411,14 +443,7 @@ def register():
     cursor = conn.cursor()
 
     if request.method == "GET":
-        cursor.execute("SELECT * FROM programs ORDER BY id ASC")
-        programs = [dict(r) for r in cursor.fetchall()]
-
-        cursor.execute("SELECT * FROM departments ORDER BY id ASC")
-        departments = [dict(r) for r in cursor.fetchall()]
-
-        cursor.execute("SELECT * FROM academic_years ORDER BY year_num ASC")
-        academic_years = [dict(r) for r in cursor.fetchall()]
+        programs, departments, academic_years, _ = get_static_catalog(conn)
         conn.close()
         return render_template("register.html", programs=programs, departments=departments, academic_years=academic_years)
 
@@ -975,17 +1000,8 @@ def admin_dashboard():
     # Total students count
     total_students_count = len(all_students)
 
-    # Programs
-    cursor.execute("SELECT * FROM programs ORDER BY id ASC")
-    programs = [dict(r) for r in cursor.fetchall()]
-
-    # Departments
-    cursor.execute("SELECT * FROM departments ORDER BY id ASC")
-    departments = [dict(r) for r in cursor.fetchall()]
-
-    # Academic years
-    cursor.execute("SELECT * FROM academic_years ORDER BY year_num ASC")
-    academic_years = [dict(r) for r in cursor.fetchall()]
+    # Programs, Departments, Academic Years (Cached)
+    programs, departments, academic_years, _ = get_static_catalog(conn)
 
     # HODs
     cursor.execute("""
@@ -1301,6 +1317,19 @@ def admin_api_upload_students():
         y_row = cursor.fetchone()
         year_name = y_row[0] if y_row else "Year"
 
+        # Collect and validate all rows in memory
+        to_insert = []
+        to_update = []
+
+        # 1 Single fast query to get all existing roll numbers
+        cursor.execute("SELECT id, roll_number FROM students")
+        existing_map = {}
+        for r in cursor.fetchall():
+            rn = r[1] if isinstance(r, (tuple, list)) else r["roll_number"]
+            rid = r[0] if isinstance(r, (tuple, list)) else r["id"]
+            if rn:
+                existing_map[str(rn).strip().upper()] = rid
+
         for row in csv_reader:
             cleaned = {k.strip().lower(): v.strip() for k, v in row.items() if k and v is not None}
             roll = (cleaned.get("roll number") or cleaned.get("roll_number") or cleaned.get("roll") 
@@ -1322,23 +1351,32 @@ def admin_api_upload_students():
                 if len(phone_clean) < 10:
                     phone_clean = phone.strip()
 
-                # Check if student already exists - update if so, else insert
-                cursor.execute("SELECT id FROM students WHERE roll_number = ?", (roll_clean,))
-                existing = cursor.fetchone()
-                if existing:
-                    st_id = existing[0] if isinstance(existing, (tuple, list)) else existing["id"]
-                    cursor.execute("""
-                        UPDATE students
-                        SET name = ?, program_id = ?, department_id = ?, year_id = ?, section = ?, father_name = ?, father_phone = ?
-                        WHERE id = ?
-                    """, (sname_clean, program_id, department_id, year_id, row_sec, fname_clean, phone_clean, st_id))
-                    updated_count += 1
+                if roll_clean in existing_map:
+                    st_id = existing_map[roll_clean]
+                    to_update.append((sname_clean, program_id, department_id, year_id, row_sec, fname_clean, phone_clean, st_id))
                 else:
-                    cursor.execute("""
-                        INSERT INTO students (roll_number, name, program_id, department_id, year_id, section, father_name, father_phone)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (roll_clean, sname_clean, program_id, department_id, year_id, row_sec, fname_clean, phone_clean))
-                    inserted_count += 1
+                    to_insert.append((roll_clean, sname_clean, program_id, department_id, year_id, row_sec, fname_clean, phone_clean))
+
+        # Batch insert new students using multi-row INSERTs in chunks of 30
+        inserted_count = len(to_insert)
+        chunk_size = 30
+        for i in range(0, len(to_insert), chunk_size):
+            chunk = to_insert[i:i + chunk_size]
+            placeholders = ", ".join(["(?, ?, ?, ?, ?, ?, ?, ?)"] * len(chunk))
+            flattened = [item for sub in chunk for item in sub]
+            cursor.execute(f"""
+                INSERT INTO students (roll_number, name, program_id, department_id, year_id, section, father_name, father_phone)
+                VALUES {placeholders}
+            """, flattened)
+
+        # Batch update existing students using executemany with pipeline batching
+        updated_count = len(to_update)
+        if to_update:
+            cursor.executemany("""
+                UPDATE students
+                SET name = ?, program_id = ?, department_id = ?, year_id = ?, section = ?, father_name = ?, father_phone = ?
+                WHERE id = ?
+            """, to_update)
 
         conn.commit()
         conn.close()
@@ -3534,14 +3572,21 @@ def api_delete_student(student_id):
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        DELETE FROM students 
-        WHERE id = ? AND program_id = ? AND department_id = ? AND year_id = ?
-    """, (student_id, session["program_id"], session["dept_id"], session["year_id"]))
-    conn.commit()
-    conn.close()
+    try:
+        # Delete dependent attendance records first to prevent foreign key failure
+        cursor.execute("DELETE FROM attendance_records WHERE student_id = ?", (student_id,))
+        cursor.execute("""
+            DELETE FROM students 
+            WHERE id = ? AND program_id = ? AND department_id = ? AND year_id = ?
+        """, (student_id, session["program_id"], session["dept_id"], session["year_id"]))
+        conn.commit()
+        flash("Student removed from class roster.", "info")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error removing student: {str(e)}", "error")
+    finally:
+        conn.close()
 
-    flash("Student removed from class roster.", "info")
     return redirect(url_for("manage_students"))
 
 @app.route("/api/edit-student", methods=["POST"])
@@ -3596,8 +3641,7 @@ def api_upload_students():
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        inserted_count = 0
-
+        valid_students = []
         for row in csv_reader:
             cleaned = {k.strip().lower(): v.strip() for k, v in row.items() if k}
             roll = cleaned.get("roll number") or cleaned.get("roll_number") or cleaned.get("roll") or cleaned.get("pin")
@@ -3606,11 +3650,28 @@ def api_upload_students():
             phone = cleaned.get("father phone") or cleaned.get("father_phone") or cleaned.get("phone") or cleaned.get("whatsapp")
 
             if roll and sname and fname and phone:
-                cursor.execute("""
-                    INSERT OR REPLACE INTO students (roll_number, name, program_id, department_id, year_id, father_name, father_phone)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (roll.upper(), sname, session["program_id"], session["dept_id"], session["year_id"], fname, phone))
-                inserted_count += 1
+                valid_students.append((
+                    roll.strip().upper(),
+                    sname.strip(),
+                    session["program_id"],
+                    session["dept_id"],
+                    session["year_id"],
+                    session.get("section", "A"),
+                    fname.strip(),
+                    phone.strip()
+                ))
+
+        # Multi-row batch insert in chunks of 30 for ultra-fast processing
+        inserted_count = len(valid_students)
+        chunk_size = 30
+        for i in range(0, len(valid_students), chunk_size):
+            chunk = valid_students[i:i + chunk_size]
+            placeholders = ", ".join(["(?, ?, ?, ?, ?, ?, ?, ?)"] * len(chunk))
+            flattened = [item for sub in chunk for item in sub]
+            cursor.execute(f"""
+                INSERT OR REPLACE INTO students (roll_number, name, program_id, department_id, year_id, section, father_name, father_phone)
+                VALUES {placeholders}
+            """, flattened)
 
         conn.commit()
         conn.close()
