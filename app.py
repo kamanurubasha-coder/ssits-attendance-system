@@ -831,8 +831,8 @@ def admin_2fa_setup():
         session["setup_2fa_admin_id"] = admin_id
         session["setup_2fa_admin_name"] = admin_name
     else:
-        admin_id = session.get("setup_2fa_admin_id") or session.get("pending_2fa_admin_id")
-        admin_name = session.get("setup_2fa_admin_name") or session.get("pending_2fa_admin_name", "Administrator")
+        admin_id = session.get("setup_2fa_admin_id")
+        admin_name = session.get("setup_2fa_admin_name", "Administrator")
         if admin_id and not session.get("setup_2fa_admin_secret"):
             session["setup_2fa_admin_secret"] = pyotp.random_base32()
             session["setup_2fa_admin_id"] = admin_id
@@ -914,13 +914,13 @@ def admin_2fa():
     if request.method == "POST":
         code = request.form.get("code", "").strip().replace(" ", "")
         totp = pyotp.TOTP(admin["totp_secret"])
-        if totp.verify(code, valid_window=2) or code == admin["password"] or code == "Hamza@123" or code == "SSITS2026":
+        if totp.verify(code, valid_window=1):
             set_admin_session(admin)
             conn.close()
             flash(f"Authentication verified! Welcome Administrator {admin['name']}.", "success")
             return redirect(url_for("admin_dashboard"))
         else:
-            flash("Invalid verification code! Enter your 6-digit Google Authenticator code, or your Admin Password.", "error")
+            flash("Invalid 6-digit verification code! Please check your Google Authenticator app and enter the current code.", "error")
 
     conn.close()
     return render_template(
@@ -1806,7 +1806,7 @@ def admin_change_password():
 
     env_admin_pw = os.getenv("ADMIN_PASSWORD")
     if current_pw:
-        if admin_row["password"] != current_pw and (not env_admin_pw or env_admin_pw != current_pw) and current_pw not in ("admin123", "Hamza@123"):
+        if admin_row["password"] != current_pw and (not env_admin_pw or env_admin_pw != current_pw):
             conn.close()
             msg = "Current password is incorrect! Credential update failed."
             if is_api:
@@ -1954,8 +1954,7 @@ def admin_api_reset_data():
     is_valid_pw = (
         (admin_row and admin_row["password"] == admin_password) or
         (env_pw and env_pw == admin_password) or
-        (admin_password in all_admin_pws) or
-        (admin_password in ("admin123", "admin", "admin@123", "Hamza@123", "Hamza123"))
+        (admin_password in all_admin_pws)
     )
 
     if not is_valid_pw:
