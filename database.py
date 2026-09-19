@@ -292,14 +292,15 @@ def init_db():
     MASTER_ADMIN_SECRET = "TW6JMF5JLJAASADJIEO57HDBD24JRCMC"
 
     if not admin_match:
-        target_admin_pw = admin_env_pw if admin_env_pw else "Hamza@123"
+        target_admin_pw = admin_env_pw if admin_env_pw else "Hamzark@123"
         cursor.execute("""
             INSERT INTO admins (username, password, name, email, phone, role, is_2fa_enabled, totp_secret, is_approved)
             VALUES ('reddybashakamanuru18@gmail.com', ?, 'Kamanuru Basha', 'reddybashakamanuru18@gmail.com', '9848099999', 'superadmin', 1, ?, 1)
         """, (target_admin_pw, MASTER_ADMIN_SECRET))
     else:
-        # Keep existing password or environment password
-        new_pw = admin_env_pw if admin_env_pw else (admin_match["password"] or "Hamza@123")
+        # Prioritize the password saved in the database! It will never be overwritten
+        existing_db_pw = admin_match["password"]
+        new_pw = existing_db_pw if existing_db_pw else (admin_env_pw if admin_env_pw else "Hamzark@123")
         current_secret = admin_match["totp_secret"] or MASTER_ADMIN_SECRET
         cursor.execute("""
             UPDATE admins 

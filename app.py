@@ -2115,58 +2115,11 @@ def admin_api_verify_2fa_setup():
 
 @app.route("/admin/api/reset-data", methods=["POST"])
 def admin_api_reset_data():
-    """Allows Super Admin to perform a clean academic data purge before the semester/month starts."""
-    if not is_admin():
-        return jsonify({"status": "error", "message": "Unauthorized access. Master Admin required."}), 403
-
-    data = request.get_json(silent=True) or {}
-    admin_password = data.get("admin_password", "").strip()
-    reset_mode = data.get("reset_mode", "attendance_only").strip()
-
-    if not admin_password:
-        return jsonify({"status": "error", "message": "Administrator password is required for confirmation!"}), 400
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT password FROM admins WHERE id = ?", (session["admin_id"],))
-    admin_row = cursor.fetchone()
-
-    cursor.execute("SELECT password FROM admins")
-    all_admin_pws = [r["password"] for r in cursor.fetchall()]
-
-    env_pw = os.getenv("ADMIN_PASSWORD")
-    is_valid_pw = (
-        (admin_row and admin_row["password"] == admin_password) or
-        (env_pw and env_pw == admin_password) or
-        (admin_password in all_admin_pws) or
-        (admin_password in ["Hamza@123", "admin123", "SSITS_SUPERADMIN_2026"])
-    )
-
-    if not is_valid_pw:
-        conn.close()
-        return jsonify({"status": "error", "message": "Incorrect Administrator password! Verification failed."}), 400
-
-    try:
-        cursor.execute("DELETE FROM attendance_records")
-        cursor.execute("DELETE FROM day_status")
-        cursor.execute("DELETE FROM email_otps")
-        cursor.execute("DELETE FROM password_resets")
-
-        if reset_mode == "factory":
-            cursor.execute("DELETE FROM students")
-            from database import seed_students
-            stud_count = seed_students(cursor, conn)
-            conn.commit()
-            msg = f"Full factory reset successful! All attendance wiped and {stud_count} original student records cleanly re-seeded across all 27 classes."
-        else:
-            conn.commit()
-            msg = "Attendance records and day statuses successfully cleared to 0! All Faculty credentials, Admin logins, and 2FA Authenticator remain 100% safe and untouched."
-
-        conn.close()
-        return jsonify({"status": "success", "message": msg})
-    except Exception as e:
-        conn.close()
-        return jsonify({"status": "error", "message": f"Database error during reset: {str(e)}"}), 500
+    """Academic Data Reset is permanently disabled for institutional data safety."""
+    return jsonify({
+        "status": "error",
+        "message": "Academic Data Reset has been permanently disabled to protect student rosters and attendance records."
+    }), 403
 
 # ==============================================================================
 # DISASTER RECOVERY: 1-CLICK DATABASE BACKUP & RESTORE API

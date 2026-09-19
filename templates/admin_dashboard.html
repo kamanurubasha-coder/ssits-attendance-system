@@ -38,9 +38,6 @@
                     <button type="button" class="btn btn-warning fw-bold rounded-pill px-3 shadow-sm text-dark" data-bs-toggle="modal" data-bs-target="#changeAdminPasswordModal">
                         <i class="bi bi-person-lock me-1"></i> Admin Credentials
                     </button>
-                    <button type="button" class="btn btn-danger fw-bold rounded-pill px-3 shadow-sm" onclick="openResetModal('attendance_only')">
-                        <i class="bi bi-arrow-counterclockwise me-1"></i> Academic Data Reset
-                    </button>
                     <a href="/faculty-directory" class="btn btn-outline-light fw-semibold rounded-pill px-3">
                         <i class="bi bi-person-lines-fill me-1"></i> Directory
                     </a>
@@ -145,8 +142,8 @@
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link fw-bold px-4 py-2 text-danger" id="maintenance-tab" data-bs-toggle="pill" data-bs-target="#dataMaintenancePane">
-                <i class="bi bi-arrow-counterclockwise me-1"></i> Academic Data Reset
+            <button class="nav-link fw-bold px-4 py-2 text-success" id="maintenance-tab" data-bs-toggle="pill" data-bs-target="#dataMaintenancePane">
+                <i class="bi bi-cloud-arrow-down-fill me-1"></i> Database Backup &amp; Recovery
             </button>
         </li>
     </ul>
@@ -1288,89 +1285,8 @@
                 </div>
             </div>
         </div>
-        <!-- TAB 4: Academic Data Reset & System Maintenance -->
+        <!-- TAB 4: Database Backup & Recovery -->
         <div class="tab-pane fade" id="dataMaintenancePane">
-            <div class="card shadow-sm border-0 mb-4 bg-white">
-                <div class="card-header bg-white py-3 border-0">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div>
-                            <h5 class="fw-bold text-navy mb-0">
-                                <i class="bi bi-arrow-counterclockwise text-danger me-2"></i> Academic Data Reset &amp; Semester Maintenance
-                            </h5>
-                            <small class="text-muted">Prepare system for a new academic semester or purge test attendance with a safe, verified reset</small>
-                        </div>
-                        <span class="badge bg-danger px-3 py-2 text-uppercase fs-7">
-                            <i class="bi bi-shield-lock-fill me-1"></i> Admin Authorization Required
-                        </span>
-                    </div>
-                </div>
-
-                <div class="card-body p-4">
-                    <div class="row g-4">
-                        <!-- Option 1: Attendance Only Reset -->
-                        <div class="col-12 col-lg-6">
-                            <div class="p-4 border border-danger-subtle rounded-4 h-100 bg-light shadow-sm d-flex flex-column justify-content-between">
-                                <div>
-                                    <div class="d-flex align-items-center mb-3">
-                                        <div class="rounded-circle p-3 bg-danger bg-opacity-10 text-danger me-3 fs-3">
-                                            <i class="bi bi-calendar-x-fill"></i>
-                                        </div>
-                                        <div>
-                                            <h5 class="fw-bold text-navy mb-0">New Semester / Test Attendance Reset</h5>
-                                            <span class="badge bg-warning-subtle text-dark border border-warning mt-1"><i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>End of Semester / Post-Testing Only</span>
-                                        </div>
-                                    </div>
-                                    <p class="text-muted small mb-3">
-                                        Clears past attendance records to start a fresh academic semester from 0%. Monthly reports run automatically — do <strong>NOT</strong> reset during regular active months.
-                                    </p>
-                                    <ul class="small text-muted mb-4 ps-3">
-                                        <li><strong class="text-success"><i class="bi bi-shield-check me-1"></i>100% PROTECTED:</strong> All Faculty Logins, Passwords, and Assignments remain permanently active (NEVER changed).</li>
-                                        <li><strong class="text-success"><i class="bi bi-shield-check me-1"></i>100% PROTECTED:</strong> Master Admin credentials, Password, and 2FA Google Authenticator are completely untouched.</li>
-                                        <li><strong class="text-success"><i class="bi bi-shield-check me-1"></i>100% PROTECTED:</strong> All enrolled Student profiles, Roll numbers, and Parent phone numbers remain safe.</li>
-                                        <li><strong class="text-danger"><i class="bi bi-eraser-fill me-1"></i>CLEARED ONLY:</strong> Past attendance logs and temporary OTP tokens wiped to 0% for a clean day-1 start.</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <button type="button" class="btn btn-danger fw-bold w-100 py-2 shadow-sm" onclick="openResetModal('attendance_only')">
-                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Attendance for New Semester / Clear Test Data
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Option 2: Full Factory Reset -->
-                        <div class="col-12 col-lg-6">
-                            <div class="p-4 border border-warning-subtle rounded-4 h-100 bg-light shadow-sm d-flex flex-column justify-content-between">
-                                <div>
-                                    <div class="d-flex align-items-center mb-3">
-                                        <div class="rounded-circle p-3 bg-warning bg-opacity-10 text-warning me-3 fs-3">
-                                            <i class="bi bi-database-fill-gear"></i>
-                                        </div>
-                                        <div>
-                                            <h5 class="fw-bold text-navy mb-0">Full Factory Academic Reset</h5>
-                                            <span class="badge bg-warning-subtle text-warning border border-warning text-dark mt-1">Extreme Caution</span>
-                                        </div>
-                                    </div>
-                                    <p class="text-muted small mb-3">
-                                        Wipes attendance records AND completely resets all student tables back to official institutional sample seed rosters.
-                                    </p>
-                                    <ul class="small text-muted mb-4 ps-3">
-                                        <li><strong class="text-danger">RE-SEEDED:</strong> Re-populates official student rosters across all 27 sections.</li>
-                                        <li><strong class="text-danger">CLEARED:</strong> Any custom students manually registered will be replaced by seed rosters.</li>
-                                        <li><strong class="text-warning">NOTE:</strong> Master Admin credentials and department structures are preserved.</li>
-                                    </ul>
-                                </div>
-                                <div>
-                                    <button type="button" class="btn btn-outline-dark fw-bold w-100 py-2 shadow-sm" onclick="openResetModal('factory')">
-                                        <i class="bi bi-arrow-repeat me-1"></i> Full Factory Reset &amp; Re-seed Rosters
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Institutional Data Backup & Disaster Recovery Card -->
             <div class="card shadow-sm border-0 mb-4 bg-white">
                 <div class="card-header bg-white py-3 border-0 border-bottom">
@@ -2131,67 +2047,6 @@
                 </div>
             </form>
         </div>
-    </div>
-</div>
-
-<!-- Data Reset Confirmation Modal -->
-<div class="modal fade" id="dataResetModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-danger text-white py-3">
-                <h5 class="modal-title fw-bold">
-                    <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Confirm Academic Data Reset
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="alert alert-warning border border-warning-subtle small mb-3">
-                    <div class="d-flex align-items-center mb-1 text-success fw-bold">
-                        <i class="bi bi-shield-check me-1 fs-5"></i> Safety Guarantee:
-                    </div>
-                    <div class="text-dark small">
-                        <strong>All Faculty Logins &amp; Passwords, Admin Credentials, and 2FA Google Authenticator are 100% PRESERVED &amp; NEVER CHANGED.</strong>
-                    </div>
-                    <hr class="my-2">
-                    <div class="text-dark">
-                        &bull; <strong>New Semester / Test Attendance Reset:</strong> Clears past attendance records and day status flags to 0. (Monthly reports are automatic; use this ONLY at the end of a semester or after testing).
-                    </div>
-                    <div class="mt-1 text-dark">
-                        &bull; <strong>Full Factory Reset:</strong> Clears attendance AND restores original student rosters across all 27 sections.
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">SELECT RESET TYPE *</label>
-                    <select class="form-select fw-bold" id="modalResetMode">
-                        <option value="attendance_only" selected>New Semester / Test Attendance Reset (Faculty, Admin &amp; 2FA Safe)</option>
-                        <option value="factory">Full Factory Reset (Re-seed Original Student Master Roster)</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold small">ADMINISTRATOR PASSWORD *</label>
-                    <input type="password" class="form-control" id="modalResetAdminPassword" placeholder="Enter your current Admin Password">
-                    <div class="form-text small text-muted">
-                        Enter your current Administrator password to authorize this action.
-                    </div>
-                </div>
-
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="checkbox" id="modalResetConfirmCheck">
-                    <label class="form-check-label small fw-semibold text-danger" for="modalResetConfirmCheck">
-                        I confirm that I want to execute this data reset.
-                    </label>
-                </div>
-            </div>
-            <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger fw-bold px-4 shadow-sm" id="btnExecuteDataReset" onclick="executeDataReset()">
-                    <i class="bi bi-trash3-fill me-1"></i> Reset Now
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <!-- Restore Database Modal -->
@@ -3364,62 +3219,6 @@ function resetPrincipal2FA(principalId, principalName) {
     .catch(err => alert('Network error: ' + err));
 }
 
-function openResetModal(mode) {
-    document.getElementById('modalResetMode').value = mode || 'attendance_only';
-    document.getElementById('modalResetAdminPassword').value = '';
-    document.getElementById('modalResetConfirmCheck').checked = false;
-    const modalEl = document.getElementById('dataResetModal');
-    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-    modal.show();
-}
-
-async function executeDataReset() {
-    const mode = document.getElementById('modalResetMode').value;
-    const password = document.getElementById('modalResetAdminPassword').value.trim();
-    const confirmed = document.getElementById('modalResetConfirmCheck').checked;
-
-    if (!confirmed) {
-        alert('Please check the confirmation box to proceed.');
-        return;
-    }
-    if (!password) {
-        alert('Please enter your admin password or emergency passcode.');
-        return;
-    }
-
-    const btn = document.getElementById('btnExecuteDataReset');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Resetting...';
-
-    try {
-        const res = await fetch('/admin/api/reset-data', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ admin_password: password, reset_mode: mode })
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-            try {
-                const modalEl = document.getElementById('dataResetModal');
-                const modal = bootstrap.Modal.getInstance(modalEl);
-                if (modal) modal.hide();
-            } catch(e) {}
-            showToastAlert('success', data.message);
-            setTimeout(() => {
-                window.location.reload();
-            }, 1200);
-        } else {
-            showToastAlert('danger', data.message || 'Failed to reset data');
-            alert('Error: ' + (data.message || 'Failed to reset data'));
-        }
-    } catch (err) {
-        console.error(err);
-        showToastAlert('danger', 'Network error while resetting academic data.');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-trash3-fill me-1"></i> Reset Now';
-    }
-}
 
 function openRestoreModal() {
     const fileInput = document.getElementById('restore_backup_file');
