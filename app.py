@@ -1034,7 +1034,7 @@ def admin_2fa():
         cancel_url="/admin"
     )
 
-@app.route("/admin/login", methods=["POST"])
+@app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     return admin_portal()
 
