@@ -1,56 +1,66 @@
-/* SSITS Portal Stylesheet - Vibrant Themes & Animations */
+/* SSITS Portal Stylesheet - Modern Corporate Executive Suite */
 :root {
     /* ==========================================================================
-       1. FACULTY PORTAL & MANAGE STUDENTS THEME: EMERALD OBSIDIAN & GOLD
+       1. MODERN EXECUTIVE CORPORATE PALETTE (MIDNIGHT NAVY & SAPPHIRE BLUE)
        ========================================================================== */
-    --faculty-obsidian: #022C22;
-    --faculty-primary: #064E3B;
-    --faculty-primary-mid: #065F46;
-    --faculty-primary-light: #047857;
-    --faculty-teal: #0D9488;
-    --faculty-emerald: #10B981;
-    --faculty-emerald-glow: rgba(16, 185, 129, 0.4);
+    --corp-midnight: #070D1E;
+    --corp-navy-900: #0B132B;
+    --corp-navy-800: #0F172A;
+    --corp-navy-700: #1E293B;
+    --corp-navy-600: #334155;
     
-    /* Warm Amber & Gold Accents */
+    /* Vibrant Electric Tech Accents */
+    --corp-blue-600: #2563EB;
+    --corp-blue-500: #3B82F6;
+    --corp-blue-light: #EFF6FF;
+    --corp-indigo: #4F46E5;
+    --corp-emerald: #059669;
+    --corp-emerald-light: #ECFDF5;
+    
+    /* Warm Champagne Gold Institutional Signature */
     --gold-primary: #F59E0B;
     --gold-light: #FEF3C7;
-    --gold-dark: #B45309;
+    --gold-dark: #D97706;
     --gold-glow: rgba(245, 158, 11, 0.35);
 
-    /* Backgrounds & Text */
-    --app-bg-slate: #F1F5F9;
+    /* Clean Corporate Surfaces & Backgrounds */
+    --app-bg-slate: #F8FAFC;
     --app-surface-white: #FFFFFF;
     --text-primary-dark: #0F172A;
     --text-secondary-muted: #64748B;
+    --border-subtle: #E2E8F0;
 
-    /* ==========================================================================
-       2. MASTER ADMIN PORTAL THEME: CYBER OBSIDIAN & ROYAL PURPLE / CRIMSON
-       ========================================================================== */
-    --admin-obsidian: #09090B;
-    --admin-surface: #18181B;
-    --admin-surface-light: #27272A;
-    --admin-purple-dark: #312E81;
-    --admin-purple: #4C1D95;
-    --admin-purple-bright: #7C3AED;
-    --admin-purple-glow: rgba(124, 58, 237, 0.4);
+    /* Legacy Variables Mapping for Compatibility */
+    --faculty-obsidian: #0F172A;
+    --faculty-primary: #0F172A;
+    --faculty-primary-mid: #1E293B;
+    --faculty-primary-light: #2563EB;
+    --faculty-teal: #0D9488;
+    --faculty-emerald: #059669;
+    --faculty-emerald-glow: rgba(5, 150, 105, 0.35);
+
+    --admin-obsidian: #070D1E;
+    --admin-surface: #0F172A;
+    --admin-surface-light: #1E293B;
+    --admin-purple-dark: #1E293B;
+    --admin-purple: #2563EB;
+    --admin-purple-bright: #3B82F6;
+    --admin-purple-glow: rgba(37, 99, 235, 0.35);
     --admin-crimson: #DC2626;
 
-    /* ==========================================================================
-       3. JEWEL-TONED STATISTIC CARDS
-       ========================================================================== */
-    --stat-total-grad: linear-gradient(135deg, #3730A3 0%, #4F46E5 50%, #6366F1 100%);
-    --stat-present-grad: linear-gradient(135deg, #065F46 0%, #059669 50%, #10B981 100%);
-    --stat-absent-grad: linear-gradient(135deg, #9F1239 0%, #E11D48 50%, #F43F5E 100%);
-    --stat-rate-grad: linear-gradient(135deg, #B45309 0%, #D97706 50%, #F59E0B 100%);
-
-    /* Legacy Variables Mapping */
-    --college-blue: #064E3B;
-    --college-blue-dark: #022C22;
+    --college-blue: #0F172A;
+    --college-blue-dark: #070D1E;
     --college-gold: #F59E0B;
     --college-gold-dark: #D97706;
     --college-red: #E11D48;
-    --college-green: #10B981;
-    --college-gray-bg: #F1F5F9;
+    --college-green: #059669;
+    --college-gray-bg: #F8FAFC;
+
+    /* Modern Soft Corporate Metric Gradients */
+    --stat-total-grad: linear-gradient(135deg, #1E293B 0%, #2563EB 100%);
+    --stat-present-grad: linear-gradient(135deg, #065F46 0%, #059669 100%);
+    --stat-absent-grad: linear-gradient(135deg, #9F1239 0%, #E11D48 100%);
+    --stat-rate-grad: linear-gradient(135deg, #B45309 0%, #F59E0B 100%);
 
     /* Department Palettes */
     --grad-ece: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
@@ -69,53 +79,55 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    letter-spacing: -0.01em;
 }
 
 /* ==========================================================================
-   4. TOP INSTITUTION BRAND HEADER (DEEP PRESTIGE NON-WHITE PALETTE)
+   2. TOP INSTITUTION BRAND HEADER (EXECUTIVE MIDNIGHT SAPPHIRE & GOLD)
    ========================================================================== */
 .college-header {
-    background: linear-gradient(135deg, #071322 0%, #0F2744 50%, #064E3B 100%);
-    border-bottom: 3.5px solid #F59E0B;
-    box-shadow: 0 6px 25px rgba(0, 0, 0, 0.25);
+    background: linear-gradient(135deg, #070D1E 0%, #0F172A 50%, #1E293B 100%);
+    border-bottom: 2.5px solid #F59E0B;
+    box-shadow: 0 8px 30px rgba(7, 13, 30, 0.35);
     position: relative;
     z-index: 1030;
 }
 
 .brand-logo {
-    height: 94px;
-    width: 94px;
+    height: 92px;
+    width: 92px;
     object-fit: contain;
-    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
-    background: rgba(255, 255, 255, 0.96);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.4));
+    background: rgba(255, 255, 255, 0.98);
     border-radius: 50%;
     padding: 4px;
-    border: 2px solid rgba(245, 158, 11, 0.6);
+    border: 2px solid rgba(245, 158, 11, 0.7);
 }
 
 .brand-logo:hover {
-    transform: scale(1.09) rotate(-2deg);
+    transform: scale(1.08);
     border-color: #F59E0B;
+    box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
 }
 
 .college-title {
     font-family: 'Poppins', sans-serif;
-    font-size: 2.25rem;
-    font-weight: 900;
+    font-size: 2.2rem;
+    font-weight: 800;
     color: #FFFFFF;
-    letter-spacing: 0.8px;
-    line-height: 1.2;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+    letter-spacing: 0.5px;
+    line-height: 1.25;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     margin-bottom: 2px;
 }
 
 .college-subtitle {
-    font-size: 1.05rem;
+    font-size: 1rem;
     font-weight: 800;
     letter-spacing: 2px;
     color: #FBBF24 !important;
-    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 
 @media (max-width: 992px) {
@@ -624,14 +636,29 @@ body {
 }
 
 /* ==========================================================================
-   10. ADMIN DASHBOARD - CYBER OBSIDIAN & ROYAL PURPLE THEME
+   10. ADMIN DASHBOARD - MODERN EXECUTIVE CORPORATE THEME
    ========================================================================== */
 .admin-top-banner {
-    background: linear-gradient(135deg, #09090B 0%, #18181B 50%, #27272A 100%);
-    border-left: 6px solid #8B5CF6 !important;
-    border-radius: 16px;
+    background: linear-gradient(135deg, #0B132B 0%, #172554 55%, #1E3A8A 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-left: 6px solid #F59E0B !important;
+    border-radius: 18px;
     color: #FFFFFF;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 10px 30px -5px rgba(11, 19, 43, 0.35);
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-top-banner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 90% 10%, rgba(59, 130, 246, 0.2), transparent 50%),
+                radial-gradient(circle at 10% 90%, rgba(245, 158, 11, 0.1), transparent 45%);
+    pointer-events: none;
 }
 
 .admin-top-banner .text-navy {
@@ -640,74 +667,109 @@ body {
 
 .admin-card-metric {
     border-radius: 16px;
-    padding: 18px;
-    color: #FFFFFF;
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    padding: 22px;
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     position: relative;
     overflow: hidden;
-    border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-.admin-card-metric::before {
+.admin-card-metric:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 16px 32px -4px rgba(15, 23, 42, 0.12);
+    border-color: #CBD5E1 !important;
+}
+
+.admin-card-metric::after {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 48%;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 100%);
-    pointer-events: none;
+    height: 4px;
 }
 
-.admin-card-metric:hover {
-    transform: translateY(-7px) scale(1.025);
-    box-shadow: 0 18px 34px rgba(0, 0, 0, 0.3);
+.admin-card-metric.purple::after { background: linear-gradient(90deg, #4F46E5, #6366F1); }
+.admin-card-metric.blue::after { background: linear-gradient(90deg, #0284C7, #2563EB); }
+.admin-card-metric.orange::after { background: linear-gradient(90deg, #D97706, #F59E0B); }
+.admin-card-metric.green::after { background: linear-gradient(90deg, #059669, #10B981); }
+
+.admin-card-metric .small {
+    color: #64748B !important;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.admin-card-metric h2 {
+    color: #0F172A !important;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 800;
+    font-size: 2.1rem;
+    margin: 4px 0 2px 0;
+}
+
+.admin-card-metric small {
+    color: #94A3B8 !important;
+    font-weight: 500;
 }
 
 .admin-card-metric i {
-    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-size: 2.2rem;
+    padding: 12px;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
 }
 
 .admin-card-metric:hover i {
-    transform: scale(1.22) rotate(-8deg);
+    transform: scale(1.15) rotate(-5deg);
 }
 
-.admin-card-metric.purple {
-    background: linear-gradient(135deg, #4C1D95 0%, #6D28D9 50%, #8B5CF6 100%);
+.admin-card-metric.purple i { background: #EEF2FF; color: #4F46E5 !important; }
+.admin-card-metric.blue i { background: #EFF6FF; color: #0284C7 !important; }
+.admin-card-metric.orange i { background: #FFFBEB; color: #D97706 !important; }
+.admin-card-metric.green i { background: #ECFDF5; color: #059669 !important; }
+
+/* Admin Tabs Navigation - Linear & Apple Segmented Control Style */
+.admin-nav-tabs {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 14px !important;
+    padding: 6px !important;
+    box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04) !important;
+    gap: 4px !important;
 }
 
-.admin-card-metric.blue {
-    background: linear-gradient(135deg, #0E7490 0%, #06B6D4 50%, #22D3EE 100%);
-}
-
-.admin-card-metric.orange {
-    background: linear-gradient(135deg, #C2410C 0%, #EA580C 50%, #FB923C 100%);
-}
-
-.admin-card-metric.green {
-    background: linear-gradient(135deg, #15803D 0%, #16A34A 50%, #4ADE80 100%);
-}
-
-/* Admin Tabs Navigation */
 .admin-nav-tabs .nav-link {
-    font-weight: 700;
-    color: #64748B;
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: #475569 !important;
     border-radius: 10px;
-    padding: 10px 20px;
-    transition: all 0.25s ease;
-}
-
-.admin-nav-tabs .nav-link.active {
-    background: linear-gradient(135deg, #6D28D9 0%, #7C3AED 100%) !important;
-    color: #FFFFFF !important;
-    box-shadow: 0 4px 14px rgba(109, 40, 217, 0.35);
+    padding: 9px 18px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: none;
 }
 
 .admin-nav-tabs .nav-link:hover:not(.active) {
-    background: #F1F5F9;
-    color: #334155;
+    background: #F1F5F9 !important;
+    color: #0F172A !important;
     transform: translateY(-1px);
+}
+
+.admin-nav-tabs .nav-link.active {
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%) !important;
+    color: #FFFFFF !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.22) !important;
+}
+
+.admin-nav-tabs .nav-link.active i {
+    color: #F59E0B !important;
 }
 
 /* Faculty Delete Button Animation */
@@ -1331,14 +1393,15 @@ body {
 }
 
 /* ==========================================================================
-   AUTHENTICATION & LOGIN PAGES - VIBRANT COSMIC WAVE BACKGROUND
+   AUTHENTICATION & LOGIN PAGES - MODERN EXECUTIVE GLASSMORPHISM
    ========================================================================== */
 body.auth-page-bg {
-    background-color: #040814 !important;
+    background-color: #070D1E !important;
     background-image: 
-        radial-gradient(circle at 50% 0%, rgba(14, 165, 233, 0.15) 0%, transparent 55%),
-        radial-gradient(circle at 10% 25%, rgba(239, 68, 68, 0.12) 0%, transparent 45%),
-        linear-gradient(180deg, rgba(4, 8, 20, 0.40) 0%, rgba(4, 8, 20, 0.65) 100%),
+        radial-gradient(circle at 15% 25%, rgba(37, 99, 235, 0.18) 0%, transparent 45%),
+        radial-gradient(circle at 85% 75%, rgba(245, 158, 11, 0.12) 0%, transparent 45%),
+        radial-gradient(circle at 50% 0%, rgba(79, 70, 229, 0.15) 0%, transparent 55%),
+        linear-gradient(180deg, rgba(7, 13, 30, 0.75) 0%, rgba(7, 13, 30, 0.90) 100%),
         url('/static/images/login_bg.jpg') !important;
     background-repeat: no-repeat !important;
     background-position: center center !important;
@@ -1360,18 +1423,18 @@ body.auth-page-bg main {
 
 /* Glassmorphism & Elevated Card Styles for Login Pages */
 body.auth-page-bg .card {
-    background: rgba(255, 255, 255, 0.96) !important;
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    border: 1px solid rgba(255, 255, 255, 0.75) !important;
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.60), 0 0 40px rgba(14, 165, 233, 0.22) !important;
+    background: rgba(255, 255, 255, 0.97) !important;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.8) !important;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.45), 0 0 35px rgba(37, 99, 235, 0.15) !important;
     border-radius: 1.25rem !important;
     overflow: hidden;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
 }
 
 body.auth-page-bg .card:hover {
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.70), 0 0 50px rgba(14, 165, 233, 0.30) !important;
+    box-shadow: 0 32px 75px -15px rgba(0, 0, 0, 0.55), 0 0 45px rgba(37, 99, 235, 0.22) !important;
 }
 
 /* Light text for breadcrumbs & outer labels on dark background */
@@ -1399,14 +1462,14 @@ body.auth-page-bg .card .text-navy {
 
 /* Seamless Header & Footer integration */
 body.auth-page-bg .college-header {
-    background: rgba(7, 19, 34, 0.94) !important;
+    background: rgba(7, 13, 30, 0.95) !important;
     backdrop-filter: blur(16px) !important;
     -webkit-backdrop-filter: blur(16px) !important;
-    border-bottom: 3.5px solid #F59E0B !important;
+    border-bottom: 2.5px solid #F59E0B !important;
 }
 
 body.auth-page-bg .footer {
-    background: rgba(4, 8, 20, 0.96) !important;
+    background: rgba(7, 13, 30, 0.96) !important;
     backdrop-filter: blur(16px) !important;
     -webkit-backdrop-filter: blur(16px) !important;
 }
