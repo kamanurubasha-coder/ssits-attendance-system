@@ -870,7 +870,7 @@
                                             </button>
                                         </div>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center" id="approval-cell-faculty-{{ t.id }}">
                                         {% if t.is_approved %}
                                             <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
                                                 <i class="bi bi-check-circle-fill me-1"></i> Approved
@@ -947,7 +947,7 @@
                                 <button type="button" class="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#adminAddStudentModal" title="Add Single Student Manually">
                                     <i class="bi bi-person-plus-fill me-1"></i> + Add Student
                                 </button>
-                                <a href="/admin/api/download-student-template" class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2 shadow-sm" title="Download Sample CSV Spreadsheet Template">
+                                <a href="/admin/api/download-student-template" onclick="downloadSampleCSV(event)" class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2 shadow-sm" title="Download Sample CSV Spreadsheet Template">
                                     <i class="bi bi-download me-1"></i> Sample CSV
                                 </a>
                                 <button type="button" id="btnBulkDeleteStudents" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="handleBulkDeleteStudents()" disabled title="Select one or more students using checkboxes to delete">
@@ -1089,7 +1089,7 @@
                                                 </button>
                                             </div>
                                         </td>
-                                        <td class="text-center">
+                                        <td class="text-center" id="approval-cell-principal-{{ p.id }}">
                                             {% if p.is_approved %}
                                                 <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
                                                     <i class="bi bi-check-circle-fill me-1"></i> Approved
@@ -1229,7 +1229,7 @@
                                             </button>
                                         </div>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center" id="approval-cell-hod-{{ h.id }}">
                                         {% if h.is_approved %}
                                             <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
                                                 <i class="bi bi-check-circle-fill me-1"></i> Approved
@@ -1580,7 +1580,7 @@
 
                     <div class="p-3 bg-light rounded-3 border d-flex justify-content-between align-items-center">
                         <small class="text-muted"><i class="bi bi-question-circle me-1"></i> Need sample format?</small>
-                        <a href="/admin/api/download-student-template" class="btn btn-sm btn-outline-success fw-bold">
+                        <a href="/admin/api/download-student-template" onclick="downloadSampleCSV(event)" class="btn btn-sm btn-outline-success fw-bold">
                             <i class="bi bi-download me-1"></i> Sample CSV Template
                         </a>
                     </div>
@@ -3114,9 +3114,32 @@ function resetTeacher2FA(teacherId, teacherName) {
     .catch(err => alert('Network error: ' + err));
 }
 
+function downloadSampleCSV(e) {
+    if (e) e.preventDefault();
+    const csvContent = "Roll Number,Student Name,Father Name,Father Phone,Section\r\n" +
+                       "22G31A0501,G. Sai Kumar,G. Narayana Rao,9849112233,A\r\n" +
+                       "22G31A0502,P. Venkata Ramana,P. Subba Rao,9440223344,A\r\n" +
+                       "22G31A0503,K. Anitha,K. Srinivasa Rao,9988776655,A\r\n" +
+                       "22-SSIT-EC-001,M. Rajesh,M. Venkateswarlu,9123456780,A\r\n";
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "SSITS_Student_Import_Template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToastAlert('success', 'Sample CSV template downloaded instantly!');
+}
+
 function approveFacultyMember(teacherId, teacherName) {
     if (!confirm('Approve and grant access to faculty member "' + teacherName + '"?\n\nOnce approved, this faculty member will be allowed to log in and manage students.')) {
         return;
+    }
+    const cell = document.getElementById('approval-cell-faculty-' + teacherId);
+    if (cell) {
+        cell.innerHTML = '<span class="spinner-border spinner-border-sm text-success" role="status"></span> <small class="text-muted">Approving...</small>';
     }
     fetch('/admin/api/approve-teacher', {
         method: 'POST',
@@ -3126,13 +3149,23 @@ function approveFacultyMember(teacherId, teacherName) {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            alert(data.message);
-            location.reload();
+            if (cell) {
+                cell.innerHTML = `
+                    <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                        <i class="bi bi-check-circle-fill me-1"></i> Approved
+                    </span>
+                `;
+            }
+            showToastAlert('success', data.message || `Faculty "${teacherName}" approved successfully!`);
         } else {
-            alert(data.message || 'Error approving faculty member');
+            showToastAlert('danger', data.message || 'Error approving faculty member');
+            if (cell) location.reload();
         }
     })
-    .catch(err => alert('Network error: ' + err));
+    .catch(err => {
+        showToastAlert('danger', 'Network error: ' + err);
+        if (cell) location.reload();
+    });
 }
 
 function resetHod2FA(hodId, hodName) {
@@ -3147,18 +3180,21 @@ function resetHod2FA(hodId, hodName) {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            alert(data.message);
-            location.reload();
+            showToastAlert('success', data.message);
         } else {
-            alert(data.message || 'Error resetting HOD 2FA');
+            showToastAlert('danger', data.message || 'Error resetting HOD 2FA');
         }
     })
-    .catch(err => alert('Network error: ' + err));
+    .catch(err => showToastAlert('danger', 'Network error: ' + err));
 }
 
 function approveHodMember(hodId, hodName) {
     if (!confirm('Approve and grant access to HOD "' + hodName + '"?\n\nOnce approved, this HOD will be allowed to log in and access their Department Desk.')) {
         return;
+    }
+    const cell = document.getElementById('approval-cell-hod-' + hodId);
+    if (cell) {
+        cell.innerHTML = '<span class="spinner-border spinner-border-sm text-success" role="status"></span> <small class="text-muted">Approving...</small>';
     }
     fetch('/admin/api/approve-hod', {
         method: 'POST',
@@ -3168,18 +3204,29 @@ function approveHodMember(hodId, hodName) {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            showToastAlert('success', data.message);
-            setTimeout(() => { location.reload(); }, 1200);
+            if (cell) {
+                cell.innerHTML = `
+                    <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                        <i class="bi bi-check-circle-fill me-1"></i> Approved
+                    </span>
+                `;
+            }
+            showToastAlert('success', data.message || `HOD "${hodName}" approved successfully!`);
         } else {
-            alert(data.message || 'Error approving HOD');
+            showToastAlert('danger', data.message || 'Error approving HOD');
+            if (cell) location.reload();
         }
     })
-    .catch(err => alert('Network error: ' + err));
+    .catch(err => showToastAlert('danger', 'Network error: ' + err));
 }
 
 function approvePrincipalAccount(principalId, principalName) {
     if (!confirm('Approve and grant access to Principal Executive "' + principalName + '"?\n\nOnce approved, the Principal will be allowed to log in and access the Executive Desk.')) {
         return;
+    }
+    const cell = document.getElementById('approval-cell-principal-' + principalId);
+    if (cell) {
+        cell.innerHTML = '<span class="spinner-border spinner-border-sm text-success" role="status"></span> <small class="text-muted">Approving...</small>';
     }
     fetch('/admin/api/approve-principal', {
         method: 'POST',
@@ -3189,13 +3236,20 @@ function approvePrincipalAccount(principalId, principalName) {
     .then(res => res.json())
     .then(data => {
         if (data.status === 'success') {
-            showToastAlert('success', data.message);
-            setTimeout(() => { location.reload(); }, 1200);
+            if (cell) {
+                cell.innerHTML = `
+                    <span class="badge bg-success-subtle text-success border border-success px-2 py-1">
+                        <i class="bi bi-check-circle-fill me-1"></i> Approved
+                    </span>
+                `;
+            }
+            showToastAlert('success', data.message || `Principal "${principalName}" approved successfully!`);
         } else {
-            alert(data.message || 'Error approving Principal');
+            showToastAlert('danger', data.message || 'Error approving Principal');
+            if (cell) location.reload();
         }
     })
-    .catch(err => alert('Network error: ' + err));
+    .catch(err => showToastAlert('danger', 'Network error: ' + err));
 }
 
 function resetPrincipal2FA(principalId, principalName) {
@@ -3423,6 +3477,11 @@ async function executeBulkDeleteTeachers() {
 
             showToastAlert('success', data.message || `Successfully deleted ${teacherIds.length} faculty member(s).`);
         } else {
+            if (res.status === 401 || res.status === 403 || (data.message && data.message.includes("Unauthorized"))) {
+                alert("Admin Session Expired or Switched!\n\nYour Admin session was logged out (e.g. if you tested Teacher or HOD login in another tab of this browser).\n\nClick OK to sign in to Master Admin again.");
+                window.location.href = "/admin";
+                return;
+            }
             showToastAlert('danger', data.message || 'Failed to delete faculty members');
         }
     } catch (err) {
@@ -3563,6 +3622,11 @@ async function executeBulkDeleteStudents() {
 
             showToastAlert('success', data.message || `Successfully deleted ${studentIds.length} student(s).`);
         } else {
+            if (res.status === 401 || res.status === 403 || (data.message && data.message.includes("Unauthorized"))) {
+                alert("Admin Session Expired or Switched!\n\nYour Admin session was logged out. Click OK to sign in to Master Admin again.");
+                window.location.href = "/admin";
+                return;
+            }
             showToastAlert('danger', data.message || 'Failed to delete students.');
         }
     } catch (err) {

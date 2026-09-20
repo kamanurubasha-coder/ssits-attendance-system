@@ -33,6 +33,7 @@ def get_ist_date_str():
 app = Flask(__name__)
 app.secret_key = "sri_sai_institute_attendance_secret_key_2026"
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 86400  # 24-hour browser caching for static assets
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)  # 30-day session persistence
 
 # Ultra-fast Keep-Alive endpoint for Render cold-start prevention
 @app.route("/healthz")
@@ -96,6 +97,7 @@ def set_principal_session(princ):
 
 def set_admin_session(admin):
     session.clear()
+    session.permanent = True
     session["admin_id"] = admin["id"]
     session["admin_name"] = admin["name"]
     session["admin_username"] = admin["username"]
@@ -3283,12 +3285,18 @@ def api_save_attendance():
         """, (att_date, session_type, session["program_id"], session["dept_id"], session["year_id"], current_section))
 
         # 3. Insert absent records
-        if day_type == 'working':
-            for sid in absent_ids:
-                cursor.execute("""
+        if day_type == 'working' and absent_ids:
+            chunk_size = 30
+            for i in range(0, len(absent_ids), chunk_size):
+                chunk = absent_ids[i:i + chunk_size]
+                placeholders = ", ".join(["(?, ?, ?, ?, 'absent', ?)"] * len(chunk))
+                flattened = []
+                for sid in chunk:
+                    flattened.extend([sid, att_date, session_type, current_section, session["teacher_id"]])
+                cursor.execute(f"""
                     INSERT OR REPLACE INTO attendance_records (student_id, attendance_date, session_type, section, status, marked_by)
-                    VALUES (?, ?, ?, ?, 'absent', ?)
-                """, (sid, att_date, session_type, current_section, session["teacher_id"]))
+                    VALUES {placeholders}
+                """, flattened)
 
         conn.commit()
 
