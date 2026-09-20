@@ -636,6 +636,54 @@
     </div>
 </div>
 
+<!-- Campus Geo-Fencing Location Alert & Emergency Bypass Modal -->
+<div class="modal fade" id="geofenceAlertModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-danger text-white py-3">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-geo-alt-fill me-2"></i> Campus Location Restriction Alert
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-danger d-flex align-items-center mb-3">
+                    <i class="bi bi-exclamation-triangle-fill fs-3 me-3 text-danger"></i>
+                    <div id="geofenceAlertMessage" class="small fw-semibold">
+                        Campus Geo-Fencing is active. Attendance can only be recorded within the official SSITS campus boundaries.
+                    </div>
+                </div>
+                <div class="bg-light p-3 rounded-3 border mb-3">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Allowed Campus Radius:</span>
+                        <strong id="geofenceAllowedRadius">1000 meters</strong>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>Detected Distance from Campus:</span>
+                        <strong class="text-danger" id="geofenceDetectedDistance">Outside Boundary</strong>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-navy">
+                        <i class="bi bi-key-fill text-warning me-1"></i> Emergency Bypass Passkey
+                    </label>
+                    <input type="text" class="form-control" id="geofenceBypassInput" placeholder="Enter emergency passkey (e.g. SSITS@2026)">
+                    <small class="text-muted">If you are physically on campus but experiencing GPS or network issues, enter the emergency passkey provided by the Administrator.</small>
+                </div>
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary fw-bold btn-sm" onclick="retryAttendanceWithLocation()">
+                    <i class="bi bi-crosshair me-1"></i> Retry GPS Location
+                </button>
+                <button type="button" class="btn btn-danger fw-bold btn-sm" onclick="submitAttendanceWithBypass()">
+                    <i class="bi bi-shield-check me-1"></i> Submit with Bypass Key
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}

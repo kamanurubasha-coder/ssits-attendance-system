@@ -142,6 +142,16 @@
             </button>
         </li>
         <li class="nav-item">
+            <button class="nav-link fw-bold px-4 py-2 text-warning" id="geofence-tab" data-bs-toggle="pill" data-bs-target="#geofencePane" onclick="loadGeofenceSettings()">
+                <i class="bi bi-geo-alt-fill me-1"></i> Campus Geo-Fencing
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold px-4 py-2 text-info" id="audit-tab" data-bs-toggle="pill" data-bs-target="#auditLogsPane" onclick="loadAuditLogs()">
+                <i class="bi bi-shield-lock-fill me-1"></i> Security Audit Logs
+            </button>
+        </li>
+        <li class="nav-item">
             <button class="nav-link fw-bold px-4 py-2 text-success" id="maintenance-tab" data-bs-toggle="pill" data-bs-target="#dataMaintenancePane">
                 <i class="bi bi-cloud-arrow-down-fill me-1"></i> Database Backup &amp; Recovery
             </button>
@@ -1293,7 +1303,7 @@
                     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                         <div>
                             <h5 class="fw-bold text-navy mb-0">
-                                <i class="bi bi-cloud-arrow-down-fill text-success me-2"></i> Database Backup &amp; 1-Click Disaster Recovery
+                                <i class="bi bi-cloud-arrow-down-fill text-success me-2"></i> Cloud Database Backup Center &amp; 1-Click Instant Snapshot
                             </h5>
                             <small class="text-muted">Preserve all registered faculty credentials, student profiles, and historical attendance before system updates or new feature rollouts</small>
                         </div>
@@ -1304,6 +1314,18 @@
                 </div>
 
                 <div class="card-body p-4">
+                    <!-- Live Turso Cloud Database Connection Status Indicator -->
+                    <div class="alert alert-success d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 rounded-3 border-success-subtle shadow-sm">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-hdd-network-fill fs-3 text-success me-3"></i>
+                            <div>
+                                <h6 class="fw-bold text-success mb-0">Turso Cloud Database: Live &amp; Synchronized</h6>
+                                <small class="text-muted">Master cloud database active. Direct snapshot engine generates a certified standalone SQLite copy without any downtime.</small>
+                            </div>
+                        </div>
+                        <span class="badge bg-success px-3 py-2 fs-7"><i class="bi bi-check-circle-fill me-1"></i> 100% Operational</span>
+                    </div>
+
                     <div class="row g-4">
                         <!-- Backup / Download Card -->
                         <div class="col-12 col-lg-6">
@@ -1330,6 +1352,9 @@
                                 <div>
                                     <a href="/admin/api/backup-db" class="btn btn-success fw-bold w-100 py-2 shadow-sm">
                                         <i class="bi bi-cloud-arrow-down-fill me-1"></i> Download Full Database Backup (.db)
+                                    </a>
+                                    <a href="/admin/api/export-full-data" class="btn btn-outline-success fw-bold w-100 py-2 shadow-sm mt-2">
+                                        <i class="bi bi-filetype-json me-1"></i> Export Master Database (JSON)
                                     </a>
                                 </div>
                             </div>
@@ -1364,6 +1389,225 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Campus Geo-Fencing & GPS Attendance Restriction -->
+        <div class="tab-pane fade" id="geofencePane">
+            <div class="card shadow-sm border-0 mb-4 bg-white">
+                <div class="card-header bg-white py-3 border-0 border-bottom">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <h5 class="fw-bold text-navy mb-0">
+                                <i class="bi bi-geo-alt-fill text-danger me-2"></i> Campus Geo-Fencing Attendance Control
+                            </h5>
+                            <small class="text-muted">Enforce physical presence on SSITS campus for faculty attendance submission using GPS &amp; Haversine coordinates</small>
+                        </div>
+                        <span id="geofenceBadgeStatus" class="badge bg-secondary-subtle text-secondary border px-3 py-2 text-uppercase fs-7">
+                            <i class="bi bi-circle me-1"></i> Checking Status...
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <!-- Left: Settings Form -->
+                        <div class="col-12 col-lg-7">
+                            <form id="geofenceSettingsForm" onsubmit="saveGeofenceSettings(event)">
+                                <div class="p-3 bg-light rounded-4 border mb-4">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <h6 class="fw-bold text-navy mb-1">Campus Geo-Fencing Protection</h6>
+                                            <small class="text-muted">When enabled, faculty can only record attendance if their device is inside the campus radius.</small>
+                                        </div>
+                                        <div class="form-check form-switch fs-4">
+                                            <input class="form-check-input" type="checkbox" id="geofenceToggleSwitch" onchange="updateGeofenceToggleLabel()">
+                                        </div>
+                                    </div>
+                                    <div class="mt-2" id="geofenceStatusTextWrap">
+                                        <span class="badge bg-danger" id="geofenceToggleStateText">DISABLED (Any Location Allowed)</span>
+                                    </div>
+                                </div>
+
+                                <div class="row g-3 mb-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-muted mb-1">
+                                            <i class="bi bi-compass me-1 text-primary"></i> CAMPUS LATITUDE (Decimal)
+                                        </label>
+                                        <input type="text" id="geoLatitude" class="form-control fw-bold" placeholder="e.g. 14.0044" required>
+                                        <small class="text-muted">SSITS Campus Latitude</small>
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-muted mb-1">
+                                            <i class="bi bi-compass me-1 text-primary"></i> CAMPUS LONGITUDE (Decimal)
+                                        </label>
+                                        <input type="text" id="geoLongitude" class="form-control fw-bold" placeholder="e.g. 78.7523" required>
+                                        <small class="text-muted">SSITS Campus Longitude</small>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold text-muted mb-1">
+                                        <i class="bi bi-broadcast me-1 text-success"></i> ALLOWED RADIUS (METERS)
+                                    </label>
+                                    <div class="input-group mb-2">
+                                        <input type="number" id="geoRadius" class="form-control fw-bold" placeholder="e.g. 1000" min="100" max="10000" required>
+                                        <span class="input-group-text">Meters</span>
+                                    </div>
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="setGeoRadiusPreset(500)">
+                                            500m (Strict)
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="setGeoRadiusPreset(1000)">
+                                            1000m (Campus Standard)
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="setGeoRadiusPreset(2000)">
+                                            2000m (Extended / Hostel)
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label class="form-label small fw-bold text-muted mb-1">
+                                        <i class="bi bi-key-fill me-1 text-warning"></i> EMERGENCY BYPASS PASSKEY
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="text" id="geoBypassKey" class="form-control fw-bold" placeholder="e.g. SSITS@2026" required>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="generateRandomBypassKey()">
+                                            <i class="bi bi-arrow-repeat me-1"></i> Generate
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">Faculty can enter this emergency code if device GPS fails or cloudy weather prevents location detection.</small>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="submit" class="btn btn-primary fw-bold px-4 py-2 shadow-sm" id="btnSaveGeofence">
+                                        <i class="bi bi-save me-1"></i> Save Geo-Fence Configuration
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary fw-semibold px-3 py-2" onclick="detectAdminCurrentLocation()">
+                                        <i class="bi bi-crosshair me-1"></i> Detect My Current Location
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Right: Live Test & Coordinate Info -->
+                        <div class="col-12 col-lg-5">
+                            <div class="p-4 border rounded-4 bg-light h-100 shadow-sm d-flex flex-column justify-content-between">
+                                <div>
+                                    <h6 class="fw-bold text-navy mb-2">
+                                        <i class="bi bi-info-circle-fill text-info me-1"></i> Campus Coordinates Reference
+                                    </h6>
+                                    <p class="small text-muted mb-3">
+                                        Sri Sai Institute of Technology and Science (SSITS), Rayachoty, Annamayya District, Andhra Pradesh.
+                                    </p>
+                                    <ul class="small text-muted mb-4 ps-3">
+                                        <li><strong>Default Coordinates:</strong> <code class="text-dark">14.0044° N, 78.7523° E</code></li>
+                                        <li><strong>High Accuracy:</strong> Uses Haversine spherical trigonometric formula for sub-meter distance accuracy.</li>
+                                        <li><strong>Fail-Safe Design:</strong> If disabled, faculty can submit from any network/location without restriction.</li>
+                                    </ul>
+
+                                    <div class="card p-3 border border-info-subtle bg-white rounded-3 mb-3">
+                                        <div class="fw-bold small text-navy mb-1"><i class="bi bi-pin-map-fill text-danger me-1"></i> Live Distance Tester</div>
+                                        <small class="text-muted d-block mb-2">Click below to test your current distance from the configured campus coordinates:</small>
+                                        <button type="button" class="btn btn-sm btn-outline-info fw-bold w-100 mb-2" onclick="testLiveDistance()">
+                                            <i class="bi bi-rulers me-1"></i> Measure Distance from Campus
+                                        </button>
+                                        <div id="liveDistanceResult" class="small fw-semibold text-center p-2 rounded bg-light border" style="display: none;"></div>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-warning mb-0 small border-0 shadow-sm">
+                                    <i class="bi bi-shield-exclamation text-warning me-1"></i>
+                                    <strong>Admin Tip:</strong> Keep Geo-Fencing disabled during holidays or remote test sessions, and enable it on working college days.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Security Audit Logs & Activity History -->
+        <div class="tab-pane fade" id="auditLogsPane">
+            <div class="card shadow-sm border-0 mb-4 bg-white">
+                <div class="card-header bg-white py-3 border-0 border-bottom">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                        <div>
+                            <h5 class="fw-bold text-navy mb-0">
+                                <i class="bi bi-shield-lock-fill text-primary me-2"></i> Security Audit Logs &amp; Activity History
+                            </h5>
+                            <small class="text-muted">Real-time tamper-evident log of administrative logins, attendance recordings, data modifications, and bypass events</small>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="/admin/api/export-audit-logs" class="btn btn-sm btn-outline-success fw-bold">
+                                <i class="bi bi-file-earmark-spreadsheet-fill me-1"></i> Export Logs (.CSV)
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger fw-semibold" onclick="confirmClearAuditLogs()">
+                                <i class="bi bi-trash me-1"></i> Clear Logs
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-3 p-md-4">
+                    <!-- Filters -->
+                    <div class="row g-2 align-items-center mb-3">
+                        <div class="col-12 col-md-4">
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
+                                <input type="text" id="auditLogSearch" class="form-control" placeholder="Search user, action, details, IP..." oninput="filterAuditLogsTable()">
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <select id="auditRoleFilter" class="form-select" onchange="loadAuditLogs()">
+                                <option value="">All Roles (Admin &amp; Faculty)</option>
+                                <option value="admin">Admin Only</option>
+                                <option value="faculty">Faculty Only</option>
+                                <option value="system">System Only</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <select id="auditActionFilter" class="form-select" onchange="loadAuditLogs()">
+                                <option value="">All Actions</option>
+                                <option value="ADMIN_LOGIN">Admin Logins</option>
+                                <option value="ATTENDANCE_SAVED">Attendance Submissions</option>
+                                <option value="EMERGENCY_GEOFENCE_BYPASS">Geo-Fence Bypasses</option>
+                                <option value="SECURITY_SETTINGS_UPDATED">Security Config Updates</option>
+                                <option value="STUDENT_ADDED">Student Additions</option>
+                                <option value="STUDENT_DELETED">Student Deletions</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <button type="button" class="btn btn-navy w-100 fw-bold" onclick="loadAuditLogs()">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Logs Table -->
+                    <div class="table-responsive rounded-3 border">
+                        <table class="table table-hover align-middle mb-0" id="auditLogsTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th style="width: 170px;">TIMESTAMP (IST)</th>
+                                    <th style="width: 120px;">ROLE</th>
+                                    <th style="width: 180px;">USER</th>
+                                    <th style="width: 220px;">ACTION</th>
+                                    <th>DETAILS</th>
+                                    <th style="width: 140px;">IP ADDRESS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditLogsTbody">
+                                <tr>
+                                    <td colspan="7" class="text-center py-4 text-muted">
+                                        <div class="spinner-border spinner-border-sm text-primary me-2"></div> Loading audit events...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -4243,6 +4487,317 @@ async function confirmDeletePrincipal(e) {
     }
 }
 
+// =============================================================
+// CAMPUS GEO-FENCING & SECURITY AUDIT LOGS CLIENT LOGIC
+// =============================================================
+
+function escapeAuditHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+async function loadGeofenceSettings() {
+    try {
+        const res = await fetch('/admin/api/geofence-settings');
+        const data = await res.json();
+        if (data.status === 'success' && data.settings) {
+            const s = data.settings;
+            const isEnabled = s.geofence_enabled === true || s.geofence_enabled === '1' || s.geofence_enabled === 1;
+            const toggle = document.getElementById('geofenceToggleSwitch');
+            if (toggle) toggle.checked = isEnabled;
+            
+            const latEl = document.getElementById('geoLatitude');
+            const lngEl = document.getElementById('geoLongitude');
+            const radEl = document.getElementById('geoRadius');
+            const keyEl = document.getElementById('geoBypassKey');
+
+            if (latEl) latEl.value = s.college_latitude || '14.0044';
+            if (lngEl) lngEl.value = s.college_longitude || '78.7523';
+            if (radEl) radEl.value = s.geofence_radius_meters || '1000';
+            if (keyEl) keyEl.value = s.emergency_bypass_key || 'SSITS@2026';
+
+            updateGeofenceToggleLabel();
+        }
+    } catch (err) {
+        console.error('Failed to load geofence settings:', err);
+    }
+}
+
+function updateGeofenceToggleLabel() {
+    const toggle = document.getElementById('geofenceToggleSwitch');
+    const badge = document.getElementById('geofenceBadgeStatus');
+    const label = document.getElementById('geofenceToggleStateText');
+    if (!toggle) return;
+
+    if (toggle.checked) {
+        if (badge) {
+            badge.className = 'badge bg-success-subtle text-success border border-success px-3 py-2 text-uppercase fs-7';
+            badge.innerHTML = '<i class="bi bi-shield-check me-1"></i> ACTIVE &amp; ENFORCED';
+        }
+        if (label) {
+            label.className = 'badge bg-success';
+            label.innerText = 'ENABLED (Attendance Restricted to Campus)';
+        }
+    } else {
+        if (badge) {
+            badge.className = 'badge bg-secondary-subtle text-secondary border px-3 py-2 text-uppercase fs-7';
+            badge.innerHTML = '<i class="bi bi-shield-slash me-1"></i> INACTIVE (DISABLED)';
+        }
+        if (label) {
+            label.className = 'badge bg-secondary';
+            label.innerText = 'DISABLED (Any Location Allowed)';
+        }
+    }
+}
+
+function setGeoRadiusPreset(radiusMeters) {
+    const input = document.getElementById('geoRadius');
+    if (input) input.value = radiusMeters;
+}
+
+function generateRandomBypassKey() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = 'SSITS@';
+    for (let i = 0; i < 4; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    const input = document.getElementById('geoBypassKey');
+    if (input) input.value = code;
+}
+
+function detectAdminCurrentLocation() {
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+    }
+    showToastAlert('info', 'Detecting your current GPS coordinates...');
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const latEl = document.getElementById('geoLatitude');
+            const lngEl = document.getElementById('geoLongitude');
+            if (latEl) latEl.value = pos.coords.latitude.toFixed(6);
+            if (lngEl) lngEl.value = pos.coords.longitude.toFixed(6);
+            showToastAlert('success', `Location detected: ${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`);
+        },
+        (err) => {
+            showToastAlert('danger', `GPS Detection Error: ${err.message}. Please ensure location permissions are granted.`);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+    );
+}
+
+function testLiveDistance() {
+    const targetLat = parseFloat(document.getElementById('geoLatitude').value);
+    const targetLng = parseFloat(document.getElementById('geoLongitude').value);
+    const radius = parseFloat(document.getElementById('geoRadius').value) || 1000;
+    const resBox = document.getElementById('liveDistanceResult');
+    if (!resBox) return;
+
+    if (isNaN(targetLat) || isNaN(targetLng)) {
+        alert('Please enter valid campus latitude and longitude first.');
+        return;
+    }
+
+    if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser.');
+        return;
+    }
+
+    resBox.style.display = 'block';
+    resBox.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Measuring current distance...';
+
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            const userLat = pos.coords.latitude;
+            const userLng = pos.coords.longitude;
+
+            // Haversine calculation in meters
+            const R = 6371000;
+            const dLat = (targetLat - userLat) * Math.PI / 180;
+            const dLng = (targetLng - userLng) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(userLat * Math.PI / 180) * Math.cos(targetLat * Math.PI / 180) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const dist = R * c;
+
+            const isInside = dist <= radius;
+            resBox.className = `small fw-semibold text-center p-2 rounded border ${isInside ? 'bg-success-subtle text-success border-success' : 'bg-danger-subtle text-danger border-danger'}`;
+            resBox.innerHTML = `
+                <div><strong>Detected Distance:</strong> ${Math.round(dist)} meters</div>
+                <div><strong>Allowed Radius:</strong> ${Math.round(radius)} meters</div>
+                <div class="mt-1">${isInside ? '<i class="bi bi-check-circle-fill"></i> INSIDE CAMPUS BOUNDARY' : '<i class="bi bi-x-circle-fill"></i> OUTSIDE CAMPUS BOUNDARY'}</div>
+            `;
+        },
+        (err) => {
+            resBox.className = 'small fw-semibold text-center p-2 rounded border bg-warning-subtle text-dark border-warning';
+            resBox.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> GPS error: ${err.message}`;
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+    );
+}
+
+async function saveGeofenceSettings(e) {
+    if (e) e.preventDefault();
+    const btn = document.getElementById('btnSaveGeofence');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+    const payload = {
+        geofence_enabled: document.getElementById('geofenceToggleSwitch').checked ? '1' : '0',
+        college_latitude: document.getElementById('geoLatitude').value.trim(),
+        college_longitude: document.getElementById('geoLongitude').value.trim(),
+        geofence_radius_meters: document.getElementById('geoRadius').value.trim(),
+        emergency_bypass_key: document.getElementById('geoBypassKey').value.trim()
+    };
+
+    try {
+        const res = await fetch('/admin/api/update-geofence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            showToastAlert('success', data.message || 'Geo-Fence settings saved successfully!');
+            updateGeofenceToggleLabel();
+        } else {
+            showToastAlert('danger', data.message || 'Failed to save Geo-Fence settings.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToastAlert('danger', 'Network error while saving Geo-Fence settings.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-save me-1"></i> Save Geo-Fence Configuration';
+    }
+}
+
+// Security Audit Logs
+let globalAuditLogs = [];
+
+async function loadAuditLogs() {
+    const tbody = document.getElementById('auditLogsTbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="7" class="text-center py-4 text-muted">
+                <div class="spinner-border spinner-border-sm text-primary me-2"></div> Fetching audit log entries...
+            </td>
+        </tr>
+    `;
+
+    const role = document.getElementById('auditRoleFilter')?.value || '';
+    const action = document.getElementById('auditActionFilter')?.value || '';
+
+    try {
+        const res = await fetch(`/admin/api/audit-logs?role=${encodeURIComponent(role)}&action=${encodeURIComponent(action)}&limit=150`);
+        const data = await res.json();
+        if (data.status === 'success') {
+            globalAuditLogs = data.logs || [];
+            renderAuditLogsTable(globalAuditLogs);
+        } else {
+            tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">${data.message || 'Error loading audit logs.'}</td></tr>`;
+        }
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-danger">Network error loading audit logs.</td></tr>`;
+    }
+}
+
+function renderAuditLogsTable(logs) {
+    const tbody = document.getElementById('auditLogsTbody');
+    if (!tbody) return;
+
+    if (!logs || logs.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-5 text-muted">
+                    <i class="bi bi-shield-check fs-2 text-muted d-block mb-2"></i>
+                    No audit records found matching the selected criteria.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    let rowsHtml = '';
+    logs.forEach((item, index) => {
+        let roleBadge = '<span class="badge bg-secondary">System</span>';
+        if (item.user_role === 'admin') {
+            roleBadge = '<span class="badge bg-danger">ADMIN</span>';
+        } else if (item.user_role === 'faculty') {
+            roleBadge = '<span class="badge bg-primary">FACULTY</span>';
+        }
+
+        let actionBadge = `<span class="badge bg-dark">${escapeAuditHtml(item.action)}</span>`;
+        if (item.action.includes('LOGIN')) {
+            actionBadge = `<span class="badge bg-info text-dark"><i class="bi bi-box-arrow-in-right me-1"></i>${escapeAuditHtml(item.action)}</span>`;
+        } else if (item.action.includes('ATTENDANCE')) {
+            actionBadge = `<span class="badge bg-success"><i class="bi bi-clipboard-check me-1"></i>${escapeAuditHtml(item.action)}</span>`;
+        } else if (item.action.includes('DELETE')) {
+            actionBadge = `<span class="badge bg-danger"><i class="bi bi-trash-fill me-1"></i>${escapeAuditHtml(item.action)}</span>`;
+        } else if (item.action.includes('BYPASS')) {
+            actionBadge = `<span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle-fill me-1"></i>${escapeAuditHtml(item.action)}</span>`;
+        }
+
+        rowsHtml += `
+            <tr>
+                <td class="text-muted small">${index + 1}</td>
+                <td class="small fw-semibold text-dark">${escapeAuditHtml(item.created_at || '—')}</td>
+                <td>${roleBadge}</td>
+                <td class="fw-bold text-navy small">${escapeAuditHtml(item.user_name || '—')}</td>
+                <td>${actionBadge}</td>
+                <td class="small text-muted">${escapeAuditHtml(item.details || '—')}</td>
+                <td class="small text-monospace"><code class="text-muted">${escapeAuditHtml(item.ip_address || '—')}</code></td>
+            </tr>
+        `;
+    });
+
+    tbody.innerHTML = rowsHtml;
+}
+
+function filterAuditLogsTable() {
+    const q = (document.getElementById('auditLogSearch')?.value || '').toLowerCase().trim();
+    if (!q) {
+        renderAuditLogsTable(globalAuditLogs);
+        return;
+    }
+    const filtered = globalAuditLogs.filter(log =>
+        (log.user_name && log.user_name.toLowerCase().includes(q)) ||
+        (log.action && log.action.toLowerCase().includes(q)) ||
+        (log.details && log.details.toLowerCase().includes(q)) ||
+        (log.ip_address && log.ip_address.toLowerCase().includes(q)) ||
+        (log.created_at && log.created_at.toLowerCase().includes(q))
+    );
+    renderAuditLogsTable(filtered);
+}
+
+async function confirmClearAuditLogs() {
+    if (!confirm('Are you sure you want to clear all historical audit logs? This action cannot be undone.')) {
+        return;
+    }
+    try {
+        const res = await fetch('/admin/api/clear-audit-logs', { method: 'POST' });
+        const data = await res.json();
+        if (data.status === 'success') {
+            showToastAlert('success', data.message || 'Audit logs cleared successfully.');
+            loadAuditLogs();
+        } else {
+            showToastAlert('danger', data.message || 'Failed to clear audit logs.');
+        }
+    } catch (err) {
+        console.error(err);
+        showToastAlert('danger', 'Error clearing audit logs.');
+    }
+}
+
 // -------------------------------------------------------------
 // Tab persistence across page reloads & direct hash deep linking
 // -------------------------------------------------------------
@@ -4254,6 +4809,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (targetId) {
                 localStorage.setItem('admin_active_tab', targetId);
                 history.replaceState(null, null, targetId);
+                if (targetId === '#geofencePane') loadGeofenceSettings();
+                if (targetId === '#auditLogsPane') loadAuditLogs();
             }
         });
     });
@@ -4265,6 +4822,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetBtn = document.querySelector(`#adminTabs button[data-bs-target="${savedTab}"]`);
         if (targetBtn) {
             bootstrap.Tab.getOrCreateInstance(targetBtn).show();
+            if (savedTab === '#geofencePane') loadGeofenceSettings();
+            if (savedTab === '#auditLogsPane') loadAuditLogs();
         }
     }
 

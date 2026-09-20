@@ -371,8 +371,40 @@ function filterStudentTable(query) {
     renderStudentTable(filtered);
 }
 
-// Save Attendance to Database (supports silent auto-save)
-async function saveAttendanceData(silent = false) {
+function getDeviceGpsCoordinates() {
+    return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+            resolve({ lat: null, lng: null });
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            (err) => resolve({ lat: null, lng: null, error: err.message }),
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 15000 }
+        );
+    });
+}
+
+function retryAttendanceWithLocation() {
+    const modalEl = document.getElementById("geofenceAlertModal");
+    if (modalEl && typeof bootstrap !== 'undefined') {
+        bootstrap.Modal.getInstance(modalEl)?.hide();
+    }
+    saveAttendanceData(false);
+}
+
+function submitAttendanceWithBypass() {
+    const bypassInput = document.getElementById("geofenceBypassInput");
+    const bypassVal = (bypassInput ? bypassInput.value : "").trim();
+    if (!bypassVal) {
+        alert("Please enter the emergency bypass passkey provided by the Administrator.");
+        return;
+    }
+    saveAttendanceData(false, bypassVal);
+}
+
+// Save Attendance to Database (supports silent auto-save and campus geo-fencing)
+async function saveAttendanceData(silent = false, bypassKey = null) {
     const dateVal = document.getElementById("attendanceDate").value;
     const btnSave = document.getElementById("btnSaveAttendance");
     const originalText = btnSave ? btnSave.innerHTML : "";
@@ -381,13 +413,28 @@ async function saveAttendanceData(silent = false) {
         btnSave.disabled = true;
     }
 
+    let coords = { lat: null, lng: null };
+    if (!bypassKey && navigator.geolocation) {
+        try {
+            coords = await getDeviceGpsCoordinates();
+        } catch (e) {
+            console.warn("Could not retrieve GPS coordinates:", e);
+        }
+    }
+
     const payload = {
         date: dateVal,
         session: currentSession,
         absent_ids: Array.from(absentStudentIds),
         day_type: currentDayType,
-        occasion_name: currentOccasionName
+        occasion_name: currentOccasionName,
+        latitude: coords.lat,
+        longitude: coords.lng
     };
+
+    if (bypassKey) {
+        payload.bypass_key = bypassKey;
+    }
 
     try {
         const res = await fetch("/api/save-attendance", {
@@ -397,7 +444,28 @@ async function saveAttendanceData(silent = false) {
         });
         const result = await res.json();
 
+        if (result.is_geofence_error) {
+            const modalEl = document.getElementById("geofenceAlertModal");
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                const msgEl = document.getElementById("geofenceAlertMessage");
+                const radEl = document.getElementById("geofenceAllowedRadius");
+                const distEl = document.getElementById("geofenceDetectedDistance");
+                if (msgEl) msgEl.innerText = result.message || "Attendance submission requires being on SSITS campus premises.";
+                if (radEl) radEl.innerText = (result.allowed_radius ? Math.round(result.allowed_radius) + " meters" : "1000 meters");
+                if (distEl) distEl.innerText = (result.distance_meters ? Math.round(result.distance_meters) + " meters" : "GPS coordinates unavailable");
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            } else {
+                alert(result.message || "Campus Geo-Fencing is active: You must be on college premises to submit attendance.");
+            }
+            return;
+        }
+
         if (result.status === "success") {
+            const alertModalEl = document.getElementById("geofenceAlertModal");
+            if (alertModalEl && typeof bootstrap !== 'undefined') {
+                bootstrap.Modal.getInstance(alertModalEl)?.hide();
+            }
+
             const now = new Date();
             const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 

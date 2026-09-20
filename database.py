@@ -270,6 +270,55 @@ def init_db():
     if "is_approved" not in adm_cols:
         cursor.execute("ALTER TABLE admins ADD COLUMN is_approved INTEGER DEFAULT 1")
 
+    # Ensure permanent shield against unwanted legacy faculty auto-insertion
+    cursor.execute("""
+        CREATE TRIGGER IF NOT EXISTS prevent_unwanted_faculty_seed
+        BEFORE INSERT ON teachers
+        FOR EACH ROW
+        WHEN LOWER(NEW.username) IN ('faizan', 'lakshmidattatri', 'dattatri')
+          OR LOWER(NEW.name) LIKE '%faizan%'
+          OR LOWER(NEW.name) LIKE '%dattatri%'
+        BEGIN
+            SELECT RAISE(IGNORE);
+        END;
+    """)
+
+    # 13. System Settings Table (Geo-fencing, Campus configs, etc.)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS system_settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    # Seed default system settings if missing
+    default_settings = [
+        ("geofence_enabled", "0"),
+        ("college_latitude", "14.0044"),
+        ("college_longitude", "78.7523"),
+        ("geofence_radius_meters", "1000"),
+        ("emergency_bypass_key", "SSITS@2026")
+    ]
+    for k, v in default_settings:
+        cursor.execute("SELECT COUNT(*) FROM system_settings WHERE key = ?", (k,))
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("INSERT INTO system_settings (key, value) VALUES (?, ?)", (k, v))
+
+    # 14. Security & Activity Audit Logs Table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_role TEXT NOT NULL,
+            user_id INTEGER,
+            user_name TEXT NOT NULL,
+            action TEXT NOT NULL,
+            details TEXT,
+            ip_address TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
     # Backfill default values
     cursor.execute("UPDATE teachers SET section = 'A' WHERE section IS NULL OR section = ''")
     cursor.execute("UPDATE students SET section = 'A' WHERE section IS NULL OR section = ''")
