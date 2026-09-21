@@ -3,6 +3,7 @@ let absentStudentIds = new Set();
 let currentSession = "morning";
 let currentDayType = "working";
 let currentOccasionName = "";
+let hasCurrentAttendanceRecords = false;
 
 document.addEventListener("DOMContentLoaded", function () {
     const dateInput = document.getElementById("attendanceDate");
@@ -171,6 +172,18 @@ async function loadAttendanceData() {
 
     try {
         const response = await fetch(`/api/students?date=${dateVal}&session=${currentSession}`);
+        if (response.status === 401) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-danger py-4">
+                        <i class="bi bi-shield-lock-fill me-1"></i> Your login session has expired. 
+                        <a href="/login" class="btn btn-sm btn-primary ms-2 fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> Sign In Again</a>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
         const data = await response.json();
 
         if (data.status === "success") {
@@ -179,6 +192,7 @@ async function loadAttendanceData() {
 
             currentDayType = data.day_type || "working";
             currentOccasionName = data.occasion_name || "";
+            hasCurrentAttendanceRecords = !!data.has_attendance_records;
 
             // If working day, populate absentees
             if (currentDayType === "working") {
@@ -190,12 +204,12 @@ async function loadAttendanceData() {
             // Update in-page status indicator
             const statusIndicator = document.getElementById("saveStatusIndicator");
             if (statusIndicator) {
-                if (data.absent_ids && data.absent_ids.length > 0) {
-                    statusIndicator.className = "badge bg-success-subtle text-success border border-success px-2 py-2 align-self-center small d-none d-lg-inline-block";
-                    statusIndicator.innerHTML = `<i class="bi bi-database-check text-success me-1"></i> Stored in DB`;
+                if (hasCurrentAttendanceRecords) {
+                    statusIndicator.className = "badge bg-success-subtle text-success border border-success px-3 py-2 align-self-center small d-none d-lg-inline-block";
+                    statusIndicator.innerHTML = `<i class="bi bi-database-check text-success me-1"></i> Stored in DB (${absentStudentIds.size} Absentees)`;
                 } else {
-                    statusIndicator.className = "badge bg-light text-secondary border px-2 py-2 align-self-center small d-none d-lg-inline-block";
-                    statusIndicator.innerHTML = `<i class="bi bi-database me-1"></i> Ready to Save`;
+                    statusIndicator.className = "badge bg-warning-subtle text-warning-emphasis border border-warning px-3 py-2 align-self-center small d-none d-lg-inline-block";
+                    statusIndicator.innerHTML = `<i class="bi bi-clock-history me-1"></i> Attendance Pending (Not Yet Saved)`;
                 }
             }
         } else {
@@ -406,6 +420,15 @@ function submitAttendanceWithBypass() {
 // Save Attendance to Database (supports silent auto-save and campus geo-fencing)
 async function saveAttendanceData(silent = false, bypassKey = null) {
     const dateVal = document.getElementById("attendanceDate").value;
+
+    // Accidental Save Prevention: Confirm if 0 absentees are marked and attendance is pending
+    if (!silent && absentStudentIds.size === 0 && !hasCurrentAttendanceRecords) {
+        const confirmed = confirm(`⚠️ ATTENDANCE CONFIRMATION (100% Present)\n\nAre you sure ALL ${students.length} students in this class are PRESENT today for the ${currentSession.toUpperCase()} session?\n\n• Click [OK] if no student is absent (Full Class Present).\n• Click [Cancel] to check the roll sheet and mark absentees.`);
+        if (!confirmed) {
+            return;
+        }
+    }
+
     const btnSave = document.getElementById("btnSaveAttendance");
     const originalText = btnSave ? btnSave.innerHTML : "";
     if (btnSave && !silent) {
@@ -442,6 +465,13 @@ async function saveAttendanceData(silent = false, bypassKey = null) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
+
+        if (res.status === 401) {
+            alert("⚠️ Your login session has expired. Please sign in again to save attendance.");
+            window.location.href = "/login";
+            return;
+        }
+
         const result = await res.json();
 
         if (result.is_geofence_error) {
@@ -461,6 +491,7 @@ async function saveAttendanceData(silent = false, bypassKey = null) {
         }
 
         if (result.status === "success") {
+            hasCurrentAttendanceRecords = true;
             const alertModalEl = document.getElementById("geofenceAlertModal");
             if (alertModalEl && typeof bootstrap !== 'undefined') {
                 bootstrap.Modal.getInstance(alertModalEl)?.hide();

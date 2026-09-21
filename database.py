@@ -319,6 +319,15 @@ def init_db():
         )
     """)
 
+    # 15. Performance Optimization Indexes
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_att_lookup ON attendance_records(attendance_date, session_type, status)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_att_student ON attendance_records(student_id)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_lookup ON students(program_id, department_id, year_id, section)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_students_roll ON students(roll_number)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_teachers_lookup ON teachers(program_id, department_id, year_id, section)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_day_status_lookup ON day_status(program_id, department_id, year_id, attendance_date)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_audit_logs_role ON audit_logs(user_role)")
+
     # Backfill default values
     cursor.execute("UPDATE teachers SET section = 'A' WHERE section IS NULL OR section = ''")
     cursor.execute("UPDATE students SET section = 'A' WHERE section IS NULL OR section = ''")

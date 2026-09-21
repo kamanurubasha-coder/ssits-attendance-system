@@ -15,7 +15,7 @@ import pyotp
 import qrcode
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file, flash
 from database import get_db_connection, init_db
-from pdf_generator import generate_attendance_pdf, generate_parent_student_dossier_pdf, generate_cumulative_monthly_attendance_pdf
+from pdf_generator import generate_attendance_pdf, generate_parent_student_dossier_pdf, generate_cumulative_monthly_attendance_pdf, generate_consolidated_absentees_summary_pdf
 
 # Central Indian Standard Time (IST, UTC+05:30)
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -36,6 +36,12 @@ app = Flask(__name__)
 app.secret_key = "sri_sai_institute_attendance_secret_key_2026"
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 86400  # 24-hour browser caching for static assets
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=30)  # 30-day session persistence
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+
+@app.before_request
+def ensure_session_permanence():
+    session.permanent = True
 
 # Ultra-fast Keep-Alive endpoint for Render cold-start prevention
 @app.route("/healthz")
@@ -57,11 +63,12 @@ COLLEGE_NAME = "Sri Sai Institute of Technology and Science"
 
 # Helper: check faculty authentication
 def is_authenticated():
-    return "teacher_id" in session
+    return "teacher_id" in session and "program_id" in session
 
 # Helper: set full authenticated faculty session
 def set_faculty_session(teacher):
     session.clear()
+    session.permanent = True
     session["teacher_id"] = teacher["id"]
     session["teacher_name"] = teacher["name"]
     session["teacher_phone"] = teacher["phone"]
@@ -80,6 +87,7 @@ def set_faculty_session(teacher):
 
 def set_hod_session(hod):
     session.clear()
+    session.permanent = True
     session["hod_id"] = hod["id"]
     session["department_id"] = hod["department_id"]
     session["hod_name"] = hod["name"]
@@ -91,6 +99,7 @@ def set_hod_session(hod):
 
 def set_principal_session(princ):
     session.clear()
+    session.permanent = True
     session["principal_id"] = princ["id"]
     session["username"] = princ["username"]
     session["name"] = princ["name"]
@@ -127,12 +136,13 @@ def log_audit_event(user_role, user_id, user_name, action, details="", ip=None):
                 ip = request.headers.get("X-Forwarded-For", request.remote_addr or "127.0.0.1").split(",")[0].strip()
             except Exception:
                 ip = "127.0.0.1"
+        ist_timestamp = get_ist_now().strftime("%Y-%m-%d %I:%M:%S %p")
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO audit_logs (user_role, user_id, user_name, action, details, ip_address)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (str(user_role), user_id, str(user_name or "System"), str(action), str(details or ""), str(ip)))
+            INSERT INTO audit_logs (user_role, user_id, user_name, action, details, ip_address, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (str(user_role), user_id, str(user_name or "System"), str(action), str(details or ""), str(ip), ist_timestamp))
         conn.commit()
         conn.close()
     except Exception as e:
@@ -1908,7 +1918,7 @@ def admin_delete_principal():
 
 @app.route("/admin/api/class-attendance")
 def admin_api_class_attendance():
-    if not is_admin():
+    if not (is_admin() or is_principal() or is_hod()):
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
     req_date = request.args.get("date", get_ist_date_str())
@@ -1917,6 +1927,7 @@ def admin_api_class_attendance():
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    # 1. Structure of all institutional classes
     cursor.execute("""
         SELECT pd.program_id, pd.department_id, p.code as prog_code, p.name as prog_name,
                d.code as dept_code, d.name as dept_name,
@@ -1932,77 +1943,102 @@ def admin_api_class_attendance():
     """)
     classes_raw = cursor.fetchall()
 
+    # 2. All teachers in 1 single bulk query
+    cursor.execute("""
+        SELECT id, name, phone, email, username, password, program_id, department_id, year_id, COALESCE(section, 'A') as section
+        FROM teachers
+    """)
+    teachers_map = {}
+    for t in cursor.fetchall():
+        sec = (t["section"] or "A").strip().upper() or "A"
+        teachers_map[(t["program_id"], t["department_id"], t["year_id"], sec)] = dict(t)
+
+    # 3. Day status for this date in 1 single bulk query
+    cursor.execute("""
+        SELECT program_id, department_id, year_id, COALESCE(section, 'A') as section, day_type, occasion_name
+        FROM day_status
+        WHERE attendance_date = ?
+    """, (req_date,))
+    day_map = {}
+    for d in cursor.fetchall():
+        sec = (d["section"] or "A").strip().upper() or "A"
+        day_map[(d["program_id"], d["department_id"], d["year_id"], sec)] = dict(d)
+
+    # 4. All enrolled students in 1 single bulk query
+    cursor.execute("""
+        SELECT id, roll_number, name, father_name, father_phone, program_id, department_id, year_id, COALESCE(section, 'A') as section
+        FROM students
+        ORDER BY roll_number ASC
+    """)
+    students_by_class = {}
+    for s in cursor.fetchall():
+        sec = (s["section"] or "A").strip().upper() or "A"
+        key = (s["program_id"], s["department_id"], s["year_id"], sec)
+        students_by_class.setdefault(key, []).append(dict(s))
+
+    # 5. All attendance records for this date & session in 1 single bulk query
+    cursor.execute("""
+        SELECT a.id as record_id, a.attendance_date, a.session_type, a.status, a.created_at,
+               s.id as student_id, s.roll_number, s.name, s.father_name, s.father_phone,
+               s.program_id, s.department_id, s.year_id, COALESCE(s.section, 'A') as section
+        FROM attendance_records a
+        JOIN students s ON a.student_id = s.id
+        WHERE a.attendance_date = ? AND LOWER(a.session_type) = LOWER(?)
+        ORDER BY s.roll_number ASC
+    """, (req_date, req_session))
+    att_rows = cursor.fetchall()
+    conn.close()
+
+    absent_students_map = {}
+    has_records_map = set()
+    for r in att_rows:
+        sec = (r["section"] or "A").strip().upper() or "A"
+        key = (r["program_id"], r["department_id"], r["year_id"], sec)
+        has_records_map.add(key)
+        if (r["status"] or "").lower() == "absent":
+            absent_students_map.setdefault(key, []).append({
+                "id": r["student_id"],
+                "roll_number": r["roll_number"],
+                "name": r["name"],
+                "father_name": r["father_name"],
+                "father_phone": r["father_phone"],
+                "created_at": r["created_at"]
+            })
+
+    try:
+        d_obj = datetime.strptime(req_date, "%Y-%m-%d").date()
+        def_day_type, def_occasion = get_default_day_type(d_obj)
+    except Exception:
+        def_day_type, def_occasion = 'working', ''
+
     result = []
     for c in classes_raw:
         prog_id = c["program_id"]
         dept_id = c["department_id"]
         year_id = c["year_id"]
         section = "A"
+        key = (prog_id, dept_id, year_id, section)
 
-        # Assigned Teacher
-        cursor.execute("""
-            SELECT name, phone, email, username, password FROM teachers
-            WHERE program_id = ? AND department_id = ? AND year_id = ? AND (section = ? OR section IS NULL)
-            LIMIT 1
-        """, (prog_id, dept_id, year_id, section))
-        teacher = cursor.fetchone()
-
-        # Day Status
-        cursor.execute("""
-            SELECT day_type, occasion_name FROM day_status
-            WHERE program_id = ? AND department_id = ? AND year_id = ? AND attendance_date = ?
-              AND (section = ? OR section IS NULL OR section = '')
-        """, (prog_id, dept_id, year_id, req_date, section))
-        day_row = cursor.fetchone()
+        teacher = teachers_map.get(key)
+        day_row = day_map.get(key)
         if day_row:
             day_type = day_row["day_type"]
             occasion_name = day_row["occasion_name"] or ""
         else:
-            try:
-                d_obj = datetime.strptime(req_date, "%Y-%m-%d").date()
-                day_type, occasion_name = get_default_day_type(d_obj)
-            except Exception:
-                day_type, occasion_name = 'working', ''
+            day_type = def_day_type
+            occasion_name = def_occasion
 
-        # Total Enrolled Students
-        cursor.execute("""
-            SELECT id, roll_number, name, father_name, father_phone
-            FROM students
-            WHERE program_id = ? AND department_id = ? AND year_id = ?
-              AND (section = ? OR section IS NULL OR section = '')
-            ORDER BY roll_number ASC
-        """, (prog_id, dept_id, year_id, section))
-        class_students = [dict(r) for r in cursor.fetchall()]
+        class_students = students_by_class.get(key, [])
         total_students = len(class_students)
 
-        # Absentees for this class on this date & session
-        cursor.execute("""
-            SELECT s.id, s.roll_number, s.name, s.father_name, s.father_phone, a.created_at
-            FROM attendance_records a
-            JOIN students s ON a.student_id = s.id
-            WHERE a.attendance_date = ? AND LOWER(a.session_type) = LOWER(?) AND LOWER(a.status) = 'absent'
-              AND s.program_id = ? AND s.department_id = ? AND s.year_id = ?
-              AND (s.section = ? OR s.section IS NULL OR s.section = '' OR ? = 'A')
-            ORDER BY s.roll_number ASC
-        """, (req_date, req_session, prog_id, dept_id, year_id, section, section))
-        absent_students = [dict(r) for r in cursor.fetchall()]
+        absent_students = absent_students_map.get(key, [])
         absent_count = len(absent_students)
         present_count = max(0, total_students - absent_count)
 
-        # Check if saved to database
-        cursor.execute("""
-            SELECT COUNT(*) as cnt FROM attendance_records a
-            JOIN students s ON a.student_id = s.id
-            WHERE a.attendance_date = ? AND LOWER(a.session_type) = LOWER(?)
-              AND s.program_id = ? AND s.department_id = ? AND s.year_id = ?
-              AND (s.section = ? OR s.section IS NULL OR s.section = '' OR ? = 'A')
-        """, (req_date, req_session, prog_id, dept_id, year_id, section, section))
-        has_records = cursor.fetchone()["cnt"] > 0
+        has_records = key in has_records_map
         has_day_marked = day_row is not None
-
         pct = round((present_count / total_students * 100), 1) if total_students > 0 else 0
 
-        # If attendance records exist or day is marked working:
         is_submitted = has_records or (has_day_marked and day_type == 'working')
         if has_records or (has_day_marked and day_type == 'working'):
             eff_day_type = 'working'
@@ -2045,10 +2081,10 @@ def admin_api_class_attendance():
             "absent_count": eff_absent,
             "attendance_pct": eff_pct,
             "is_submitted": is_submitted,
-            "absent_students": eff_absent_students
+            "absent_students": eff_absent_students,
+            "all_students": class_students
         })
 
-    conn.close()
     return jsonify({
         "status": "success",
         "date": req_date,
@@ -2452,6 +2488,21 @@ def admin_api_update_geofence():
 # ==============================================================================
 # SECURITY FEATURE 2: SECURITY & ACTIVITY AUDIT LOGS API
 # ==============================================================================
+def format_audit_timestamp(ts):
+    if not ts:
+        return get_ist_now().strftime("%d-%b-%Y, %I:%M:%S %p IST")
+    ts_str = str(ts).strip()
+    if "IST" in ts_str:
+        return ts_str
+    if "AM" in ts_str or "PM" in ts_str:
+        return f"{ts_str} IST"
+    try:
+        dt = datetime.strptime(ts_str.split('.')[0], "%Y-%m-%d %H:%M:%S")
+        dt_ist = dt + timedelta(hours=5, minutes=30)
+        return dt_ist.strftime("%d-%b-%Y, %I:%M:%S %p IST")
+    except Exception:
+        return f"{ts_str} IST"
+
 @app.route("/admin/api/audit-logs", methods=["GET"])
 def admin_api_audit_logs():
     if not is_admin():
@@ -2484,7 +2535,11 @@ def admin_api_audit_logs():
     params.append(limit)
 
     cur.execute(query, params)
-    rows = [dict(r) for r in cur.fetchall()]
+    rows = []
+    for r in cur.fetchall():
+        d = dict(r)
+        d["created_at"] = format_audit_timestamp(d.get("created_at"))
+        rows.append(d)
     conn.close()
 
     return jsonify({
@@ -2509,7 +2564,7 @@ def admin_api_export_audit_logs():
     writer = csv.writer(output)
     writer.writerow(["Log ID", "User Role", "User Name", "Action / Event", "Details", "IP Address", "Timestamp (IST)"])
     for r in rows:
-        writer.writerow([r["id"], r["user_role"].upper(), r["user_name"], r["action"], r["details"], r["ip_address"], r["created_at"]])
+        writer.writerow([r["id"], r["user_role"].upper(), r["user_name"], r["action"], r["details"], r["ip_address"], format_audit_timestamp(r["created_at"])])
 
     log_audit_event(
         "superadmin", session.get("admin_id"), session.get("admin_name", "Admin"),
@@ -2662,7 +2717,7 @@ def admin_api_restore_db():
 # ==============================================================================
 @app.route("/admin/api/summary-absentees")
 def admin_api_summary_absentees():
-    if not is_admin():
+    if not (is_admin() or is_principal() or is_hod()):
         return jsonify({"status": "error", "message": "Unauthorized"}), 401
 
     req_date = request.args.get("date", get_ist_date_str())
@@ -2712,6 +2767,92 @@ def admin_api_summary_absentees():
         "branch_summary": stats_by_dept,
         "absentees": absentees
     })
+
+# Official Institutional Consolidated Summary Absentees PDF Generator Route
+@app.route("/admin/api/summary-absentees/pdf")
+@app.route("/api/summary-absentees/pdf")
+def admin_api_summary_absentees_pdf():
+    if not (is_admin() or is_principal() or is_hod()):
+        flash("Unauthorized access to institutional reports.", "error")
+        return redirect(url_for("welcome"))
+
+    req_date = request.args.get("date", get_ist_date_str())
+    req_session = request.args.get("session", "morning").lower()
+    req_prog = request.args.get("program")
+    req_dept = request.args.get("department")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT a.id as record_id, a.attendance_date, a.session_type, a.section, a.created_at,
+               s.id as student_id, s.roll_number, s.name as student_name, s.name as name,
+               s.father_name, s.father_phone,
+               p.id as prog_id, p.code as prog_code, p.name as prog_name,
+               d.id as dept_id, d.code as dept_code, d.name as dept_name,
+               y.id as year_id, y.year_name, y.year_num,
+               t.name as teacher_name, t.phone as teacher_phone
+        FROM attendance_records a
+        JOIN students s ON a.student_id = s.id
+        JOIN programs p ON s.program_id = p.id
+        JOIN departments d ON s.department_id = d.id
+        JOIN academic_years y ON s.year_id = y.id
+        LEFT JOIN teachers t ON a.marked_by = t.id
+        WHERE a.attendance_date = ? AND LOWER(a.status) = 'absent'
+    """
+    params = [req_date]
+    if req_session in ["morning", "afternoon"]:
+        query += " AND LOWER(a.session_type) = LOWER(?)"
+        params.append(req_session)
+
+    if req_prog and req_prog != 'ALL':
+        query += " AND UPPER(p.code) = UPPER(?)"
+        params.append(req_prog)
+
+    if req_dept and req_dept != 'ALL':
+        query += " AND UPPER(d.code) = UPPER(?)"
+        params.append(req_dept)
+    elif is_hod() and not is_admin() and not is_principal():
+        hod_dept_code = session.get("dept_code")
+        if hod_dept_code:
+            query += " AND UPPER(d.code) = UPPER(?)"
+            params.append(hod_dept_code)
+            req_dept = hod_dept_code
+
+    query += " ORDER BY p.id, d.id, y.year_num, a.section, s.roll_number ASC"
+    cursor.execute(query, tuple(params))
+    absentees = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+
+    stats_by_dept = {}
+    for ab in absentees:
+        key = f"{ab['prog_code']} {ab['dept_code']} ({ab['year_name']})"
+        stats_by_dept[key] = stats_by_dept.get(key, 0) + 1
+
+    gen_name = session.get("admin_name") or session.get("principal_name") or session.get("hod_name") or "Institutional Administrator"
+
+    import tempfile
+    dept_label = f"_{req_dept.lower()}" if req_dept and req_dept != 'ALL' else ""
+    pdf_filename = f"ssits_consolidated_absentees{dept_label}_{req_date}_{req_session}.pdf"
+    temp_dir = tempfile.gettempdir()
+    output_path = os.path.join(temp_dir, pdf_filename)
+
+    generate_consolidated_absentees_summary_pdf(
+        output_path,
+        COLLEGE_NAME,
+        req_date,
+        req_session,
+        absentees,
+        stats_by_dept,
+        generated_by=f"{gen_name} (SSITS Autonomous)"
+    )
+
+    return send_file(
+        output_path,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=pdf_filename
+    )
 
 # ==============================================================================
 # NEW FEATURE 3: MONTHLY WORKING DAYS vs ATTENDED DAYS REPORT ENGINE
@@ -3337,9 +3478,9 @@ def api_student_daily_attendance():
 
 @app.route("/admin/api/class-pdf")
 def admin_api_class_pdf():
-    if not is_admin():
-        flash("Admin access required!", "error")
-        return redirect(url_for("admin_portal"))
+    if not (is_admin() or is_principal() or is_hod()):
+        flash("Privileged access required to download class PDF.", "error")
+        return redirect(url_for("welcome"))
 
     prog_id = request.args.get("program_id", type=int)
     dept_id = request.args.get("dept_id", type=int)
@@ -3357,6 +3498,12 @@ def admin_api_class_pdf():
     dept = cursor.fetchone()
     cursor.execute("SELECT * FROM academic_years WHERE id = ?", (year_id,))
     year = cursor.fetchone()
+
+    if not prog or not dept or not year:
+        conn.close()
+        flash("Invalid class parameters.", "error")
+        return redirect(url_for("welcome"))
+
     cursor.execute("SELECT * FROM teachers WHERE program_id = ? AND department_id = ? AND year_id = ?", (prog_id, dept_id, year_id))
     teacher = cursor.fetchone()
     cursor.execute("SELECT * FROM hods WHERE program_id = ? AND department_id = ?", (prog_id, dept_id))
@@ -3473,13 +3620,16 @@ def dashboard():
     if not is_authenticated():
         return redirect(url_for("login"))
 
+    prog_id = session.get("program_id")
+    dept_id = session.get("dept_id")
+    year_id = session.get("year_id")
+    section = session.get("section", "A")
+
+    if not prog_id or not dept_id or not year_id:
+        return redirect(url_for("login"))
+
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    prog_id = session["program_id"]
-    dept_id = session["dept_id"]
-    year_id = session["year_id"]
-    section = session.get("section", "A")
 
     cursor.execute("""
         SELECT * FROM hods 
@@ -3492,9 +3642,20 @@ def dashboard():
 
     conn.close()
 
-    program_info = {"id": prog_id, "code": session["program_code"], "name": session["program_name"]}
-    dept_info = {"id": dept_id, "code": session["dept_code"], "name": session["dept_name"]}
-    year_info = {"id": year_id, "year_name": session["year_name"]}
+    program_info = {
+        "id": prog_id,
+        "code": session.get("program_code", "DIPLOMA"),
+        "name": session.get("program_name", "Diploma")
+    }
+    dept_info = {
+        "id": dept_id,
+        "code": session.get("dept_code", "CSE"),
+        "name": session.get("dept_name", "Computer Science")
+    }
+    year_info = {
+        "id": year_id,
+        "year_name": session.get("year_name", "1st Year")
+    }
 
     today_str = get_ist_date_str()
 
@@ -3561,6 +3722,17 @@ def api_students():
         except Exception:
             day_type, occasion_name = 'working', ''
 
+    # Check if ANY attendance record has been committed for this class & session
+    cursor.execute("""
+        SELECT COUNT(*) as cnt
+        FROM attendance_records a
+        JOIN students s ON a.student_id = s.id
+        WHERE a.attendance_date = ? AND LOWER(a.session_type) = LOWER(?)
+          AND s.program_id = ? AND s.department_id = ? AND s.year_id = ?
+          AND (s.section = ? OR s.section IS NULL OR s.section = '')
+    """, (req_date, req_session, session["program_id"], session["dept_id"], session["year_id"], current_section))
+    has_attendance_records = cursor.fetchone()["cnt"] > 0
+
     conn.close()
 
     return jsonify({
@@ -3569,7 +3741,8 @@ def api_students():
         "absent_ids": absent_ids,
         "day_type": day_type,
         "occasion_name": occasion_name,
-        "section": current_section
+        "section": current_section,
+        "has_attendance_records": has_attendance_records
     })
 
 @app.route("/api/save-day-status", methods=["POST"])

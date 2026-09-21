@@ -308,12 +308,15 @@
                                 Real-time consolidated absentee register across all Programs (Diploma, B.Tech), all Branches (ECE, CSE, AIDS, EEE, MECH, CIVIL) and all Sections.
                             </div>
                         </div>
-                        <div class="d-flex gap-2">
+                        <div class="d-flex gap-2 flex-wrap">
                             <button type="button" class="btn btn-outline-danger fw-semibold btn-sm px-3" onclick="loadSummaryAbsents()">
                                 <i class="bi bi-arrow-clockwise me-1"></i> Refresh Absentees
                             </button>
-                            <button type="button" class="btn btn-dark fw-semibold btn-sm px-3" onclick="window.print()">
-                                <i class="bi bi-printer-fill me-1"></i> Print Summary
+                            <button type="button" class="btn btn-danger fw-bold btn-sm px-3 shadow-sm" onclick="downloadSummaryAbsentsPdf()">
+                                <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download Official PDF
+                            </button>
+                            <button type="button" class="btn btn-outline-dark fw-semibold btn-sm px-3" onclick="window.print()">
+                                <i class="bi bi-printer-fill me-1"></i> Print
                             </button>
                         </div>
                     </div>
@@ -2431,6 +2434,14 @@ async function loadClassAttendance() {
 
     try {
         const res = await fetch(`/admin/api/class-attendance?date=${dateVal}&session=${sessionVal}`);
+        if (res.status === 401) {
+            tbody.innerHTML = `<tr><td colspan="11" class="text-center text-danger py-4">
+                <i class="bi bi-shield-lock-fill me-1"></i> Login session expired. 
+                <a href="/login" class="btn btn-sm btn-primary ms-2 fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> Sign In Again</a>
+            </td></tr>`;
+            statusLabel.innerHTML = `<i class="bi bi-shield-lock text-danger me-1"></i> Session Expired`;
+            return;
+        }
         const data = await res.json();
 
         if (data.status === 'success') {
@@ -2961,6 +2972,13 @@ async function loadSummaryAbsents() {
 
     try {
         const res = await fetch(`/admin/api/summary-absentees?date=${dateVal}&session=${sessionVal}`);
+        if (res.status === 401) {
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">
+                <i class="bi bi-shield-lock-fill me-1"></i> Login session expired. 
+                <a href="/login" class="btn btn-sm btn-primary ms-2 fw-bold"><i class="bi bi-box-arrow-in-right me-1"></i> Sign In Again</a>
+            </td></tr>`;
+            return;
+        }
         const data = await res.json();
 
         if (data.status === 'success') {
@@ -2973,6 +2991,17 @@ async function loadSummaryAbsents() {
         console.error('Error loading summary absentees:', err);
         tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger py-4">Failed to fetch summary absentees.</td></tr>`;
     }
+}
+
+function downloadSummaryAbsentsPdf() {
+    const dateVal = document.getElementById('summaryDate').value;
+    const sessionVal = document.getElementById('summarySession').value;
+    const progVal = document.getElementById('summaryProgFilter')?.value || '';
+    const deptVal = document.getElementById('summaryDeptFilter')?.value || '';
+    let url = `/admin/api/summary-absentees/pdf?date=${dateVal}&session=${sessionVal}`;
+    if (progVal && progVal !== 'ALL') url += `&program=${encodeURIComponent(progVal)}`;
+    if (deptVal && deptVal !== 'ALL') url += `&department=${encodeURIComponent(deptVal)}`;
+    window.open(url, '_blank');
 }
 
 function filterSummaryAbsents() {

@@ -238,7 +238,10 @@
                         </h5>
                         <small class="text-muted">Total {{ college_absentees|length }} absentees recorded across the institution</small>
                     </div>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap align-items-center">
+                        <button type="button" onclick="downloadPrincipalSummaryPdf()" class="btn btn-danger btn-sm fw-bold shadow-sm">
+                            <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download Official PDF
+                        </button>
                         <select class="form-select form-select-sm" id="absentDeptFilter" onchange="filterPrincipalAbsents()" style="width: auto;">
                             <option value="ALL">All Departments</option>
                             {% for d in departments %}
@@ -522,6 +525,15 @@ function filterPrincipalAbsents() {
         const matchProg = (prog === 'ALL' || rProg === prog.toUpperCase());
         r.style.display = (matchDept && matchProg) ? '' : 'none';
     });
+}
+
+function downloadPrincipalSummaryPdf() {
+    const dept = document.getElementById('absentDeptFilter')?.value || '';
+    const prog = document.getElementById('absentProgFilter')?.value || '';
+    let url = `/admin/api/summary-absentees/pdf?date={{ selected_date }}&session=morning`;
+    if (dept && dept !== 'ALL') url += `&department=${encodeURIComponent(dept)}`;
+    if (prog && prog !== 'ALL') url += `&program=${encodeURIComponent(prog)}`;
+    window.open(url, '_blank');
 }
 
 async function loadPrincipalClassStudents(classId) {

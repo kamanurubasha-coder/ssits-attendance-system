@@ -227,29 +227,29 @@ class TursoConnection:
 
         # Fast Path: Pooled urllib3
         if _HTTP_POOL is not None:
-            try:
-                resp = _HTTP_POOL.request(
-                    "POST",
-                    self.http_url,
-                    body=json_data,
-                    headers=headers
-                )
-                if resp.status != 200:
-                    raise Exception(f"Turso HTTP {resp.status}: {resp.data.decode('utf-8', errors='ignore')}")
-                data = json.loads(resp.data.decode('utf-8'))
-                return data.get("results", [])
-            except Exception as e:
-                if "Turso" in str(e):
+            import time
+            for attempt in range(3):
+                try:
+                    resp = _HTTP_POOL.request(
+                        "POST",
+                        self.http_url,
+                        body=json_data,
+                        headers=headers
+                    )
+                    body_text = resp.data.decode('utf-8', errors='ignore')
+                    if resp.status in [429, 502, 503, 504] or "capacity" in body_text.lower():
+                        if attempt < 2:
+                            time.sleep(0.6 * (attempt + 1))
+                            continue
+                    if resp.status != 200:
+                        raise Exception(f"Turso HTTP {resp.status}: {body_text}")
+                    data = json.loads(body_text)
+                    return data.get("results", [])
+                except Exception as e:
+                    if attempt < 2:
+                        time.sleep(0.6 * (attempt + 1))
+                        continue
                     raise
-                # Retry once if network glitch
-                resp = _HTTP_POOL.request(
-                    "POST",
-                    self.http_url,
-                    body=json_data,
-                    headers=headers
-                )
-                data = json.loads(resp.data.decode('utf-8'))
-                return data.get("results", [])
 
         # Fallback: Persistent HTTPSConnection
         ssl_ctx = ssl.create_default_context()
