@@ -34,11 +34,11 @@ class TursoOfflineException(Exception):
 # Try importing urllib3 for high-performance connection pooling with aggressive timeout
 try:
     import urllib3
-    # Fail fast (connect=2.0s, read=2.5s) to prevent Gunicorn worker starvation and 500 errors
+    # Generous read timeout (connect=3.0s, read=8.0s) so cross-region database writes commit safely
     _HTTP_POOL = urllib3.PoolManager(
-        maxsize=15,
-        timeout=urllib3.Timeout(connect=2.0, read=2.5),
-        retries=urllib3.Retry(total=1, backoff_factor=0.1)
+        maxsize=20,
+        timeout=urllib3.Timeout(connect=3.0, read=8.0),
+        retries=urllib3.Retry(total=2, backoff_factor=0.2)
     )
 except ImportError:
     _HTTP_POOL = None
@@ -371,7 +371,7 @@ class TursoConnection:
         ssl_ctx = ssl.create_default_context()
         try:
             if self._fallback_conn is None:
-                self._fallback_conn = http.client.HTTPSConnection(self._host, context=ssl_ctx, timeout=3)
+                self._fallback_conn = http.client.HTTPSConnection(self._host, context=ssl_ctx, timeout=8)
             self._fallback_conn.request("POST", self._path, body=json_data, headers=headers)
             r = self._fallback_conn.getresponse()
             raw_body = r.read().decode('utf-8')
