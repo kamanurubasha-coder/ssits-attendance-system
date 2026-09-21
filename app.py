@@ -589,11 +589,11 @@ def register():
         try:
             cursor.execute("""
                 INSERT INTO teachers (name, program_id, department_id, year_id, section, email, username, password, phone, is_approved)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
             """, (name, prog_id, dept_id, year_id, section, email, username, password, phone))
             conn.commit()
             conn.close()
-            flash(f"Registration successful for Faculty {name}! Your credentials have been added and are active. You can now sign in with your email/username and password.", "success")
+            flash(f"Registration submitted successfully for Faculty {name}! Your account is pending Administrator acceptance. Once approved by Admin, you can sign in.", "info")
             return redirect(url_for("login"))
         except Exception as e:
             conn.close()
@@ -620,17 +620,17 @@ def register():
             if existing_hod:
                 cursor.execute("""
                     UPDATE hods
-                    SET name = ?, phone = ?, email = ?, password = ?, username = ?, is_approved = 1
+                    SET name = ?, phone = ?, email = ?, password = ?, username = ?, is_approved = 0
                     WHERE id = ?
                 """, (name, phone, email, password, username, existing_hod["id"]))
             else:
                 cursor.execute("""
                     INSERT INTO hods (program_id, department_id, name, phone, email, username, password, is_approved)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 0)
                 """, (prog_id, dept_id, name, phone, email, username, password))
             conn.commit()
             conn.close()
-            flash(f"Registration successful for HOD {name}! Your leadership account is active. You can now sign in.", "success")
+            flash(f"Registration submitted successfully for HOD {name}! Your leadership account is pending Administrator acceptance. Once approved by Super Admin, you can complete 2FA setup and sign in.", "info")
             return redirect(url_for("hod_login"))
         except Exception as e:
             conn.close()
