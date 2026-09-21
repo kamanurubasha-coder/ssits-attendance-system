@@ -29,6 +29,17 @@ def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    # Fast-path check: If schema and superadmin already exist, skip redundant DDL statements
+    try:
+        cursor.execute("SELECT 1 FROM programs LIMIT 1")
+        if cursor.fetchone():
+            cursor.execute("SELECT 1 FROM admins WHERE role = 'superadmin' LIMIT 1")
+            if cursor.fetchone():
+                conn.close()
+                return
+    except Exception:
+        pass
+
     # 1. Programs (Diploma & B.Tech)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS programs (

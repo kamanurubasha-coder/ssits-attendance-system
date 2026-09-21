@@ -132,7 +132,7 @@ function applyDayTypeUI() {
         banner.style.display = "none";
         if (tableControls) tableControls.style.display = "block";
         if (btnParents) btnParents.disabled = false;
-        if (tableSubTitle) tableSubTitle.innerText = "Tick the checkbox for students who are ABSENT for this session.";
+        if (tableSubTitle) tableSubTitle.innerHTML = "Click <b>[P]</b> for Present or <b>[A]</b> for Absent. Or type roll numbers in Quick Absent box.";
     } else {
         banner.style.display = "block";
         if (tableControls) tableControls.style.display = "none";
@@ -212,6 +212,11 @@ async function loadAttendanceData() {
                     statusIndicator.innerHTML = `<i class="bi bi-clock-history me-1"></i> Attendance Pending (Not Yet Saved)`;
                 }
             }
+
+            const unmarkedNotice = document.getElementById("unmarkedNotice");
+            if (unmarkedNotice) {
+                unmarkedNotice.style.display = (currentDayType === "working" && !hasCurrentAttendanceRecords) ? "flex" : "none";
+            }
         } else {
             tableBody.innerHTML = `<tr><td colspan="7" class="text-center text-danger py-4">${data.message}</td></tr>`;
         }
@@ -221,7 +226,7 @@ async function loadAttendanceData() {
     }
 }
 
-// Render Student Table
+// Render Student Table with Modern [ P | A ] Segmented Switch
 function renderStudentTable(filteredStudents = null) {
     const list = filteredStudents || students;
     const tableBody = document.getElementById("studentTableBody");
@@ -248,21 +253,34 @@ function renderStudentTable(filteredStudents = null) {
         if (isHoliday) {
             statusBadge = `<span class="badge bg-secondary px-2 py-1"><i class="bi bi-calendar-x me-1"></i>HOLIDAY</span>`;
         } else if (isAbsent) {
-            statusBadge = `<span class="badge badge-absent-pill px-2 py-1 shadow-sm"><i class="bi bi-exclamation-circle-fill me-1"></i>ABSENT</span>`;
+            statusBadge = `<span class="badge badge-absent-pill px-2.5 py-1.5 shadow-sm"><i class="bi bi-x-circle-fill me-1"></i>ABSENT</span>`;
         } else {
-            statusBadge = `<span class="badge badge-present-pill px-2 py-1 shadow-sm"><i class="bi bi-check-circle-fill me-1"></i>PRESENT</span>`;
+            statusBadge = `<span class="badge badge-present-pill px-2.5 py-1.5 shadow-sm"><i class="bi bi-check-circle-fill me-1"></i>PRESENT</span>`;
         }
 
+        const toggleHtml = isHoliday 
+            ? `<span class="badge bg-light text-muted border">OFF</span>`
+            : `
+                <div class="attendance-toggle-pill" role="group" aria-label="Attendance">
+                    <button type="button" class="btn-att-toggle ${!isAbsent ? 'active-p' : ''}" onclick="event.stopPropagation(); setStudentStatus(${s.id}, 'present')" title="Mark ${s.name} Present">
+                        <i class="bi bi-check-circle-fill me-1"></i>P
+                    </button>
+                    <button type="button" class="btn-att-toggle ${isAbsent ? 'active-a' : ''}" onclick="event.stopPropagation(); setStudentStatus(${s.id}, 'absent')" title="Mark ${s.name} Absent">
+                        <i class="bi bi-x-circle-fill me-1"></i>A
+                    </button>
+                </div>
+            `;
+
         html += `
-            <tr class="${rowClass}" id="student-row-${s.id}">
-                <td class="text-center">
-                    <input type="checkbox" class="absent-checkbox" ${isAbsent ? "checked" : ""} ${isHoliday ? "disabled" : ""} onchange="toggleAbsent(${s.id})">
+            <tr class="${rowClass}" id="student-row-${s.id}" style="cursor: pointer;" onclick="toggleStudentStatus(${s.id})">
+                <td class="text-center" id="toggle-cell-${s.id}" onclick="event.stopPropagation()">
+                    ${toggleHtml}
                 </td>
                 <td><small class="text-muted fw-bold">${idx + 1}</small></td>
                 <td><strong class="text-primary">${s.roll_number}</strong></td>
                 <td class="fw-semibold">${s.name}</td>
                 <td class="text-muted">${s.father_name}</td>
-                <td>
+                <td onclick="event.stopPropagation()">
                     <a href="https://wa.me/91${s.father_phone}" target="_blank" class="btn btn-sm btn-student-wa py-1 px-2 text-decoration-none" title="Direct WhatsApp Chat">
                         <i class="bi bi-whatsapp me-1 text-success"></i> +91 ${s.father_phone}
                     </a>
@@ -290,33 +308,109 @@ function triggerAutoSave() {
     }, 1200);
 }
 
-// Toggle individual student absent state
-function toggleAbsent(studentId) {
+// Explicitly set student status to 'present' or 'absent'
+function setStudentStatus(studentId, status) {
     if (currentDayType !== "working") return;
 
-    if (absentStudentIds.has(studentId)) {
-        absentStudentIds.delete(studentId);
-    } else {
+    if (status === "absent") {
         absentStudentIds.add(studentId);
+    } else {
+        absentStudentIds.delete(studentId);
     }
 
     const row = document.getElementById(`student-row-${studentId}`);
     const statusCell = document.getElementById(`status-cell-${studentId}`);
+    const toggleCell = document.getElementById(`toggle-cell-${studentId}`);
+    const isAbsent = absentStudentIds.has(studentId);
+
     if (row && statusCell) {
-        if (absentStudentIds.has(studentId)) {
+        if (isAbsent) {
             row.classList.add("row-absent");
-            statusCell.innerHTML = `<span class="badge badge-absent-pill px-2 py-1 shadow-sm"><i class="bi bi-exclamation-circle-fill me-1"></i>ABSENT</span>`;
+            statusCell.innerHTML = `<span class="badge badge-absent-pill px-2.5 py-1.5 shadow-sm"><i class="bi bi-x-circle-fill me-1"></i>ABSENT</span>`;
         } else {
             row.classList.remove("row-absent");
-            statusCell.innerHTML = `<span class="badge badge-present-pill px-2 py-1 shadow-sm"><i class="bi bi-check-circle-fill me-1"></i>PRESENT</span>`;
+            statusCell.innerHTML = `<span class="badge badge-present-pill px-2.5 py-1.5 shadow-sm"><i class="bi bi-check-circle-fill me-1"></i>PRESENT</span>`;
         }
     }
+
+    if (toggleCell) {
+        toggleCell.innerHTML = `
+            <div class="attendance-toggle-pill" role="group" aria-label="Attendance">
+                <button type="button" class="btn-att-toggle ${!isAbsent ? 'active-p' : ''}" onclick="event.stopPropagation(); setStudentStatus(${studentId}, 'present')" title="Mark Present">
+                    <i class="bi bi-check-circle-fill me-1"></i>P
+                </button>
+                <button type="button" class="btn-att-toggle ${isAbsent ? 'active-a' : ''}" onclick="event.stopPropagation(); setStudentStatus(${studentId}, 'absent')" title="Mark Absent">
+                    <i class="bi bi-x-circle-fill me-1"></i>A
+                </button>
+            </div>
+        `;
+    }
+
+    const unmarkedNotice = document.getElementById("unmarkedNotice");
+    if (unmarkedNotice) unmarkedNotice.style.display = "none";
 
     updateStatistics();
     triggerAutoSave();
 }
 
-// Mark All Absent or Clear All
+// Toggle individual student absent/present state
+function toggleStudentStatus(studentId) {
+    if (currentDayType !== "working") return;
+    if (absentStudentIds.has(studentId)) {
+        setStudentStatus(studentId, 'present');
+    } else {
+        setStudentStatus(studentId, 'absent');
+    }
+}
+
+// Backward compatibility alias for toggleAbsent
+function toggleAbsent(studentId) {
+    toggleStudentStatus(studentId);
+}
+
+// Quick Absent Entry by typing roll numbers (e.g. 5, 12, 43)
+function quickMarkAbsent() {
+    const input = document.getElementById("quickAbsentInput");
+    if (!input || !input.value.trim()) return;
+
+    const raw = input.value.trim();
+    const tokens = raw.split(/[,\s]+/).map(t => t.trim()).filter(Boolean);
+    if (tokens.length === 0) return;
+
+    let matchedCount = 0;
+    const matchedList = [];
+
+    tokens.forEach(tok => {
+        const cleanTok = tok.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        students.forEach(s => {
+            const cleanRoll = (s.roll_number || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+            const isMatch = (cleanRoll === cleanTok) || 
+                           cleanRoll.endsWith(cleanTok) || 
+                           (cleanTok.length <= 3 && cleanRoll.endsWith(cleanTok.padStart(2, '0')));
+            if (isMatch && !absentStudentIds.has(s.id)) {
+                absentStudentIds.add(s.id);
+                matchedCount++;
+                matchedList.push(`${s.roll_number} - ${s.name}`);
+            }
+        });
+    });
+
+    input.value = "";
+    renderStudentTable();
+    updateStatistics();
+    triggerAutoSave();
+
+    const unmarkedNotice = document.getElementById("unmarkedNotice");
+    if (unmarkedNotice) unmarkedNotice.style.display = "none";
+
+    if (matchedCount > 0) {
+        alert(`🔴 Marked ${matchedCount} student(s) as ABSENT:\n\n` + matchedList.join("\n"));
+    } else {
+        alert(`⚠️ No matching students found for: "${raw}".\nPlease check the roll numbers.`);
+    }
+}
+
+// Mark All Absent or Clear All (All Present)
 function toggleAllAbsent(markAll) {
     if (currentDayType !== "working") return;
 
@@ -325,6 +419,9 @@ function toggleAllAbsent(markAll) {
     } else {
         absentStudentIds.clear();
     }
+
+    const unmarkedNotice = document.getElementById("unmarkedNotice");
+    if (unmarkedNotice) unmarkedNotice.style.display = "none";
 
     renderStudentTable();
     updateStatistics();

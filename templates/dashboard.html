@@ -155,26 +155,40 @@
     <!-- Student Attendance Table Card -->
     <div class="card shadow-sm border-0 mb-5" id="tableCard">
         <div class="card-header bg-white py-3 border-0">
-            <div class="row align-items-center g-2">
-                <div class="col-12 col-md-6">
+            <div class="row align-items-center g-3">
+                <div class="col-12 col-lg-5">
                     <h5 class="fw-bold text-navy mb-0" id="tableCardTitle">
                         <i class="bi bi-card-checklist me-2 text-primary"></i>
-                        Class Roll Sheet & Absentees Selection
+                        Class Roll Sheet & Live Attendance
                     </h5>
-                    <small class="text-muted" id="tableCardSubTitle">Tick the checkbox for students who are ABSENT for this session.</small>
+                    <small class="text-muted" id="tableCardSubTitle">Click <b>[P]</b> for Present or <b>[A]</b> for Absent. Or type roll numbers in Quick Absent box.</small>
                 </div>
-                <div class="col-12 col-md-6 text-md-end" id="tableControlsCol">
-                    <div class="d-flex gap-2 justify-content-md-end">
-                        <input type="text" id="searchInput" class="form-control form-control-sm w-auto" placeholder="🔍 Search student / roll no...">
-                        <button class="btn btn-sm btn-outline-danger" onclick="toggleAllAbsent(true)">
-                            <i class="bi bi-check2-all me-1"></i> Mark All Absent
+                <div class="col-12 col-lg-7 text-lg-end" id="tableControlsCol">
+                    <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center">
+                        <!-- Quick Absent Entry Box -->
+                        <div class="input-group input-group-sm" style="max-width: 250px;">
+                            <span class="input-group-text bg-danger-subtle text-danger border-danger fw-bold py-1 px-2" title="Type absent roll numbers separated by commas">
+                                <i class="bi bi-person-x-fill me-1"></i> Absent:
+                            </span>
+                            <input type="text" id="quickAbsentInput" class="form-control form-control-sm border-danger fw-bold" placeholder="e.g. 5, 12, 43" onkeydown="if(event.key==='Enter') quickMarkAbsent()">
+                            <button class="btn btn-danger btn-sm fw-bold px-2.5" type="button" onclick="quickMarkAbsent()" title="Mark these roll numbers as Absent">Mark</button>
+                        </div>
+                        <button class="btn btn-sm btn-success fw-bold shadow-sm" onclick="toggleAllAbsent(false)" title="Mark everyone Present">
+                            <i class="bi bi-check2-all me-1"></i> All Present
                         </button>
-                        <button class="btn btn-sm btn-outline-success" onclick="toggleAllAbsent(false)">
-                            <i class="bi bi-x-circle me-1"></i> Clear All
+                        <button class="btn btn-sm btn-outline-danger fw-semibold" onclick="toggleAllAbsent(true)" title="Mark everyone Absent">
+                            <i class="bi bi-x-circle me-1"></i> All Absent
                         </button>
+                        <input type="text" id="searchInput" class="form-control form-control-sm w-auto" placeholder="🔍 Search student...">
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Dynamic Unsaved / Pending Notice -->
+        <div id="unmarkedNotice" class="alert alert-warning py-2 px-3 border-0 rounded-3 mb-2 small fw-bold d-flex align-items-center justify-content-between mx-3 mt-1" style="display: none;">
+            <span><i class="bi bi-info-circle-fill me-1"></i> Today's attendance is pending. Use [P] / [A] buttons or Quick Absent box, then save.</span>
+            <button type="button" class="btn btn-sm btn-success fw-bold shadow-sm py-0.5 px-2" onclick="toggleAllAbsent(false)"><i class="bi bi-check2-all me-1"></i> Mark All Present</button>
         </div>
 
         <div class="card-body p-0">
@@ -182,8 +196,8 @@
                 <table class="table table-hover student-table align-middle mb-0" id="attendanceTable">
                     <thead>
                         <tr>
-                            <th class="text-center" style="width: 70px;">ABSENT?</th>
-                            <th style="width: 60px;">S.NO</th>
+                            <th class="text-center" style="width: 135px;">MARK ATTENDANCE</th>
+                            <th style="width: 55px;">S.NO</th>
                             <th style="width: 170px;">ROLL NUMBER / PIN</th>
                             <th>STUDENT NAME</th>
                             <th>FATHER / PARENT NAME</th>

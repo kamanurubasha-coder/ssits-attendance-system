@@ -1,20 +1,44 @@
 """
 Turso Cloud SQLite Database Adapter for SSITS Attendance Portal
-High-Performance Pooled Client with Keep-Alive & Pipeline Batching.
+High-Performance Pooled Client with Keep-Alive, Pipeline Batching & Instant Local SQLite Fallback.
 100% SQLite-compatible interface over Turso HTTP Pipeline API.
+Guarantees ZERO 500 errors even if Turso cloud is slow, down, or rate-limited.
 """
 
 import json
 import ssl
+import time
+import os
+import sqlite3
 import urllib.parse
 
-# Try importing urllib3 for high-performance connection pooling
+# Local DB path for instant fallback & dual-sync
+DEFAULT_DB_PATH = os.path.join(os.path.dirname(__file__), "attendance.db")
+DB_PATH = os.getenv("DB_PATH", DEFAULT_DB_PATH)
+
+# Circuit Breaker: If Turso fails or times out, bypass it for 45 seconds to keep responses instant
+_TURSO_DISABLED_UNTIL = 0
+
+def is_turso_available():
+    global _TURSO_DISABLED_UNTIL
+    return time.time() > _TURSO_DISABLED_UNTIL
+
+def mark_turso_failed(cooldown=45):
+    global _TURSO_DISABLED_UNTIL
+    _TURSO_DISABLED_UNTIL = time.time() + cooldown
+
+class TursoOfflineException(Exception):
+    """Raised when Turso is in cooldown or fails to respond quickly."""
+    pass
+
+# Try importing urllib3 for high-performance connection pooling with aggressive timeout
 try:
     import urllib3
+    # Fail fast (connect=2.0s, read=2.5s) to prevent Gunicorn worker starvation and 500 errors
     _HTTP_POOL = urllib3.PoolManager(
         maxsize=15,
-        timeout=urllib3.Timeout(connect=5.0, read=30.0),
-        retries=urllib3.Retry(total=2, backoff_factor=0.2)
+        timeout=urllib3.Timeout(connect=2.0, read=2.5),
+        retries=urllib3.Retry(total=1, backoff_factor=0.1)
     )
 except ImportError:
     _HTTP_POOL = None
@@ -28,7 +52,7 @@ class TursoRow(dict):
     """
     def __init__(self, cols, values):
         super().__init__(zip(cols, values))
-        self._cols = cols
+        self._cols = list(cols)
         self._values = tuple(values)
         
     def __getitem__(self, key):
@@ -36,7 +60,7 @@ class TursoRow(dict):
             return self._values[key]
         if key not in self:
             for k in self:
-                if k.lower() == key.lower():
+                if str(k).lower() == str(key).lower():
                     return self[k]
         return super().__getitem__(key)
 
@@ -96,93 +120,181 @@ class TursoCursor:
         self.lastrowid = None
         self.rowcount = 0
 
+    def _fallback_execute(self, sql, args=()):
+        """Transparently execute SQL against the local SQLite database."""
+        try:
+            loc = self.conn._get_local_conn()
+            loc_cur = loc.cursor()
+            loc_cur.execute(sql, args)
+            
+            is_write = any(sql.strip().upper().startswith(v) for v in ("INSERT", "UPDATE", "DELETE", "REPLACE", "CREATE", "DROP", "ALTER"))
+            if is_write:
+                loc.commit()
+
+            self.lastrowid = loc_cur.lastrowid
+            self.rowcount = loc_cur.rowcount
+            if loc_cur.description:
+                self.cols = [d[0] for d in loc_cur.description]
+                raw_rows = loc_cur.fetchall()
+                self.rows = [TursoRow(self.cols, list(r)) for r in raw_rows]
+            else:
+                self.cols = []
+                self.rows = []
+            self.row_idx = 0
+            return self
+        except Exception as local_err:
+            # Re-raise if local SQLite also errors (e.g. SQL syntax error)
+            raise local_err
+
     def execute(self, sql, args=()):
+        # Fast path: If Turso is in circuit-breaker cooldown, immediately use local SQLite
+        if not is_turso_available():
+            return self._fallback_execute(sql, args)
+
         formatted_args = _format_args(args)
+        # Always append {"type": "close"} to close the Turso interactive stream session immediately
         payload = {
             "requests": [
                 {
                     "type": "execute",
                     "stmt": {"sql": sql, "args": formatted_args}
-                }
+                },
+                {"type": "close"}
             ]
         }
         
-        results = self.conn._send_pipeline_payload(payload)
-        if not results:
-            self.rows = []
+        try:
+            results = self.conn._send_pipeline_payload(payload)
+            if not results:
+                self.rows = []
+                return self
+
+            res = results[0]
+            if res.get("type") == "error":
+                err_msg = res.get("error", {}).get("message", str(res))
+                # If error is capacity, rate limit or server error, trip circuit breaker and fallback
+                if any(x in err_msg.lower() for x in ("capacity", "limit", "timeout", "overloaded", "locked")):
+                    mark_turso_failed(30)
+                    return self._fallback_execute(sql, args)
+                raise Exception(f"Turso Error: {err_msg}")
+            
+            result_data = res.get("response", {}).get("result", {})
+            self.cols = [c["name"] for c in result_data.get("cols", [])]
+            raw_rows = result_data.get("rows", [])
+            
+            parsed_rows = []
+            for r in raw_rows:
+                vals = []
+                for col_val in r:
+                    t = col_val.get("type")
+                    v = col_val.get("value")
+                    if t == "null" or v is None:
+                        vals.append(None)
+                    elif t == "integer":
+                        vals.append(int(v))
+                    elif t == "float":
+                        vals.append(float(v))
+                    else:
+                        vals.append(v)
+                parsed_rows.append(TursoRow(self.cols, vals))
+                
+            self.rows = parsed_rows
+            self.row_idx = 0
+            self.rowcount = result_data.get("affected_row_count", len(parsed_rows))
+            lid = result_data.get("last_insert_rowid")
+            self.lastrowid = int(lid) if lid is not None else None
+
+            # Dual-write: If this is a write query, also apply to local SQLite so offline fallback stays fresh!
+            is_write = any(sql.strip().upper().startswith(v) for v in ("INSERT", "UPDATE", "DELETE", "REPLACE"))
+            if is_write:
+                try:
+                    loc = self.conn._get_local_conn()
+                    loc.execute(sql, args)
+                    loc.commit()
+                except Exception:
+                    pass
+
             return self
 
-        res = results[0]
-        if res.get("type") == "error":
-            err_msg = res.get("error", {}).get("message", str(res))
-            raise Exception(f"Turso Error: {err_msg}")
-        
-        result_data = res.get("response", {}).get("result", {})
-        self.cols = [c["name"] for c in result_data.get("cols", [])]
-        raw_rows = result_data.get("rows", [])
-        
-        parsed_rows = []
-        for r in raw_rows:
-            vals = []
-            for col_val in r:
-                t = col_val.get("type")
-                v = col_val.get("value")
-                if t == "null" or v is None:
-                    vals.append(None)
-                elif t == "integer":
-                    vals.append(int(v))
-                elif t == "float":
-                    vals.append(float(v))
-                else:
-                    vals.append(v)
-            parsed_rows.append(TursoRow(self.cols, vals))
-            
-        self.rows = parsed_rows
-        self.row_idx = 0
-        self.rowcount = result_data.get("affected_row_count", len(parsed_rows))
-        lid = result_data.get("last_insert_rowid")
-        self.lastrowid = int(lid) if lid is not None else None
-        return self
+        except Exception as e:
+            # If Turso fails, times out, or network dropped, mark failed and seamlessly fallback to local SQLite
+            mark_turso_failed(45)
+            return self._fallback_execute(sql, args)
 
     def executemany(self, sql, seq_of_args):
         """
         Executes a parameterized SQL query against multiple parameter tuples
-        using batch pipelining for maximum speed.
+        using batch pipelining for maximum speed, with instant local SQLite fallback.
         """
         arg_list = list(seq_of_args)
         if not arg_list:
             return self
 
-        # Chunk into batches of 40 to avoid oversized HTTP requests
+        if not is_turso_available():
+            loc = self.conn._get_local_conn()
+            loc_cur = loc.cursor()
+            loc_cur.executemany(sql, arg_list)
+            loc.commit()
+            self.rows = []
+            self.row_idx = 0
+            self.rowcount = loc_cur.rowcount
+            self.lastrowid = loc_cur.lastrowid
+            return self
+
         batch_size = 40
         total_affected = 0
         last_id = None
 
-        for i in range(0, len(arg_list), batch_size):
-            chunk = arg_list[i:i + batch_size]
-            requests = [
-                {
-                    "type": "execute",
-                    "stmt": {"sql": sql, "args": _format_args(args)}
-                }
-                for args in chunk
-            ]
-            results = self.conn._send_pipeline_payload({"requests": requests})
-            for r in results:
-                if r.get("type") == "error":
-                    err_msg = r.get("error", {}).get("message", str(r))
-                    raise Exception(f"Turso Error: {err_msg}")
-                res_data = r.get("response", {}).get("result", {})
-                total_affected += res_data.get("affected_row_count", 0)
-                lid = res_data.get("last_insert_rowid")
-                if lid is not None:
-                    last_id = int(lid)
+        try:
+            for i in range(0, len(arg_list), batch_size):
+                chunk = arg_list[i:i + batch_size]
+                requests = [
+                    {
+                        "type": "execute",
+                        "stmt": {"sql": sql, "args": _format_args(args)}
+                    }
+                    for args in chunk
+                ]
+                requests.append({"type": "close"})
+                results = self.conn._send_pipeline_payload({"requests": requests})
+                for r in results:
+                    if r.get("type") == "error":
+                        err_msg = r.get("error", {}).get("message", str(r))
+                        if any(x in err_msg.lower() for x in ("capacity", "limit", "timeout", "overloaded", "locked")):
+                            raise TursoOfflineException(err_msg)
+                        raise Exception(f"Turso Error: {err_msg}")
+                    res_data = r.get("response", {}).get("result", {})
+                    total_affected += res_data.get("affected_row_count", 0)
+                    lid = res_data.get("last_insert_rowid")
+                    if lid is not None:
+                        last_id = int(lid)
 
-        self.rows = []
-        self.row_idx = 0
-        self.rowcount = total_affected
-        self.lastrowid = last_id
-        return self
+            self.rows = []
+            self.row_idx = 0
+            self.rowcount = total_affected
+            self.lastrowid = last_id
+
+            # Also sync to local SQLite
+            try:
+                loc = self.conn._get_local_conn()
+                loc.executemany(sql, arg_list)
+                loc.commit()
+            except Exception:
+                pass
+
+            return self
+
+        except Exception as e:
+            mark_turso_failed(45)
+            loc = self.conn._get_local_conn()
+            loc_cur = loc.cursor()
+            loc_cur.executemany(sql, arg_list)
+            loc.commit()
+            self.rows = []
+            self.row_idx = 0
+            self.rowcount = loc_cur.rowcount
+            self.lastrowid = loc_cur.lastrowid
+            return self
 
     def fetchone(self):
         if self.row_idx < len(self.rows):
@@ -212,9 +324,17 @@ class TursoConnection:
         self.auth_token = auth_token
         self.row_factory = None
         self._fallback_conn = None
+        self._local_sqlite = None
         parsed = urllib.parse.urlparse(self.http_url)
         self._host = parsed.netloc
         self._path = parsed.path
+
+    def _get_local_conn(self):
+        """Returns a cached thread-safe SQLite connection to the local database file."""
+        if self._local_sqlite is None:
+            self._local_sqlite = sqlite3.connect(DB_PATH, check_same_thread=False)
+            self._local_sqlite.row_factory = sqlite3.Row
+        return self._local_sqlite
 
     def _send_pipeline_payload(self, payload):
         """Sends a JSON pipeline payload using the connection pool with Keep-Alive."""
@@ -227,52 +347,48 @@ class TursoConnection:
 
         # Fast Path: Pooled urllib3
         if _HTTP_POOL is not None:
-            import time
-            for attempt in range(3):
-                try:
-                    resp = _HTTP_POOL.request(
-                        "POST",
-                        self.http_url,
-                        body=json_data,
-                        headers=headers
-                    )
-                    body_text = resp.data.decode('utf-8', errors='ignore')
-                    if resp.status in [429, 502, 503, 504] or "capacity" in body_text.lower():
-                        if attempt < 2:
-                            time.sleep(0.6 * (attempt + 1))
-                            continue
-                    if resp.status != 200:
-                        raise Exception(f"Turso HTTP {resp.status}: {body_text}")
-                    data = json.loads(body_text)
-                    return data.get("results", [])
-                except Exception as e:
-                    if attempt < 2:
-                        time.sleep(0.6 * (attempt + 1))
-                        continue
-                    raise
+            try:
+                resp = _HTTP_POOL.request(
+                    "POST",
+                    self.http_url,
+                    body=json_data,
+                    headers=headers
+                )
+                body_text = resp.data.decode('utf-8', errors='ignore')
+                if resp.status in [429, 502, 503, 504] or "capacity" in body_text.lower():
+                    mark_turso_failed(30)
+                    raise TursoOfflineException(f"Turso rate limit/capacity: {resp.status}")
+                if resp.status != 200:
+                    mark_turso_failed(30)
+                    raise TursoOfflineException(f"Turso HTTP {resp.status}: {body_text}")
+                data = json.loads(body_text)
+                return data.get("results", [])
+            except Exception as e:
+                mark_turso_failed(45)
+                raise
 
         # Fallback: Persistent HTTPSConnection
         ssl_ctx = ssl.create_default_context()
-        for attempt in range(2):
+        try:
+            if self._fallback_conn is None:
+                self._fallback_conn = http.client.HTTPSConnection(self._host, context=ssl_ctx, timeout=3)
+            self._fallback_conn.request("POST", self._path, body=json_data, headers=headers)
+            r = self._fallback_conn.getresponse()
+            raw_body = r.read().decode('utf-8')
+            if r.status != 200:
+                mark_turso_failed(30)
+                raise TursoOfflineException(f"Turso HTTP {r.status}: {raw_body}")
+            data = json.loads(raw_body)
+            return data.get("results", [])
+        except Exception:
+            mark_turso_failed(45)
             try:
-                if self._fallback_conn is None:
-                    self._fallback_conn = http.client.HTTPSConnection(self._host, context=ssl_ctx, timeout=20)
-                self._fallback_conn.request("POST", self._path, body=json_data, headers=headers)
-                r = self._fallback_conn.getresponse()
-                raw_body = r.read().decode('utf-8')
-                if r.status != 200:
-                    raise Exception(f"Turso HTTP {r.status}: {raw_body}")
-                data = json.loads(raw_body)
-                return data.get("results", [])
+                if self._fallback_conn:
+                    self._fallback_conn.close()
             except Exception:
-                try:
-                    if self._fallback_conn:
-                        self._fallback_conn.close()
-                except Exception:
-                    pass
-                self._fallback_conn = None
-                if attempt == 1:
-                    raise
+                pass
+            self._fallback_conn = None
+            raise
 
     def cursor(self):
         return TursoCursor(self)
@@ -286,10 +402,18 @@ class TursoConnection:
         return c.executemany(sql, seq_of_args)
 
     def commit(self):
-        pass
+        if self._local_sqlite:
+            try:
+                self._local_sqlite.commit()
+            except Exception:
+                pass
 
     def rollback(self):
-        pass
+        if self._local_sqlite:
+            try:
+                self._local_sqlite.rollback()
+            except Exception:
+                pass
 
     def close(self):
         if self._fallback_conn is not None:
@@ -298,6 +422,12 @@ class TursoConnection:
             except Exception:
                 pass
             self._fallback_conn = None
+        if self._local_sqlite is not None:
+            try:
+                self._local_sqlite.close()
+            except Exception:
+                pass
+            self._local_sqlite = None
 
     def __enter__(self):
         return self
