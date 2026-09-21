@@ -569,6 +569,15 @@ def register():
             flash("Please choose Degree, Branch, and Academic Year!", "error")
             return redirect(url_for("register"))
 
+        try:
+            prog_id = int(prog_id)
+            dept_id = int(dept_id)
+            year_id = int(year_id)
+        except (ValueError, TypeError):
+            conn.close()
+            flash("Please choose valid Degree, Branch, and Academic Year!", "error")
+            return redirect(url_for("register"))
+
         cursor.execute("SELECT id, name FROM teachers WHERE LOWER(email) = LOWER(?)", (email,))
         existing = cursor.fetchone()
         if existing:
@@ -608,6 +617,14 @@ def register():
         if not dept_id:
             conn.close()
             flash("Please select your assigned Department / Branch!", "error")
+            return redirect(url_for("register"))
+
+        try:
+            dept_id = int(dept_id)
+            prog_id = int(prog_id)
+        except (ValueError, TypeError):
+            conn.close()
+            flash("Invalid Department selection!", "error")
             return redirect(url_for("register"))
 
         base_user = email.split("@")[0].replace(".", "_")

@@ -23,7 +23,7 @@ def is_turso_available():
     global _TURSO_DISABLED_UNTIL
     return time.time() > _TURSO_DISABLED_UNTIL
 
-def mark_turso_failed(cooldown=45):
+def mark_turso_failed(cooldown=5):
     global _TURSO_DISABLED_UNTIL
     _TURSO_DISABLED_UNTIL = time.time() + cooldown
 
@@ -34,10 +34,10 @@ class TursoOfflineException(Exception):
 # Try importing urllib3 for high-performance connection pooling with aggressive timeout
 try:
     import urllib3
-    # Generous read timeout (connect=3.0s, read=8.0s) so cross-region database writes commit safely
+    # Generous read timeout (connect=3.0s, read=10.0s) so cross-region database writes commit safely
     _HTTP_POOL = urllib3.PoolManager(
         maxsize=20,
-        timeout=urllib3.Timeout(connect=3.0, read=8.0),
+        timeout=urllib3.Timeout(connect=3.0, read=10.0),
         retries=urllib3.Retry(total=2, backoff_factor=0.2)
     )
 except ImportError:
@@ -147,12 +147,13 @@ class TursoCursor:
             raise local_err
 
     def execute(self, sql, args=()):
-        # Fast path: If Turso is in circuit-breaker cooldown, immediately use local SQLite
-        if not is_turso_available():
+        is_write = any(sql.strip().upper().startswith(v) for v in ("INSERT", "UPDATE", "DELETE", "REPLACE", "CREATE", "DROP", "ALTER"))
+
+        # For read queries, if Turso is in circuit-breaker cooldown, use local SQLite cache
+        if not is_write and not is_turso_available():
             return self._fallback_execute(sql, args)
 
         formatted_args = _format_args(args)
-        # Always append {"type": "close"} to close the Turso interactive stream session immediately
         payload = {
             "requests": [
                 {
@@ -172,10 +173,11 @@ class TursoCursor:
             res = results[0]
             if res.get("type") == "error":
                 err_msg = res.get("error", {}).get("message", str(res))
-                # If error is capacity, rate limit or server error, trip circuit breaker and fallback
-                if any(x in err_msg.lower() for x in ("capacity", "limit", "timeout", "overloaded", "locked")):
-                    mark_turso_failed(30)
+                print(f"[TURSO ERROR] SQL: {sql[:60]} -> {err_msg}")
+                if not is_write and any(x in err_msg.lower() for x in ("capacity", "limit", "timeout", "overloaded", "locked")):
+                    mark_turso_failed(5)
                     return self._fallback_execute(sql, args)
+                # Write errors must be raised to ensure cloud data integrity
                 raise Exception(f"Turso Error: {err_msg}")
             
             result_data = res.get("response", {}).get("result", {})
@@ -205,7 +207,6 @@ class TursoCursor:
             self.lastrowid = int(lid) if lid is not None else None
 
             # Dual-write: If this is a write query, also apply to local SQLite so offline fallback stays fresh!
-            is_write = any(sql.strip().upper().startswith(v) for v in ("INSERT", "UPDATE", "DELETE", "REPLACE"))
             if is_write:
                 try:
                     loc = self.conn._get_local_conn()
@@ -217,8 +218,29 @@ class TursoCursor:
             return self
 
         except Exception as e:
-            # If Turso fails, times out, or network dropped, mark failed and seamlessly fallback to local SQLite
-            mark_turso_failed(45)
+            print(f"[TURSO EXCEPTION] SQL: {sql[:60]} -> {e}")
+            if is_write:
+                # Retry write once more with a fresh connection to handle dropped idle sockets
+                try:
+                    time.sleep(0.3)
+                    results = self.conn._send_pipeline_payload(payload)
+                    if results and results[0].get("type") != "error":
+                        result_data = results[0].get("response", {}).get("result", {})
+                        lid = result_data.get("last_insert_rowid")
+                        self.lastrowid = int(lid) if lid is not None else None
+                        self.rowcount = result_data.get("affected_row_count", 0)
+                        self.rows = []
+                        self.cols = []
+                        try:
+                            loc = self.conn._get_local_conn()
+                            loc.execute(sql, args)
+                            loc.commit()
+                        except Exception:
+                            pass
+                        return self
+                except Exception as retry_e:
+                    print(f"[TURSO WRITE RETRY EXCEPTION] -> {retry_e}")
+            mark_turso_failed(5)
             return self._fallback_execute(sql, args)
 
     def executemany(self, sql, seq_of_args):
@@ -347,25 +369,35 @@ class TursoConnection:
 
         # Fast Path: Pooled urllib3
         if _HTTP_POOL is not None:
-            try:
-                resp = _HTTP_POOL.request(
-                    "POST",
-                    self.http_url,
-                    body=json_data,
-                    headers=headers
-                )
-                body_text = resp.data.decode('utf-8', errors='ignore')
-                if resp.status in [429, 502, 503, 504] or "capacity" in body_text.lower():
-                    mark_turso_failed(30)
-                    raise TursoOfflineException(f"Turso rate limit/capacity: {resp.status}")
-                if resp.status != 200:
-                    mark_turso_failed(30)
-                    raise TursoOfflineException(f"Turso HTTP {resp.status}: {body_text}")
-                data = json.loads(body_text)
-                return data.get("results", [])
-            except Exception as e:
-                mark_turso_failed(45)
-                raise
+            for attempt in range(2):
+                try:
+                    resp = _HTTP_POOL.request(
+                        "POST",
+                        self.http_url,
+                        body=json_data,
+                        headers=headers
+                    )
+                    body_text = resp.data.decode('utf-8', errors='ignore')
+                    if resp.status in [429, 502, 503, 504] or "capacity" in body_text.lower():
+                        if attempt == 0:
+                            time.sleep(0.3)
+                            continue
+                        mark_turso_failed(10)
+                        raise TursoOfflineException(f"Turso rate limit/capacity: {resp.status}")
+                    if resp.status != 200:
+                        if attempt == 0:
+                            time.sleep(0.3)
+                            continue
+                        mark_turso_failed(10)
+                        raise TursoOfflineException(f"Turso HTTP {resp.status}: {body_text}")
+                    data = json.loads(body_text)
+                    return data.get("results", [])
+                except Exception as e:
+                    if attempt == 0:
+                        time.sleep(0.2)
+                        continue
+                    mark_turso_failed(10)
+                    raise
 
         # Fallback: Persistent HTTPSConnection
         ssl_ctx = ssl.create_default_context()
