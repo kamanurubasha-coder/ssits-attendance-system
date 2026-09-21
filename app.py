@@ -1063,12 +1063,17 @@ def admin_dashboard():
 
     # All teachers with program & department info + email, section, password
     cursor.execute("""
-        SELECT t.*, p.code as prog_code, d.code as dept_code, d.name as dept_name, y.year_name, y.year_num
+        SELECT t.*, 
+               COALESCE(p.code, 'DIPLOMA') as prog_code, 
+               COALESCE(d.code, 'GEN') as dept_code, 
+               COALESCE(d.name, 'General') as dept_name, 
+               COALESCE(y.year_name, '1st Year') as year_name, 
+               COALESCE(y.year_num, 1) as year_num
         FROM teachers t
-        JOIN programs p ON t.program_id = p.id
-        JOIN departments d ON t.department_id = d.id
-        JOIN academic_years y ON t.year_id = y.id
-        ORDER BY p.id, d.id, y.year_num, t.section ASC
+        LEFT JOIN programs p ON t.program_id = p.id
+        LEFT JOIN departments d ON t.department_id = d.id
+        LEFT JOIN academic_years y ON t.year_id = y.id
+        ORDER BY t.is_approved ASC, t.id DESC
     """)
     teachers = [dict(r) for r in cursor.fetchall()]
 
@@ -1095,13 +1100,19 @@ def admin_dashboard():
         FROM hods h
         JOIN programs p ON h.program_id = p.id
         JOIN departments d ON h.department_id = d.id
-        ORDER BY p.id, d.id ASC
+        ORDER BY h.is_approved ASC, p.id, d.id ASC
     """)
     hods = [dict(r) for r in cursor.fetchall()]
 
     # Principal Executives
-    cursor.execute("SELECT * FROM admins WHERE role = 'principal' ORDER BY id ASC")
+    cursor.execute("SELECT * FROM admins WHERE role = 'principal' ORDER BY is_approved ASC, id ASC")
     principals = [dict(r) for r in cursor.fetchall()]
+
+    # Pending approvals tracking
+    pending_teachers = [t for t in teachers if not t.get("is_approved")]
+    pending_hods = [h for h in hods if not h.get("is_approved")]
+    pending_principals = [p for p in principals if not p.get("is_approved")]
+    total_pending_approvals = len(pending_teachers) + len(pending_hods) + len(pending_principals)
 
     conn.close()
 
@@ -1118,6 +1129,10 @@ def admin_dashboard():
         academic_years=academic_years,
         hods=hods,
         principals=principals,
+        pending_teachers=pending_teachers,
+        pending_hods=pending_hods,
+        pending_principals=pending_principals,
+        total_pending_approvals=total_pending_approvals,
         today_date=today_str
     )
 
@@ -2584,39 +2599,24 @@ def admin_api_export_audit_logs():
 @app.route("/admin/api/clear-audit-logs", methods=["POST"])
 def admin_api_clear_audit_logs():
     if not is_admin():
-        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+        return jsonify({"status": "error", "message": "Unauthorized access. Master Admin required."}), 401
 
-    data = request.get_json() or {}
-    admin_pw = data.get("admin_password", "").strip()
-
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT password FROM admins WHERE id = ?", (session["admin_id"],))
-    admin_row = cur.fetchone()
-    all_admin_pws = [r["password"] for r in cur.execute("SELECT password FROM admins").fetchall()]
-    env_pw = os.getenv("ADMIN_PASSWORD")
-
-    is_valid_pw = (
-        (admin_row and admin_row["password"] == admin_pw) or
-        (env_pw and env_pw == admin_pw) or
-        (admin_pw in all_admin_pws) or
-        (admin_pw in ["Hamza@123", "Hamzark@123", "admin123", "SSITS_SUPERADMIN_2026"])
-    )
-    if not is_valid_pw:
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM audit_logs")
+        conn.commit()
         conn.close()
-        return jsonify({"status": "error", "message": "Incorrect Master Admin Password! Clear action aborted."}), 403
 
-    cur.execute("DELETE FROM audit_logs")
-    conn.commit()
-    conn.close()
+        log_audit_event(
+            "superadmin", session.get("admin_id"), session.get("admin_name", "Admin"),
+            "AUDIT_LOGS_CLEARED",
+            "Purged historical audit logs upon Administrator authorization"
+        )
 
-    log_audit_event(
-        "superadmin", session.get("admin_id"), session.get("admin_name", "Admin"),
-        "AUDIT_LOGS_CLEARED",
-        "Purged historical audit logs upon Administrator authorization"
-    )
-
-    return jsonify({"status": "success", "message": "Historical audit logs have been successfully cleared."})
+        return jsonify({"status": "success", "message": "Historical audit logs have been successfully cleared."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Failed to clear audit logs: {str(e)}"}), 500
 
 @app.route("/admin/api/restore-db", methods=["POST"])
 def admin_api_restore_db():

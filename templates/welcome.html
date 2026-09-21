@@ -317,10 +317,10 @@
         <div class="p-3">
             <div class="small fw-bold text-muted text-uppercase mb-2 letter-spacing-1">Portal Navigation</div>
 
-            <!-- Role Links Group (Admin Login is EXCLUDED for strict confidentiality) -->
+            <!-- Role Links Group -->
             <div class="list-group list-group-flush border rounded-3 overflow-hidden shadow-sm mb-3">
                 <!-- 1. Faculty Login -->
-                <a href="/login" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
+                <a href="/login" target="_blank" rel="noopener noreferrer" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-primary-subtle text-primary p-2 rounded-circle">
                             <i class="bi bi-box-arrow-in-right fs-5"></i>
@@ -330,11 +330,11 @@
                             <small class="text-muted">Attendance marking &amp; parent WhatsApp alerts (2FA Protected)</small>
                         </div>
                     </div>
-                    <i class="bi bi-chevron-right text-muted"></i>
+                    <i class="bi bi-box-arrow-up-right text-muted small"></i>
                 </a>
 
                 <!-- 2. HOD Login -->
-                <a href="/hod/login" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
+                <a href="/hod/login" target="_blank" rel="noopener noreferrer" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-warning-subtle text-warning-emphasis p-2 rounded-circle">
                             <i class="bi bi-person-workspace fs-5"></i>
@@ -344,11 +344,11 @@
                             <small class="text-muted">ECE, CSE, EEE, AIDS, MECH &amp; CIVIL oversight</small>
                         </div>
                     </div>
-                    <i class="bi bi-chevron-right text-muted"></i>
+                    <i class="bi bi-box-arrow-up-right text-muted small"></i>
                 </a>
 
                 <!-- 3. Principal Login -->
-                <a href="/principal/login" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
+                <a href="/principal/login" target="_blank" rel="noopener noreferrer" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-danger-subtle text-danger p-2 rounded-circle">
                             <i class="bi bi-building-fill-lock fs-5"></i>
@@ -358,11 +358,11 @@
                             <small class="text-muted">Autonomous institution command &amp; daily monitoring</small>
                         </div>
                     </div>
-                    <i class="bi bi-chevron-right text-muted"></i>
+                    <i class="bi bi-box-arrow-up-right text-muted small"></i>
                 </a>
 
                 <!-- 4. New Registration (3 Roles) -->
-                <a href="/register" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
+                <a href="/register" target="_blank" rel="noopener noreferrer" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-success-subtle text-success p-2 rounded-circle">
                             <i class="bi bi-person-plus-fill fs-5"></i>
@@ -372,11 +372,11 @@
                             <small class="text-muted">Self-registration for Faculty, HOD &amp; Principal</small>
                         </div>
                     </div>
-                    <i class="bi bi-chevron-right text-muted"></i>
+                    <i class="bi bi-box-arrow-up-right text-muted small"></i>
                 </a>
 
                 <!-- 5. Faculty Directory -->
-                <a href="/faculty-directory" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
+                <a href="/faculty-directory" target="_blank" rel="noopener noreferrer" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3">
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-secondary-subtle text-secondary p-2 rounded-circle">
                             <i class="bi bi-person-lines-fill fs-5"></i>
@@ -386,11 +386,11 @@
                             <small class="text-muted">Academic coordinators &amp; branch contacts</small>
                         </div>
                     </div>
-                    <i class="bi bi-chevron-right text-muted"></i>
+                    <i class="bi bi-box-arrow-up-right text-muted small"></i>
                 </a>
 
-                <!-- 6. Administrator Portal (Opens Pop-up Modal) -->
-                <a href="#adminLoginModal" data-bs-toggle="modal" data-bs-dismiss="offcanvas" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3 border-top bg-light-subtle">
+                <!-- 6. Administrator Portal -->
+                <a href="/admin/login" target="_blank" rel="noopener noreferrer" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between p-3 border-top bg-light-subtle">
                     <div class="d-flex align-items-center gap-3">
                         <div class="bg-dark text-warning p-2 rounded-circle shadow-sm">
                             <i class="bi bi-shield-lock-fill fs-5"></i>
@@ -401,7 +401,7 @@
                         </div>
                     </div>
                     <span class="badge bg-warning text-dark fw-bold px-2 py-1 small shadow-sm">
-                        <i class="bi bi-shield-lock-fill me-1"></i> Pop-up Login
+                        <i class="bi bi-box-arrow-up-right me-1"></i> Admin Portal
                     </span>
                 </a>
             </div>
@@ -409,7 +409,7 @@
             <!-- Forgot Password Assistance -->
             <div class="card border-0 bg-light p-3 rounded-3 text-center">
                 <small class="text-muted mb-1">Forgot portal password?</small>
-                <a href="/forgot-password" class="btn btn-sm btn-outline-secondary fw-semibold rounded-pill">
+                <a href="/forgot-password" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary fw-semibold rounded-pill">
                     <i class="bi bi-key me-1"></i> Request Password Reset Link
                 </a>
             </div>
@@ -492,7 +492,7 @@
 
                 <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top extra-small text-muted">
                     <span>Authorized Admins Only</span>
-                    <a href="/admin" class="text-decoration-none text-secondary">
+                    <a href="/admin" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-secondary">
                         <i class="bi bi-box-arrow-up-right me-1"></i> Full Page View
                     </a>
                 </div>

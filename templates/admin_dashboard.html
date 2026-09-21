@@ -104,6 +104,61 @@
         </div>
     </div>
 
+    <!-- Pending Approvals Notification Banner (Faculty, HOD, Principal) -->
+    {% if total_pending_approvals and total_pending_approvals > 0 %}
+    <div class="alert alert-warning border border-warning shadow-sm rounded-4 mb-4 p-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border-left: 6px solid #F59E0B !important;">
+        <div class="d-flex align-items-center gap-3">
+            <div class="bg-warning text-dark p-2 px-3 rounded-circle fs-4 shadow-sm">
+                <i class="bi bi-person-exclamation"></i>
+            </div>
+            <div>
+                <h6 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                    <span>New Account Approvals Awaiting Acceptance</span>
+                    <span class="badge bg-danger text-white rounded-pill px-2 py-1">{{ total_pending_approvals }} Pending</span>
+                </h6>
+                <small class="text-secondary">
+                    Self-registered faculty or department coordinators are waiting for Super Admin authorization to access the portal.
+                </small>
+            </div>
+        </div>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            {% for pt in pending_teachers %}
+            <div class="btn-group shadow-sm">
+                <span class="btn btn-sm btn-dark fw-bold disabled text-white">
+                    <i class="bi bi-person-fill me-1 text-warning"></i> {{ pt.name }} ({{ pt.prog_code }} {{ pt.dept_code }})
+                </span>
+                <button type="button" class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1" onclick="approveFacultyMember({{ pt.id }}, '{{ pt.name|escape }}')">
+                    <i class="bi bi-check-circle-fill"></i> Accept &amp; Approve
+                </button>
+            </div>
+            {% endfor %}
+            {% for ph in pending_hods %}
+            <div class="btn-group shadow-sm">
+                <span class="btn btn-sm btn-dark fw-bold disabled text-white">
+                    <i class="bi bi-person-workspace me-1 text-warning"></i> HOD: {{ ph.name }} ({{ ph.dept_code }})
+                </span>
+                <button type="button" class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1" onclick="approveHodMember({{ ph.id }}, '{{ ph.name|escape }}')">
+                    <i class="bi bi-check-circle-fill"></i> Accept &amp; Approve
+                </button>
+            </div>
+            {% endfor %}
+            {% for pp in pending_principals %}
+            <div class="btn-group shadow-sm">
+                <span class="btn btn-sm btn-dark fw-bold disabled text-white">
+                    <i class="bi bi-building-fill-lock me-1 text-warning"></i> Principal: {{ pp.name }}
+                </span>
+                <button type="button" class="btn btn-sm btn-success fw-bold d-flex align-items-center gap-1" onclick="approvePrincipalAccount({{ pp.id }}, '{{ pp.name|escape }}')">
+                    <i class="bi bi-check-circle-fill"></i> Accept &amp; Approve
+                </button>
+            </div>
+            {% endfor %}
+            <button class="btn btn-sm btn-outline-dark fw-bold rounded-pill px-3" onclick="document.getElementById('teachers-tab').click()">
+                <i class="bi bi-arrow-right-circle me-1"></i> Manage Faculty &rarr;
+            </button>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Admin Navigation Tabs -->
     <ul class="nav nav-pills admin-nav-tabs mb-4 gap-2 bg-white p-2 rounded-3 shadow-sm" id="adminTabs" role="tablist">
         <li class="nav-item">
@@ -127,8 +182,11 @@
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link fw-bold px-4 py-2" id="teachers-tab" data-bs-toggle="pill" data-bs-target="#teachersPane">
+            <button class="nav-link fw-bold px-4 py-2 position-relative" id="teachers-tab" data-bs-toggle="pill" data-bs-target="#teachersPane">
                 <i class="bi bi-key-fill me-1 text-warning"></i> Faculty Credentials (<span id="facultyTabCount">{{ teachers|length }}</span>)
+                {% if pending_teachers and pending_teachers|length > 0 %}
+                <span class="badge bg-danger rounded-pill ms-1 animate-pulse">{{ pending_teachers|length }} PENDING</span>
+                {% endif %}
             </button>
         </li>
         <li class="nav-item">
@@ -852,7 +910,7 @@
                             </thead>
                             <tbody>
                                 {% for t in teachers %}
-                                <tr data-teacher-row-id="{{ t.id }}" id="teacher-row-{{ t.id }}">
+                                <tr data-teacher-row-id="{{ t.id }}" id="teacher-row-{{ t.id }}" class="{% if not t.is_approved %}table-warning border-warning{% endif %}">
                                     <td class="text-center">
                                         <input type="checkbox" class="form-check-input teacher-cb" value="{{ t.id }}" data-name="{{ t.name|escape }}" onchange="updateSelectedTeachers()">
                                     </td>
@@ -1087,7 +1145,7 @@
                             <tbody>
                                 {% if principals %}
                                     {% for p in principals %}
-                                    <tr data-principal-row-id="{{ p.id }}" id="principal-row-{{ p.id }}">
+                                    <tr data-principal-row-id="{{ p.id }}" id="principal-row-{{ p.id }}" class="{% if not p.is_approved %}table-warning border-warning{% endif %}">
                                         <td class="sno-cell fw-semibold text-muted">{{ loop.index }}</td>
                                         <td><span class="badge bg-danger text-white px-2 py-1">PRINCIPAL</span></td>
                                         <td class="fw-bold text-navy fs-6" id="princ-name-{{ p.id }}">{{ p.name }}</td>
@@ -1219,7 +1277,7 @@
                             </thead>
                             <tbody>
                                 {% for h in hods %}
-                                <tr data-hod-row-id="{{ h.id }}" id="hod-row-{{ h.id }}">
+                                <tr data-hod-row-id="{{ h.id }}" id="hod-row-{{ h.id }}" class="{% if not h.is_approved %}table-warning border-warning{% endif %}">
                                     <td class="text-center">
                                         <input type="checkbox" class="form-check-input hod-cb" value="{{ h.id }}" data-name="{{ h.name|escape }}" onchange="updateSelectedHods()">
                                     </td>
@@ -3429,6 +3487,10 @@ function approveFacultyMember(teacherId, teacherName) {
                     </span>
                 `;
             }
+            const row = document.getElementById('teacher-row-' + teacherId);
+            if (row) {
+                row.classList.remove('table-warning', 'border-warning');
+            }
             showToastAlert('success', data.message || `Faculty "${teacherName}" approved successfully!`);
         } else {
             showToastAlert('danger', data.message || 'Error approving faculty member');
@@ -3484,6 +3546,10 @@ function approveHodMember(hodId, hodName) {
                     </span>
                 `;
             }
+            const row = document.getElementById('hod-row-' + hodId);
+            if (row) {
+                row.classList.remove('table-warning', 'border-warning');
+            }
             showToastAlert('success', data.message || `HOD "${hodName}" approved successfully!`);
         } else {
             showToastAlert('danger', data.message || 'Error approving HOD');
@@ -3515,6 +3581,10 @@ function approvePrincipalAccount(principalId, principalName) {
                         <i class="bi bi-check-circle-fill me-1"></i> Approved
                     </span>
                 `;
+            }
+            const row = document.getElementById('principal-row-' + principalId);
+            if (row) {
+                row.classList.remove('table-warning', 'border-warning');
             }
             showToastAlert('success', data.message || `Principal "${principalName}" approved successfully!`);
         } else {
