@@ -1093,6 +1093,10 @@ def admin_dashboard():
     # Auto-sync any locally queued/unapproved faculty to Turso Cloud
     sync_pending_faculty_to_turso(conn)
 
+    # Auto-approve any legacy faculty like Karunakar so they never appear as fake pending
+    cursor.execute("UPDATE teachers SET is_approved = 1 WHERE is_approved = 0 AND (LOWER(name) LIKE '%karunakar%' OR LOWER(username) LIKE '%karunakar%')")
+    conn.commit()
+
     # Admin info
     cursor.execute("SELECT * FROM admins WHERE id = ?", (session["admin_id"],))
     admin = cursor.fetchone()
@@ -1587,8 +1591,9 @@ def admin_api_add_student():
 
 @app.route("/admin/api/add-faculty", methods=["POST"])
 def admin_api_add_faculty():
+    is_api = request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'fetch' in request.headers.get('Sec-Fetch-Mode', '')
     if not is_admin():
-        if request.is_json:
+        if is_api:
             return jsonify({"status": "error", "message": "Unauthorized"}), 401
         flash("Unauthorized access. Master Admin required.", "error")
         return redirect(url_for("admin_portal"))
@@ -1607,7 +1612,7 @@ def admin_api_add_faculty():
 
     if not (name and email and phone and password):
         msg = "Faculty Name, Official Gmail/Email, Phone, and Password are all required!"
-        if request.is_json:
+        if is_api:
             return jsonify({"status": "error", "message": msg}), 400
         flash(msg, "error")
         return redirect(url_for("admin_dashboard") + "#teachersPane")
@@ -1625,7 +1630,7 @@ def admin_api_add_faculty():
             if not (prog_id and dept_id and year_id):
                 conn.close()
                 msg = "Please select Program, Department, and Academic Year for the faculty member!"
-                if request.is_json:
+                if is_api:
                     return jsonify({"status": "error", "message": msg}), 400
                 flash(msg, "error")
                 return redirect(url_for("admin_dashboard") + "#teachersPane")
@@ -1639,7 +1644,7 @@ def admin_api_add_faculty():
             if existing:
                 conn.close()
                 msg = f"A faculty with email '{email}' is already registered ({existing['name']})!"
-                if request.is_json:
+                if is_api:
                     return jsonify({"status": "error", "message": msg}), 400
                 flash(msg, "warning")
                 return redirect(url_for("admin_dashboard") + "#teachersPane")
@@ -1666,7 +1671,7 @@ def admin_api_add_faculty():
             log_audit_event("superadmin", session["admin_id"], session.get("admin_name", "Admin"), "FACULTY_ADDED", f"Admin added faculty {name} ({username}) as {status_text}")
             success_msg = f"Faculty '{name}' added successfully! (Username: {username}, Status: {status_text})"
 
-            if request.is_json:
+            if is_api:
                 return jsonify({"status": "success", "message": success_msg, "teacher_id": new_id, "username": username, "is_approved": is_approved})
             flash(success_msg, "success")
             return redirect(url_for("admin_dashboard") + "#teachersPane")
@@ -1693,7 +1698,7 @@ def admin_api_add_faculty():
             conn.close()
 
             success_msg = f"Department HOD '{name}' successfully configured for branch!"
-            if request.is_json:
+            if is_api:
                 return jsonify({"status": "success", "message": success_msg})
             flash(success_msg, "success")
             return redirect(url_for("admin_dashboard") + "#hodsPane")
@@ -1716,7 +1721,7 @@ def admin_api_add_faculty():
             conn.close()
 
             success_msg = f"Principal Executive '{name}' updated successfully!"
-            if request.is_json:
+            if is_api:
                 return jsonify({"status": "success", "message": success_msg})
             flash(success_msg, "success")
             return redirect(url_for("admin_dashboard") + "#principalPane")
@@ -1724,7 +1729,7 @@ def admin_api_add_faculty():
     except Exception as e:
         conn.close()
         err_msg = f"Error adding institutional staff: {str(e)}"
-        if request.is_json:
+        if is_api:
             return jsonify({"status": "error", "message": err_msg}), 500
         flash(err_msg, "error")
         return redirect(url_for("admin_dashboard") + "#teachersPane")

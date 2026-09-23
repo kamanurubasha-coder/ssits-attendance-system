@@ -35,7 +35,7 @@
                 </div>
 
                 <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-success fw-bold rounded-pill px-3 shadow-sm text-white" data-bs-toggle="modal" data-bs-target="#adminAddFacultyModal" title="Quickly Add New Faculty, HOD or Principal">
+                    <button type="button" class="btn btn-success fw-bold rounded-pill px-3 shadow-sm text-white" onclick="openAddFacultyModal('faculty')" id="btnTopAddFaculty" title="Quickly Add New Faculty, HOD or Principal">
                         <i class="bi bi-person-plus-fill me-1"></i> + Add Faculty / Staff
                     </button>
                     <button type="button" class="btn btn-warning fw-bold rounded-pill px-3 shadow-sm text-dark" data-bs-toggle="modal" data-bs-target="#changeAdminPasswordModal">
@@ -109,7 +109,7 @@
 
     <!-- Pending Approvals Notification Banner (Faculty, HOD, Principal) -->
     {% if total_pending_approvals and total_pending_approvals > 0 %}
-    <div class="alert alert-warning border border-warning shadow-sm rounded-4 mb-4 p-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border-left: 6px solid #F59E0B !important;">
+    <div id="pendingApprovalsAlert" class="alert alert-warning border border-warning shadow-sm rounded-4 mb-4 p-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border-left: 6px solid #F59E0B !important;">
         <div class="d-flex align-items-center gap-3">
             <div class="bg-warning text-dark p-2 px-3 rounded-circle fs-4 shadow-sm">
                 <i class="bi bi-person-exclamation"></i>
@@ -117,16 +117,16 @@
             <div>
                 <h6 class="fw-bold mb-1 text-dark d-flex align-items-center gap-2">
                     <span>New Account Approvals Awaiting Acceptance</span>
-                    <span class="badge bg-danger text-white rounded-pill px-2 py-1">{{ total_pending_approvals }} Pending</span>
+                    <span class="badge bg-danger text-white rounded-pill px-2 py-1" id="topPendingCounter">{{ total_pending_approvals }} Pending</span>
                 </h6>
                 <small class="text-secondary">
                     Self-registered faculty or department coordinators are waiting for Super Admin authorization to access the portal.
                 </small>
             </div>
         </div>
-        <div class="d-flex gap-2 flex-wrap align-items-center">
+        <div class="d-flex gap-2 flex-wrap align-items-center" id="topPendingItemsList">
             {% for pt in pending_teachers %}
-            <div class="btn-group shadow-sm">
+            <div class="btn-group shadow-sm" id="top-pending-item-teacher-{{ pt.id }}">
                 <span class="btn btn-sm btn-dark fw-bold disabled text-white">
                     <i class="bi bi-person-fill me-1 text-warning"></i> {{ pt.name }} ({{ pt.prog_code }} {{ pt.dept_code }})
                 </span>
@@ -136,7 +136,7 @@
             </div>
             {% endfor %}
             {% for ph in pending_hods %}
-            <div class="btn-group shadow-sm">
+            <div class="btn-group shadow-sm" id="top-pending-item-hod-{{ ph.id }}">
                 <span class="btn btn-sm btn-dark fw-bold disabled text-white">
                     <i class="bi bi-person-workspace me-1 text-warning"></i> HOD: {{ ph.name }} ({{ ph.dept_code }})
                 </span>
@@ -146,7 +146,7 @@
             </div>
             {% endfor %}
             {% for pp in pending_principals %}
-            <div class="btn-group shadow-sm">
+            <div class="btn-group shadow-sm" id="top-pending-item-principal-{{ pp.id }}">
                 <span class="btn btn-sm btn-dark fw-bold disabled text-white">
                     <i class="bi bi-building-fill-lock me-1 text-warning"></i> Principal: {{ pp.name }}
                 </span>
@@ -188,7 +188,7 @@
             <button class="nav-link fw-bold px-4 py-2 position-relative" id="teachers-tab" data-bs-toggle="pill" data-bs-target="#teachersPane">
                 <i class="bi bi-key-fill me-1 text-warning"></i> Faculty Credentials (<span id="facultyTabCount">{{ teachers|length }}</span>)
                 {% if pending_teachers and pending_teachers|length > 0 %}
-                <span class="badge bg-danger rounded-pill ms-1 animate-pulse">{{ pending_teachers|length }} PENDING</span>
+                <span class="badge bg-danger rounded-pill ms-1 animate-pulse" id="tabBadgePending">{{ pending_teachers|length }} PENDING</span>
                 {% endif %}
             </button>
         </li>
@@ -865,7 +865,7 @@
                             <small class="text-muted">All faculty passwords, registered Gmail addresses, and sections are securely stored and viewable by Admin.</small>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <button type="button" class="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#adminAddFacultyModal" title="Add New Faculty / Staff Member">
+                            <button type="button" class="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm" onclick="openAddFacultyModal('faculty')" id="btnPaneAddFaculty" title="Add New Faculty / Staff Member">
                                 <i class="bi bi-person-plus-fill me-1"></i> + Add Faculty / Staff
                             </button>
                             <button type="button" id="btnBulkDeleteTeachers" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="handleBulkDeleteTeachers()" disabled title="Select one or more faculty members using checkboxes to delete">
@@ -879,14 +879,14 @@
                 <div class="card-body p-0">
                     <!-- Prominent In-Tab Pending Approvals Banner -->
                     {% if pending_teachers and pending_teachers|length > 0 %}
-                    <div class="alert alert-warning border border-warning shadow-sm mx-3 mt-3 mb-2 p-3 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border-left: 6px solid #F59E0B !important;">
+                    <div id="pendingTeachersAlert" class="alert alert-warning border border-warning shadow-sm mx-3 mt-3 mb-2 p-3 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border-left: 6px solid #F59E0B !important;">
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-danger rounded-pill px-2 py-1 fs-6"><i class="bi bi-person-exclamation me-1"></i> {{ pending_teachers|length }} Pending Approval</span>
+                            <span class="badge bg-danger rounded-pill px-2 py-1 fs-6" id="tabPendingCounter"><i class="bi bi-person-exclamation me-1"></i> {{ pending_teachers|length }} Pending Approval</span>
                             <span class="fw-bold text-dark">Newly registered faculty waiting for Super Admin authorization:</span>
                         </div>
-                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <div class="d-flex flex-wrap gap-2 align-items-center" id="tabPendingItemsList">
                             {% for pt in pending_teachers %}
-                            <div class="btn-group btn-group-sm shadow-sm">
+                            <div class="btn-group btn-group-sm shadow-sm" id="tab-pending-item-teacher-{{ pt.id }}">
                                 <span class="btn btn-dark fw-bold disabled text-white">
                                     <i class="bi bi-person-fill me-1 text-warning"></i> {{ pt.name }} ({{ pt.prog_code }} {{ pt.dept_code }} Sec {{ pt.section or 'A' }})
                                 </span>
@@ -1266,6 +1266,9 @@
                         <small class="text-muted">Direct oversight of all departmental branches, stored passwords, approval access, and 2FA status.</small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-warning fw-bold rounded-pill px-3 shadow-sm text-dark" onclick="openAddFacultyModal('hod')" id="btnPaneAddHod" title="Add / Configure Department Head">
+                            <i class="bi bi-person-plus-fill me-1"></i> + Add / Configure HOD
+                        </button>
                         <button type="button" id="btnBulkDeleteHods" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="handleBulkDeleteHods()" disabled title="Select one or more HODs using checkboxes to delete">
                             <i class="bi bi-trash3-fill me-1"></i> Delete Selected HODs (<span id="bulkDeleteHodCount">0</span>)
                         </button>
@@ -2552,7 +2555,7 @@
                             </div>
                         </div>
 
-                        <form method="POST" action="/admin/api/add-faculty" id="adminAddFacultyForm">
+                        <form method="POST" action="/admin/api/add-faculty" id="adminAddFacultyForm" onsubmit="handleAdminAddFaculty(event)">
                             <input type="hidden" name="role" value="faculty">
 
                             <div class="row g-3 mb-3">
@@ -2661,7 +2664,7 @@
                             </div>
                         </div>
 
-                        <form method="POST" action="/admin/api/add-faculty" id="adminAddHodForm">
+                        <form method="POST" action="/admin/api/add-faculty" id="adminAddHodForm" onsubmit="handleAdminAddHod(event)">
                             <input type="hidden" name="role" value="hod">
                             <input type="hidden" name="is_approved" value="1">
 
@@ -2724,7 +2727,7 @@
                             </div>
                         </div>
 
-                        <form method="POST" action="/admin/api/add-faculty" id="adminAddPrincForm">
+                        <form method="POST" action="/admin/api/add-faculty" id="adminAddPrincForm" onsubmit="handleAdminAddPrincipal(event)">
                             <input type="hidden" name="role" value="principal">
 
                             <div class="row g-3 mb-3">
@@ -3787,6 +3790,51 @@ function approveFacultyMember(teacherId, teacherName) {
             if (row) {
                 row.classList.remove('table-warning', 'border-warning');
             }
+
+            // Immediately remove from top pending banner
+            const topItem = document.getElementById('top-pending-item-teacher-' + teacherId);
+            if (topItem) topItem.remove();
+
+            // Immediately remove from in-tab pending banner
+            const tabItem = document.getElementById('tab-pending-item-teacher-' + teacherId);
+            if (tabItem) tabItem.remove();
+
+            // Decrement top counter & hide banner if 0
+            const topBadge = document.getElementById('topPendingCounter');
+            if (topBadge) {
+                let cnt = parseInt(topBadge.innerText) || 0;
+                cnt = Math.max(0, cnt - 1);
+                topBadge.innerText = cnt + ' Pending';
+                if (cnt === 0) {
+                    const topAlert = document.getElementById('pendingApprovalsAlert');
+                    if (topAlert) topAlert.remove();
+                }
+            }
+
+            // Decrement in-tab counter & hide banner if 0
+            const tabBadge = document.getElementById('tabPendingCounter');
+            if (tabBadge) {
+                let cnt = parseInt(tabBadge.innerText) || 0;
+                cnt = Math.max(0, cnt - 1);
+                tabBadge.innerHTML = '<i class="bi bi-person-exclamation me-1"></i> ' + cnt + ' Pending Approval';
+                if (cnt === 0) {
+                    const tabAlert = document.getElementById('pendingTeachersAlert');
+                    if (tabAlert) tabAlert.remove();
+                }
+            }
+
+            // Decrement tab header badge
+            const navBadge = document.getElementById('tabBadgePending');
+            if (navBadge) {
+                let cnt = parseInt(navBadge.innerText) || 0;
+                cnt = Math.max(0, cnt - 1);
+                if (cnt === 0) {
+                    navBadge.remove();
+                } else {
+                    navBadge.innerText = cnt + ' PENDING';
+                }
+            }
+
             showToastAlert('success', data.message || `Faculty "${teacherName}" approved successfully!`);
         } else {
             showToastAlert('danger', data.message || 'Error approving faculty member');
@@ -3846,6 +3894,23 @@ function approveHodMember(hodId, hodName) {
             if (row) {
                 row.classList.remove('table-warning', 'border-warning');
             }
+
+            // Remove from top pending banner
+            const topItem = document.getElementById('top-pending-item-hod-' + hodId);
+            if (topItem) topItem.remove();
+
+            // Decrement top counter
+            const topBadge = document.getElementById('topPendingCounter');
+            if (topBadge) {
+                let cnt = parseInt(topBadge.innerText) || 0;
+                cnt = Math.max(0, cnt - 1);
+                topBadge.innerText = cnt + ' Pending';
+                if (cnt === 0) {
+                    const topAlert = document.getElementById('pendingApprovalsAlert');
+                    if (topAlert) topAlert.remove();
+                }
+            }
+
             showToastAlert('success', data.message || `HOD "${hodName}" approved successfully!`);
         } else {
             showToastAlert('danger', data.message || 'Error approving HOD');
@@ -3882,6 +3947,23 @@ function approvePrincipalAccount(principalId, principalName) {
             if (row) {
                 row.classList.remove('table-warning', 'border-warning');
             }
+
+            // Remove from top pending banner
+            const topItem = document.getElementById('top-pending-item-principal-' + principalId);
+            if (topItem) topItem.remove();
+
+            // Decrement top counter
+            const topBadge = document.getElementById('topPendingCounter');
+            if (topBadge) {
+                let cnt = parseInt(topBadge.innerText) || 0;
+                cnt = Math.max(0, cnt - 1);
+                topBadge.innerText = cnt + ' Pending';
+                if (cnt === 0) {
+                    const topAlert = document.getElementById('pendingApprovalsAlert');
+                    if (topAlert) topAlert.remove();
+                }
+            }
+
             showToastAlert('success', data.message || `Principal "${principalName}" approved successfully!`);
         } else {
             showToastAlert('danger', data.message || 'Error approving Principal');
@@ -3910,6 +3992,192 @@ function resetPrincipal2FA(principalId, principalName) {
         }
     })
     .catch(err => alert('Network error: ' + err));
+}
+
+function openAddFacultyModal(role = 'faculty') {
+    const modalEl = document.getElementById('adminAddFacultyModal');
+    if (!modalEl) {
+        console.error('adminAddFacultyModal element not found');
+        return;
+    }
+    // Ensure modal is directly inside body to avoid z-index / overflow clipping
+    if (modalEl.parentElement !== document.body) {
+        document.body.appendChild(modalEl);
+    }
+
+    // Switch to corresponding role tab
+    if (role === 'hod') {
+        const hodTab = document.getElementById('admin-add-hod-tab');
+        if (hodTab) bootstrap.Tab.getOrCreateInstance(hodTab).show();
+    } else if (role === 'principal') {
+        const princTab = document.getElementById('admin-add-princ-tab');
+        if (princTab) bootstrap.Tab.getOrCreateInstance(princTab).show();
+    } else {
+        const facTab = document.getElementById('admin-add-fac-tab');
+        if (facTab) bootstrap.Tab.getOrCreateInstance(facTab).show();
+    }
+
+    const modalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+    modalInstance.show();
+}
+
+async function handleAdminAddFaculty(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = document.getElementById('btnAdminSubmitFaculty');
+    const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Adding Faculty...';
+    }
+
+    const formData = new FormData(form);
+
+    try {
+        const response = await fetch(form.action || '/admin/api/add-faculty', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'success') {
+            showToastAlert('success', data.message || 'Faculty added successfully!');
+            const modalEl = document.getElementById('adminAddFacultyModal');
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+            }
+            form.reset();
+            localStorage.setItem('admin_active_tab', '#teachersPane');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to add faculty.');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        }
+    } catch (err) {
+        console.error('Error adding faculty:', err);
+        showToastAlert('danger', 'Network or server error while adding faculty: ' + err.message);
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnHtml;
+        }
+    }
+}
+
+async function handleAdminAddHod(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = document.getElementById('btnAdminSubmitHod');
+    const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Saving HOD...';
+    }
+
+    const formData = new FormData(form);
+
+    try {
+        const response = await fetch(form.action || '/admin/api/add-faculty', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'success') {
+            showToastAlert('success', data.message || 'HOD configured successfully!');
+            const modalEl = document.getElementById('adminAddFacultyModal');
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+            }
+            form.reset();
+            localStorage.setItem('admin_active_tab', '#hodsPane');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to configure HOD.');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        }
+    } catch (err) {
+        console.error('Error adding HOD:', err);
+        showToastAlert('danger', 'Network or server error while saving HOD: ' + err.message);
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnHtml;
+        }
+    }
+}
+
+async function handleAdminAddPrincipal(event) {
+    event.preventDefault();
+    const form = event.target;
+    const submitBtn = document.getElementById('btnAdminSubmitPrincipal');
+    const originalBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Saving Principal...';
+    }
+
+    const formData = new FormData(form);
+
+    try {
+        const response = await fetch(form.action || '/admin/api/add-faculty', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status === 'success') {
+            showToastAlert('success', data.message || 'Principal account created successfully!');
+            const modalEl = document.getElementById('adminAddFacultyModal');
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+            }
+            form.reset();
+            localStorage.setItem('admin_active_tab', '#principalPane');
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            showToastAlert('danger', data.message || 'Failed to create Principal account.');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        }
+    } catch (err) {
+        console.error('Error adding Principal:', err);
+        showToastAlert('danger', 'Network or server error while creating Principal: ' + err.message);
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalBtnHtml;
+        }
+    }
 }
 
 
