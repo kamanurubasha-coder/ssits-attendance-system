@@ -37,8 +37,8 @@ try:
     # Generous read timeout (connect=3.0s, read=10.0s) so cross-region database writes commit safely
     _HTTP_POOL = urllib3.PoolManager(
         maxsize=20,
-        timeout=urllib3.Timeout(connect=3.0, read=10.0),
-        retries=urllib3.Retry(total=2, backoff_factor=0.2)
+        timeout=urllib3.Timeout(connect=5.0, read=15.0),
+        retries=urllib3.Retry(total=3, backoff_factor=0.3)
     )
 except ImportError:
     _HTTP_POOL = None
@@ -220,26 +220,33 @@ class TursoCursor:
         except Exception as e:
             print(f"[TURSO EXCEPTION] SQL: {sql[:60]} -> {e}")
             if is_write:
-                # Retry write once more with a fresh connection to handle dropped idle sockets
-                try:
-                    time.sleep(0.3)
-                    results = self.conn._send_pipeline_payload(payload)
-                    if results and results[0].get("type") != "error":
-                        result_data = results[0].get("response", {}).get("result", {})
-                        lid = result_data.get("last_insert_rowid")
-                        self.lastrowid = int(lid) if lid is not None else None
-                        self.rowcount = result_data.get("affected_row_count", 0)
-                        self.rows = []
-                        self.cols = []
-                        try:
-                            loc = self.conn._get_local_conn()
-                            loc.execute(sql, args)
-                            loc.commit()
-                        except Exception:
-                            pass
-                        return self
-                except Exception as retry_e:
-                    print(f"[TURSO WRITE RETRY EXCEPTION] -> {retry_e}")
+                # Aggressive retry directly against Turso Cloud to ensure cloud data persistence
+                last_err = e
+                for retry_i in range(3):
+                    try:
+                        time.sleep(0.3 * (retry_i + 1))
+                        results = self.conn._send_pipeline_payload(payload)
+                        if results and results[0].get("type") != "error":
+                            result_data = results[0].get("response", {}).get("result", {})
+                            lid = result_data.get("last_insert_rowid")
+                            self.lastrowid = int(lid) if lid is not None else None
+                            self.rowcount = result_data.get("affected_row_count", 0)
+                            self.rows = []
+                            self.cols = []
+                            try:
+                                loc = self.conn._get_local_conn()
+                                loc.execute(sql, args)
+                                loc.commit()
+                            except Exception:
+                                pass
+                            return self
+                        elif results and results[0].get("type") == "error":
+                            last_err = Exception(f"Turso Error: {results[0].get('error', {}).get('message')}")
+                    except Exception as retry_e:
+                        last_err = retry_e
+                        print(f"[TURSO WRITE RETRY #{retry_i+1} EXCEPTION] -> {retry_e}")
+                # Cloud writes must NEVER silently divert to local ephemeral SQLite
+                raise last_err
             mark_turso_failed(5)
             return self._fallback_execute(sql, args)
 

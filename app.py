@@ -921,30 +921,17 @@ def admin_portal():
         env_admin_pw = os.getenv("ADMIN_PASSWORD")
         clean_pw = password.strip()
 
-        valid_master_passwords = [
-            "HamzaRK@123",
-            "Hamzark@123",
-            "Hamza@123",
-            "admin123",
-            "SSITS_SUPERADMIN_2026"
-        ]
-        if env_admin_pw:
-            valid_master_passwords.append(env_admin_pw.strip())
+        # Strict Authentication: ONLY accept the administrator's authentic password from database (or explicit env var)
+        allowed_passwords = []
         if admin and "password" in admin.keys() and admin["password"]:
-            valid_master_passwords.append(str(admin["password"]).strip())
+            allowed_passwords.append(str(admin["password"]).strip())
+        if env_admin_pw and env_admin_pw.strip():
+            allowed_passwords.append(env_admin_pw.strip())
 
-        for vp in valid_master_passwords:
-            if clean_pw == vp or clean_pw.lower() == vp.lower():
+        for ap in allowed_passwords:
+            if clean_pw == ap:
                 is_pw_valid = True
                 break
-
-        if admin and is_pw_valid:
-            try:
-                if admin["password"] != clean_pw:
-                    cursor.execute("UPDATE admins SET password = ? WHERE id = ?", (clean_pw, admin["id"]))
-                    conn.commit()
-            except Exception:
-                pass
 
         conn.close()
 
