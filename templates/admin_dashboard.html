@@ -35,6 +35,9 @@
                 </div>
 
                 <div class="d-flex flex-wrap gap-2">
+                    <button type="button" class="btn btn-success fw-bold rounded-pill px-3 shadow-sm text-white" data-bs-toggle="modal" data-bs-target="#adminAddFacultyModal" title="Quickly Add New Faculty, HOD or Principal">
+                        <i class="bi bi-person-plus-fill me-1"></i> + Add Faculty / Staff
+                    </button>
                     <button type="button" class="btn btn-warning fw-bold rounded-pill px-3 shadow-sm text-dark" data-bs-toggle="modal" data-bs-target="#changeAdminPasswordModal">
                         <i class="bi bi-person-lock me-1"></i> Admin Credentials
                     </button>
@@ -862,6 +865,9 @@
                             <small class="text-muted">All faculty passwords, registered Gmail addresses, and sections are securely stored and viewable by Admin.</small>
                         </div>
                         <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#adminAddFacultyModal" title="Add New Faculty / Staff Member">
+                                <i class="bi bi-person-plus-fill me-1"></i> + Add Faculty / Staff
+                            </button>
                             <button type="button" id="btnBulkDeleteTeachers" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="handleBulkDeleteTeachers()" disabled title="Select one or more faculty members using checkboxes to delete">
                                 <i class="bi bi-trash3-fill me-1"></i> Delete Selected Faculty (<span id="bulkDeleteCount">0</span>)
                             </button>
@@ -2497,6 +2503,267 @@
         </div>
     </div>
 </div>
+<!-- ================= 8. MASTER ADMIN: ADD FACULTY / STAFF MODAL ================= -->
+<div class="modal fade" id="adminAddFacultyModal" tabindex="-1" aria-labelledby="adminAddFacultyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="modal-header py-3 px-4 border-0 text-white" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="rounded-circle p-2 bg-white bg-opacity-10 text-warning border border-warning-subtle shadow-sm">
+                        <i class="bi bi-person-plus-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <h5 class="modal-title fw-bold text-white mb-0" id="adminAddFacultyModalLabel">Add Institutional Faculty &amp; Staff</h5>
+                        <small class="text-warning-emphasis" style="font-size: 0.82rem;">Create credentials directly for Class Teachers, HODs, or Principal</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Role Selector Nav Tabs -->
+            <ul class="nav nav-pills nav-fill bg-light p-2 border-bottom" id="adminAddRoleTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold py-2 rounded-3" id="admin-add-fac-tab" data-bs-toggle="pill" data-bs-target="#adminAddFacPane" type="button" role="tab">
+                        <i class="bi bi-person-badge-fill text-primary me-1"></i> 1. Faculty / Class Teacher
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 rounded-3" id="admin-add-hod-tab" data-bs-toggle="pill" data-bs-target="#adminAddHodPane" type="button" role="tab">
+                        <i class="bi bi-person-workspace text-warning me-1"></i> 2. Department HOD
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 rounded-3" id="admin-add-princ-tab" data-bs-toggle="pill" data-bs-target="#adminAddPrincPane" type="button" role="tab">
+                        <i class="bi bi-building-fill-lock text-danger me-1"></i> 3. Principal Executive
+                    </button>
+                </li>
+            </ul>
+
+            <div class="modal-body p-4 bg-white">
+                <div class="tab-content" id="adminAddRoleTabContent">
+
+                    <!-- ================= TAB 1: ADD FACULTY / CLASS TEACHER ================= -->
+                    <div class="tab-pane fade show active" id="adminAddFacPane" role="tabpanel">
+                        <div class="alert alert-primary py-2 px-3 mb-3 small d-flex align-items-center gap-2 rounded-3 border-0 bg-primary-subtle text-primary-emphasis">
+                            <i class="bi bi-info-circle-fill fs-5"></i>
+                            <div>
+                                <strong>Class Coordinator Credentials:</strong> Automatically assigned to degree, branch, year &amp; section to mark daily attendance and send WhatsApp alerts.
+                            </div>
+                        </div>
+
+                        <form method="POST" action="/admin/api/add-faculty" id="adminAddFacultyForm">
+                            <input type="hidden" name="role" value="faculty">
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">1. DEGREE / PROGRAM *</label>
+                                    <select class="form-select fw-bold" name="program_id" id="admin_fac_prog" required>
+                                        <option value="" disabled selected>-- Select Degree --</option>
+                                        {% for p in programs %}
+                                        <option value="{{ p.id }}">{{ p.name }} ({{ p.code }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">2. DEPARTMENT / BRANCH *</label>
+                                    <select class="form-select fw-bold" name="department_id" id="admin_fac_dept" required>
+                                        <option value="" disabled selected>-- Select Branch --</option>
+                                        {% for d in departments %}
+                                        <option value="{{ d.id }}">{{ d.name }} ({{ d.code }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">3. ACADEMIC YEAR *</label>
+                                    <select class="form-select" name="year_id" id="admin_fac_year" required>
+                                        <option value="" disabled selected>-- Select Academic Year --</option>
+                                        {% for y in academic_years %}
+                                        <option value="{{ y.id }}">{{ y.year_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">4. SECTION *</label>
+                                    <select class="form-select fw-bold" name="section" id="admin_fac_section" required>
+                                        <option value="A" selected>Section A</option>
+                                        <option value="B">Section B</option>
+                                        <option value="C">Section C</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">5. FACULTY FULL NAME *</label>
+                                    <input type="text" class="form-control fw-bold" name="name" id="admin_fac_name" placeholder="e.g. Smt. K. Anitha / Dr. R. Suresh" required>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">6. MOBILE PHONE (10 DIGITS) *</label>
+                                    <input type="tel" class="form-control" name="phone" id="admin_fac_phone" placeholder="e.g. 9848012345" pattern="[0-9]{10}" maxlength="10" required>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">7. OFFICIAL GMAIL / EMAIL *</label>
+                                    <input type="email" class="form-control" name="email" id="admin_fac_email" placeholder="e.g. faculty.name@gmail.com" required>
+                                    <small class="text-muted" style="font-size: 11px;">A username will be auto-generated from this email.</small>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">8. INITIAL LOGIN PASSWORD *</label>
+                                    <div class="input-group">
+                                        <input type="text" class="form-control font-monospace fw-bold" name="password" id="admin_fac_password" value="Pass@123" required>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('admin_fac_password').value = 'Ssits@' + Math.floor(1000 + Math.random() * 9000);" title="Generate Random Password">
+                                            <i class="bi bi-shuffle"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted" style="font-size: 11px;">Faculty can change this password after signing in.</small>
+                                </div>
+                            </div>
+
+                            <div class="p-3 bg-light rounded-3 border mb-3">
+                                <label class="form-label small fw-bold text-navy mb-1">9. INITIAL APPROVAL STATUS</label>
+                                <div class="d-flex flex-wrap gap-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="is_approved" id="admin_appr_pending" value="0" checked>
+                                        <label class="form-check-label fw-bold text-warning-emphasis" for="admin_appr_pending">
+                                            ⏳ Pending Approval (Appear in Faculty Credentials with green "Accept" button)
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="is_approved" id="admin_appr_direct" value="1">
+                                        <label class="form-check-label fw-bold text-success" for="admin_appr_direct">
+                                            ✅ Approve Immediately (Active right away)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-primary fw-bold rounded-pill px-4 shadow-sm" id="btnAdminSubmitFaculty">
+                                    <i class="bi bi-person-check-fill me-1"></i> Save &amp; Add Faculty
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ================= TAB 2: ADD DEPARTMENT HOD ================= -->
+                    <div class="tab-pane fade" id="adminAddHodPane" role="tabpanel">
+                        <div class="alert alert-warning py-2 px-3 mb-3 small d-flex align-items-center gap-2 rounded-3 border-0 bg-warning-subtle text-warning-emphasis">
+                            <i class="bi bi-person-workspace fs-5"></i>
+                            <div>
+                                <strong>Department Head Setup:</strong> Configures the branch-level oversight leader for absentees and section monitoring.
+                            </div>
+                        </div>
+
+                        <form method="POST" action="/admin/api/add-faculty" id="adminAddHodForm">
+                            <input type="hidden" name="role" value="hod">
+                            <input type="hidden" name="is_approved" value="1">
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">1. DEGREE / PROGRAM *</label>
+                                    <select class="form-select fw-bold" name="program_id" required>
+                                        {% for p in programs %}
+                                        <option value="{{ p.id }}">{{ p.name }} ({{ p.code }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">2. DEPARTMENT / BRANCH *</label>
+                                    <select class="form-select fw-bold" name="department_id" required>
+                                        {% for d in departments %}
+                                        <option value="{{ d.id }}">{{ d.name }} ({{ d.code }})</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">3. HOD FULL NAME *</label>
+                                    <input type="text" class="form-control fw-bold" name="name" placeholder="e.g. Dr. A. Sudhakar (HOD)" required>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">4. CONTACT PHONE NUMBER *</label>
+                                    <input type="tel" class="form-control" name="phone" placeholder="e.g. 9848011221" pattern="[0-9]{10}" maxlength="10" required>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">5. OFFICIAL GMAIL / EMAIL *</label>
+                                    <input type="email" class="form-control" name="email" placeholder="e.g. hod.ece@gmail.com" required>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">6. INITIAL LOGIN PASSWORD *</label>
+                                    <input type="text" class="form-control font-monospace fw-bold" name="password" value="Hod@123" required>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-warning fw-bold rounded-pill px-4 shadow-sm text-dark" id="btnAdminSubmitHod">
+                                    <i class="bi bi-shield-check me-1"></i> Save &amp; Configure HOD
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- ================= TAB 3: ADD / CONFIGURE PRINCIPAL ================= -->
+                    <div class="tab-pane fade" id="adminAddPrincPane" role="tabpanel">
+                        <div class="alert alert-danger py-2 px-3 mb-3 small d-flex align-items-center gap-2 rounded-3 border-0 bg-danger-subtle text-danger-emphasis">
+                            <i class="bi bi-building-fill-lock fs-5"></i>
+                            <div>
+                                <strong>Principal Executive Desk:</strong> Chief Institutional Authority account with master oversight across all branches and sections.
+                            </div>
+                        </div>
+
+                        <form method="POST" action="/admin/api/add-faculty" id="adminAddPrincForm">
+                            <input type="hidden" name="role" value="principal">
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">1. PRINCIPAL FULL NAME *</label>
+                                    <input type="text" class="form-control fw-bold" name="name" placeholder="e.g. Dr. P. Sreenivasulu, Ph.D" required>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">2. CONTACT PHONE NUMBER *</label>
+                                    <input type="tel" class="form-control" name="phone" placeholder="e.g. 9848099887" pattern="[0-9]{10}" maxlength="10" required>
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">3. OFFICIAL GMAIL / EMAIL *</label>
+                                    <input type="email" class="form-control" name="email" placeholder="e.g. principal@ssits.ac.in" required>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-bold text-navy">4. INITIAL LOGIN PASSWORD *</label>
+                                    <input type="text" class="form-control font-monospace fw-bold" name="password" value="Principal@123" required>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-danger fw-bold rounded-pill px-4 shadow-sm" id="btnAdminSubmitPrincipal">
+                                    <i class="bi bi-building-check me-1"></i> Save Principal Account
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}

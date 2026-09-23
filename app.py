@@ -1585,6 +1585,150 @@ def admin_api_add_student():
 
     return redirect(url_for("admin_dashboard") + "#studentsPane")
 
+@app.route("/admin/api/add-faculty", methods=["POST"])
+def admin_api_add_faculty():
+    if not is_admin():
+        if request.is_json:
+            return jsonify({"status": "error", "message": "Unauthorized"}), 401
+        flash("Unauthorized access. Master Admin required.", "error")
+        return redirect(url_for("admin_portal"))
+
+    data = request.get_json(silent=True) if request.is_json else request.form
+    role = data.get("role", "faculty").strip().lower()
+    name = data.get("name", "").strip()
+    email = data.get("email", "").strip().lower()
+    phone = data.get("phone", "").strip()
+    password = data.get("password", "").strip()
+    is_approved_val = data.get("is_approved", "0")
+    try:
+        is_approved = int(is_approved_val)
+    except (ValueError, TypeError):
+        is_approved = 0
+
+    if not (name and email and phone and password):
+        msg = "Faculty Name, Official Gmail/Email, Phone, and Password are all required!"
+        if request.is_json:
+            return jsonify({"status": "error", "message": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("admin_dashboard") + "#teachersPane")
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        if role == "faculty":
+            prog_id = data.get("program_id")
+            dept_id = data.get("department_id") or data.get("dept_id")
+            year_id = data.get("year_id")
+            section = data.get("section", "A").strip().upper() or "A"
+
+            if not (prog_id and dept_id and year_id):
+                conn.close()
+                msg = "Please select Program, Department, and Academic Year for the faculty member!"
+                if request.is_json:
+                    return jsonify({"status": "error", "message": msg}), 400
+                flash(msg, "error")
+                return redirect(url_for("admin_dashboard") + "#teachersPane")
+
+            prog_id = int(prog_id)
+            dept_id = int(dept_id)
+            year_id = int(year_id)
+
+            cursor.execute("SELECT id, name FROM teachers WHERE LOWER(email) = LOWER(?)", (email,))
+            existing = cursor.fetchone()
+            if existing:
+                conn.close()
+                msg = f"A faculty with email '{email}' is already registered ({existing['name']})!"
+                if request.is_json:
+                    return jsonify({"status": "error", "message": msg}), 400
+                flash(msg, "warning")
+                return redirect(url_for("admin_dashboard") + "#teachersPane")
+
+            base_user = email.split("@")[0].replace(".", "_")
+            username = base_user
+            cnt = 1
+            while True:
+                cursor.execute("SELECT id FROM teachers WHERE LOWER(username) = LOWER(?)", (username,))
+                if not cursor.fetchone():
+                    break
+                username = f"{base_user}_{cnt}"
+                cnt += 1
+
+            cursor.execute("""
+                INSERT INTO teachers (name, program_id, department_id, year_id, section, email, username, password, phone, is_approved)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (name, prog_id, dept_id, year_id, section, email, username, password, phone, is_approved))
+            conn.commit()
+            new_id = cursor.lastrowid
+            conn.close()
+
+            status_text = "Approved & Active" if is_approved else "Pending Approval (Click Accept to Activate)"
+            log_audit_event("superadmin", session["admin_id"], session.get("admin_name", "Admin"), "FACULTY_ADDED", f"Admin added faculty {name} ({username}) as {status_text}")
+            success_msg = f"Faculty '{name}' added successfully! (Username: {username}, Status: {status_text})"
+
+            if request.is_json:
+                return jsonify({"status": "success", "message": success_msg, "teacher_id": new_id, "username": username, "is_approved": is_approved})
+            flash(success_msg, "success")
+            return redirect(url_for("admin_dashboard") + "#teachersPane")
+
+        elif role == "hod":
+            prog_id = int(data.get("program_id", 2))
+            dept_id = int(data.get("department_id", 1))
+            username = f"hod_{email.split('@')[0].replace('.', '_')}"
+
+            cursor.execute("SELECT id FROM hods WHERE department_id = ?", (dept_id,))
+            existing_hod = cursor.fetchone()
+            if existing_hod:
+                cursor.execute("""
+                    UPDATE hods
+                    SET name = ?, phone = ?, email = ?, password = ?, username = ?, is_approved = ?
+                    WHERE id = ?
+                """, (name, phone, email, password, username, is_approved, existing_hod["id"]))
+            else:
+                cursor.execute("""
+                    INSERT INTO hods (program_id, department_id, name, phone, email, username, password, is_approved)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (prog_id, dept_id, name, phone, email, username, password, is_approved))
+            conn.commit()
+            conn.close()
+
+            success_msg = f"Department HOD '{name}' successfully configured for branch!"
+            if request.is_json:
+                return jsonify({"status": "success", "message": success_msg})
+            flash(success_msg, "success")
+            return redirect(url_for("admin_dashboard") + "#hodsPane")
+
+        elif role == "principal":
+            cursor.execute("SELECT id FROM admins WHERE role = 'principal'")
+            existing_princ = cursor.fetchone()
+            if existing_princ:
+                cursor.execute("""
+                    UPDATE admins
+                    SET name = ?, email = ?, phone = ?, password = ?, is_approved = 1
+                    WHERE id = ?
+                """, (name, email, phone, password, existing_princ["id"]))
+            else:
+                cursor.execute("""
+                    INSERT INTO admins (username, password, name, email, phone, role, is_approved)
+                    VALUES ('principal', ?, ?, ?, ?, 'principal', 1)
+                """, (password, name, email, phone))
+            conn.commit()
+            conn.close()
+
+            success_msg = f"Principal Executive '{name}' updated successfully!"
+            if request.is_json:
+                return jsonify({"status": "success", "message": success_msg})
+            flash(success_msg, "success")
+            return redirect(url_for("admin_dashboard") + "#principalPane")
+
+    except Exception as e:
+        conn.close()
+        err_msg = f"Error adding institutional staff: {str(e)}"
+        if request.is_json:
+            return jsonify({"status": "error", "message": err_msg}), 500
+        flash(err_msg, "error")
+        return redirect(url_for("admin_dashboard") + "#teachersPane")
+
 @app.route("/admin/api/download-student-template")
 def admin_api_download_student_template():
     if not is_admin():
