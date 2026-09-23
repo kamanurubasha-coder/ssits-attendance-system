@@ -14,7 +14,7 @@ import base64
 import pyotp
 import qrcode
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file, flash
-from database import get_db_connection, init_db
+from database import get_db_connection, init_db, sync_pending_faculty_to_turso
 from pdf_generator import generate_attendance_pdf, generate_parent_student_dossier_pdf, generate_cumulative_monthly_attendance_pdf, generate_consolidated_absentees_summary_pdf
 
 # Central Indian Standard Time (IST, UTC+05:30)
@@ -1102,6 +1102,9 @@ def admin_dashboard():
 
     conn = get_db_connection()
     cursor = conn.cursor()
+
+    # Auto-sync any locally queued/unapproved faculty to Turso Cloud
+    sync_pending_faculty_to_turso(conn)
 
     # Admin info
     cursor.execute("SELECT * FROM admins WHERE id = ?", (session["admin_id"],))

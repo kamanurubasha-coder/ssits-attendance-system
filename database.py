@@ -566,5 +566,50 @@ def seed_students(cursor, conn):
     print(f"Added {len(all_students)} students across Diploma (3 Years) and B.Tech (4 Years)!")
     return len(all_students)
 
+def sync_pending_faculty_to_turso(conn=None):
+    """
+    Guarantees zero lost registrations.
+    If a faculty registered while Turso was in cooldown or offline,
+    this automatically pulls any unapproved faculty (is_approved=0) from local SQLite
+    and syncs them to Turso Cloud so the Admin ALWAYS sees them in the dashboard.
+    """
+    if os.getenv("USE_LOCAL_SQLITE") == "1":
+        return
+    try:
+        import sqlite3
+        if not os.path.exists(DB_PATH):
+            return
+        loc = sqlite3.connect(DB_PATH)
+        loc.row_factory = sqlite3.Row
+        cur = loc.cursor()
+        cur.execute("SELECT * FROM teachers WHERE is_approved = 0")
+        pending_local = cur.fetchall()
+        loc.close()
+
+        if not pending_local:
+            return
+
+        should_close = False
+        if conn is None:
+            conn = get_db_connection()
+            should_close = True
+
+        cloud_cur = conn.cursor()
+        for t in pending_local:
+            cloud_cur.execute("SELECT id FROM teachers WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)", (t["email"], t["username"]))
+            if not cloud_cur.fetchone():
+                cloud_cur.execute("""
+                    INSERT INTO teachers (name, program_id, department_id, year_id, section, email, username, password, phone, is_approved)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                """, (t["name"], t["program_id"], t["department_id"], t["year_id"], t["section"] or "A", t["email"], t["username"], t["password"], t["phone"]))
+                if hasattr(conn, "commit"):
+                    conn.commit()
+                print(f"[SYNC] Pushed unapproved faculty '{t['name']}' ({t['username']}) to Turso Cloud!")
+        if should_close:
+            conn.close()
+    except Exception as e:
+        print(f"[WARN] sync_pending_faculty_to_turso: {e}")
+
 if __name__ == "__main__":
     init_db()
+
