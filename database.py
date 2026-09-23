@@ -345,8 +345,6 @@ def init_db():
     cursor.execute("UPDATE attendance_records SET section = 'A' WHERE section IS NULL OR section = ''")
     cursor.execute("UPDATE day_status SET section = 'A' WHERE section IS NULL OR section = ''")
     cursor.execute("UPDATE teachers SET email = username || '@gmail.com' WHERE email IS NULL OR email = ''")
-    # Auto-approve any legacy faculty like Karunakar so they never appear as fake pending
-    cursor.execute("UPDATE teachers SET is_approved = 1 WHERE is_approved = 0 AND (LOWER(name) LIKE '%karunakar%' OR LOWER(username) LIKE '%karunakar%')")
 
     # Set HOD usernames (e.g. hod_ece, hod_cse, etc.) and passwords
     cursor.execute("""
@@ -584,8 +582,6 @@ def sync_pending_faculty_to_turso(conn=None):
         loc = sqlite3.connect(DB_PATH)
         loc.row_factory = sqlite3.Row
         cur = loc.cursor()
-        cur.execute("UPDATE teachers SET is_approved = 1 WHERE LOWER(name) LIKE '%karunakar%' OR LOWER(username) LIKE '%karunakar%'")
-        loc.commit()
         cur.execute("SELECT * FROM teachers WHERE is_approved = 0")
         pending_local = cur.fetchall()
         loc.close()

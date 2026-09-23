@@ -1093,10 +1093,6 @@ def admin_dashboard():
     # Auto-sync any locally queued/unapproved faculty to Turso Cloud
     sync_pending_faculty_to_turso(conn)
 
-    # Auto-approve any legacy faculty like Karunakar so they never appear as fake pending
-    cursor.execute("UPDATE teachers SET is_approved = 1 WHERE is_approved = 0 AND (LOWER(name) LIKE '%karunakar%' OR LOWER(username) LIKE '%karunakar%')")
-    conn.commit()
-
     # Admin info
     cursor.execute("SELECT * FROM admins WHERE id = ?", (session["admin_id"],))
     admin = cursor.fetchone()
