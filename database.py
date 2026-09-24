@@ -281,18 +281,8 @@ def init_db():
     if "is_approved" not in adm_cols:
         cursor.execute("ALTER TABLE admins ADD COLUMN is_approved INTEGER DEFAULT 1")
 
-    # Ensure permanent shield against unwanted legacy faculty auto-insertion
-    cursor.execute("""
-        CREATE TRIGGER IF NOT EXISTS prevent_unwanted_faculty_seed
-        BEFORE INSERT ON teachers
-        FOR EACH ROW
-        WHEN LOWER(NEW.username) IN ('faizan', 'lakshmidattatri', 'dattatri')
-          OR LOWER(NEW.name) LIKE '%faizan%'
-          OR LOWER(NEW.name) LIKE '%dattatri%'
-        BEGIN
-            SELECT RAISE(IGNORE);
-        END;
-    """)
+    # Ensure legacy block triggers are permanently dropped so any candidate name can be registered
+    cursor.execute("DROP TRIGGER IF EXISTS prevent_unwanted_faculty_seed")
 
     # 13. System Settings Table (Geo-fencing, Campus configs, etc.)
     cursor.execute("""
@@ -566,13 +556,44 @@ def seed_students(cursor, conn):
     print(f"Added {len(all_students)} students across Diploma (3 Years) and B.Tech (4 Years)!")
     return len(all_students)
 
-def sync_pending_faculty_to_turso(conn=None):
+def batch_execute(conn, queries):
     """
-    Guarantees zero lost registrations.
+    Executes multiple (sql, args) queries in ONE single network round trip on Turso,
+    or sequentially on local SQLite fallback.
+    queries: [("SELECT ...", (arg1,)), ("SELECT ...", (arg2,))]
+    Returns: [[row1, row2, ...], [row1, row2, ...], ...]
+    """
+    if hasattr(conn, "batch_execute"):
+        return conn.batch_execute(queries)
+    # Standard SQLite fallback
+    cursor = conn.cursor()
+    results = []
+    for sql, args in queries:
+        cursor.execute(sql, args)
+        if cursor.description:
+            results.append(cursor.fetchall())
+        else:
+            results.append([])
+    return results
+
+_LAST_SYNC_CHECK = 0
+
+def sync_pending_faculty_to_turso(conn=None, force=False):
+    """
+    Guarantees zero lost registrations with zero performance overhead.
+    Rate-limited to run at most once every 60 seconds (or immediately if force=True).
     If a faculty registered while Turso was in cooldown or offline,
-    this automatically pulls any unapproved faculty (is_approved=0) from local SQLite
-    and syncs them to Turso Cloud so the Admin ALWAYS sees them in the dashboard.
+    this pulls any unapproved faculty (is_approved=0) from local SQLite
+    and syncs them to Turso Cloud.
     """
+    global _LAST_SYNC_CHECK
+    import time
+    now = time.time()
+    if not force and (now - _LAST_SYNC_CHECK < 60):
+        return
+
+    _LAST_SYNC_CHECK = now
+
     if os.getenv("USE_LOCAL_SQLITE") == "1":
         return
     try:
@@ -584,9 +605,9 @@ def sync_pending_faculty_to_turso(conn=None):
         cur = loc.cursor()
         cur.execute("SELECT * FROM teachers WHERE is_approved = 0")
         pending_local = cur.fetchall()
-        loc.close()
 
         if not pending_local:
+            loc.close()
             return
 
         should_close = False
@@ -597,7 +618,8 @@ def sync_pending_faculty_to_turso(conn=None):
         cloud_cur = conn.cursor()
         for t in pending_local:
             cloud_cur.execute("SELECT id FROM teachers WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)", (t["email"], t["username"]))
-            if not cloud_cur.fetchone():
+            row = cloud_cur.fetchone()
+            if not row:
                 cloud_cur.execute("""
                     INSERT INTO teachers (name, program_id, department_id, year_id, section, email, username, password, phone, is_approved)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
@@ -605,6 +627,11 @@ def sync_pending_faculty_to_turso(conn=None):
                 if hasattr(conn, "commit"):
                     conn.commit()
                 print(f"[SYNC] Pushed unapproved faculty '{t['name']}' ({t['username']}) to Turso Cloud!")
+            # Mark synced in local database so this teacher is not re-checked repeatedly
+            cur.execute("UPDATE teachers SET is_approved = 1 WHERE id = ?", (t["id"],))
+            loc.commit()
+
+        loc.close()
         if should_close:
             conn.close()
     except Exception as e:

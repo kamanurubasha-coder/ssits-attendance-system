@@ -34,11 +34,12 @@ class TursoOfflineException(Exception):
 # Try importing urllib3 for high-performance connection pooling with aggressive timeout
 try:
     import urllib3
-    # Generous read timeout (connect=3.0s, read=10.0s) so cross-region database writes commit safely
+    # Optimized keep-alive connection pool with fast 3s connect timeout
     _HTTP_POOL = urllib3.PoolManager(
-        maxsize=20,
-        timeout=urllib3.Timeout(connect=5.0, read=15.0),
-        retries=urllib3.Retry(total=3, backoff_factor=0.3)
+        num_pools=10,
+        maxsize=30,
+        timeout=urllib3.Timeout(connect=3.0, read=10.0),
+        retries=urllib3.Retry(total=2, backoff_factor=0.2)
     )
 except ImportError:
     _HTTP_POOL = None
@@ -159,8 +160,7 @@ class TursoCursor:
                 {
                     "type": "execute",
                     "stmt": {"sql": sql, "args": formatted_args}
-                },
-                {"type": "close"}
+                }
             ]
         }
         
@@ -435,6 +435,70 @@ class TursoConnection:
     def execute(self, sql, args=()):
         c = self.cursor()
         return c.execute(sql, args)
+
+    def batch_execute(self, query_list):
+        """
+        Executes multiple parameterized SQL queries in a SINGLE HTTP round trip.
+        query_list: list of (sql, args) tuples
+        Returns: list of lists of TursoRow objects: [[TursoRow, ...], ...]
+        """
+        if not query_list:
+            return []
+
+        if not is_turso_available():
+            return self._fallback_batch_execute(query_list)
+
+        requests = [
+            {"type": "execute", "stmt": {"sql": sql, "args": _format_args(args)}}
+            for sql, args in query_list
+        ]
+
+        try:
+            raw_results = self._send_pipeline_payload({"requests": requests})
+            parsed_batches = []
+            for r in raw_results:
+                if r.get("type") == "error":
+                    err_msg = r.get("error", {}).get("message", str(r))
+                    if any(x in err_msg.lower() for x in ("capacity", "limit", "timeout", "overloaded", "locked")):
+                        mark_turso_failed(5)
+                        return self._fallback_batch_execute(query_list)
+                    raise Exception(f"Turso Batch Error: {err_msg}")
+                res_data = r.get("response", {}).get("result", {})
+                cols = [c["name"] for c in res_data.get("cols", [])]
+                raw_rows = res_data.get("rows", [])
+                batch_rows = []
+                for row in raw_rows:
+                    vals = []
+                    for col_val in row:
+                        t = col_val.get("type")
+                        v = col_val.get("value")
+                        if t == "null" or v is None:
+                            vals.append(None)
+                        elif t == "integer":
+                            vals.append(int(v))
+                        elif t == "float":
+                            vals.append(float(v))
+                        else:
+                            vals.append(v)
+                    batch_rows.append(TursoRow(cols, vals))
+                parsed_batches.append(batch_rows)
+            return parsed_batches
+        except Exception:
+            mark_turso_failed(5)
+            return self._fallback_batch_execute(query_list)
+
+    def _fallback_batch_execute(self, query_list):
+        loc = self._get_local_conn()
+        results = []
+        for sql, args in query_list:
+            cur = loc.cursor()
+            cur.execute(sql, args)
+            if cur.description:
+                cols = [d[0] for d in cur.description]
+                results.append([TursoRow(cols, list(r)) for r in cur.fetchall()])
+            else:
+                results.append([])
+        return results
 
     def executemany(self, sql, seq_of_args):
         c = self.cursor()

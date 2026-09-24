@@ -12,9 +12,10 @@ import math
 import calendar
 import base64
 import pyotp
+import gzip
 import qrcode
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file, flash
-from database import get_db_connection, init_db, sync_pending_faculty_to_turso
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, send_file, flash, Response
+from database import get_db_connection, init_db, sync_pending_faculty_to_turso, batch_execute
 from pdf_generator import generate_attendance_pdf, generate_parent_student_dossier_pdf, generate_cumulative_monthly_attendance_pdf, generate_consolidated_absentees_summary_pdf
 
 # Central Indian Standard Time (IST, UTC+05:30)
@@ -42,6 +43,28 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 @app.before_request
 def ensure_session_permanence():
     session.permanent = True
+
+@app.after_request
+def compress_response(response):
+    """Ultra-fast automatic GZIP compression for HTML, JSON, and text responses over 500 bytes."""
+    accept_encoding = request.headers.get("Accept-Encoding", "")
+    if (
+        "gzip" in accept_encoding
+        and response.status_code == 200
+        and not response.direct_passthrough
+        and response.content_type
+        and any(t in response.content_type for t in ("text/", "application/json", "application/javascript"))
+    ):
+        data = response.get_data()
+        if len(data) > 500:
+            gzip_buffer = io.BytesIO()
+            with gzip.GzipFile(mode="wb", fileobj=gzip_buffer, compresslevel=6) as gzip_file:
+                gzip_file.write(data)
+            response.set_data(gzip_buffer.getvalue())
+            response.headers["Content-Encoding"] = "gzip"
+            response.headers["Content-Length"] = len(response.get_data())
+            response.headers["Vary"] = "Accept-Encoding"
+    return response
 
 # Ultra-fast Keep-Alive endpoint for Render cold-start prevention
 @app.route("/healthz")
@@ -1088,69 +1111,64 @@ def admin_dashboard():
         return redirect(url_for("admin_portal"))
 
     conn = get_db_connection()
-    cursor = conn.cursor()
 
-    # Auto-sync any locally queued/unapproved faculty to Turso Cloud
-    sync_pending_faculty_to_turso(conn)
+    # Rate-limited sync check (at most once every 60s)
+    sync_pending_faculty_to_turso(conn, force=False)
 
-    # Admin info
-    cursor.execute("SELECT * FROM admins WHERE id = ?", (session["admin_id"],))
-    admin = cursor.fetchone()
-
-    # All teachers with program & department info + email, section, password
-    cursor.execute("""
-        SELECT t.*, 
-               COALESCE(p.code, 'DIPLOMA') as prog_code, 
-               COALESCE(d.code, 'GEN') as dept_code, 
-               COALESCE(d.name, 'General') as dept_name, 
-               COALESCE(y.year_name, '1st Year') as year_name, 
-               COALESCE(y.year_num, 1) as year_num
-        FROM teachers t
-        LEFT JOIN programs p ON t.program_id = p.id
-        LEFT JOIN departments d ON t.department_id = d.id
-        LEFT JOIN academic_years y ON t.year_id = y.id
-        ORDER BY t.is_approved ASC, t.id DESC
-    """)
-    teachers = [dict(r) for r in cursor.fetchall()]
-
-    # All students with program & department info
-    cursor.execute("""
-        SELECT s.*, p.code as prog_code, d.code as dept_code, d.name as dept_name, y.year_name
-        FROM students s
-        JOIN programs p ON s.program_id = p.id
-        JOIN departments d ON s.department_id = d.id
-        JOIN academic_years y ON s.year_id = y.id
-        ORDER BY p.id, d.id, y.year_num, s.roll_number ASC
-    """)
-    all_students = [dict(r) for r in cursor.fetchall()]
-
-    # Total students count
-    total_students_count = len(all_students)
-
-    # Programs, Departments, Academic Years (Cached)
+    # Programs, Departments, Academic Years (In-Memory Cached, TTL 10 min)
     programs, departments, academic_years, _ = get_static_catalog(conn)
 
-    # HODs
-    cursor.execute("""
-        SELECT h.*, p.code as prog_code, d.code as dept_code, d.name as dept_name
-        FROM hods h
-        JOIN programs p ON h.program_id = p.id
-        JOIN departments d ON h.department_id = d.id
-        ORDER BY h.is_approved ASC, p.id, d.id ASC
-    """)
-    hods = [dict(r) for r in cursor.fetchall()]
+    # ULTRA-FAST SINGLE-ROUNDTRIP BATCH EXECUTION:
+    # 1. Admin info
+    # 2. Teachers with prog/dept/year
+    # 3. Students with prog/dept/year
+    # 4. HODs with prog/dept
+    # 5. Principals
+    queries = [
+        ("SELECT * FROM admins WHERE id = ?", (session["admin_id"],)),
+        ("""SELECT t.*, 
+                   COALESCE(p.code, 'DIPLOMA') as prog_code, 
+                   COALESCE(d.code, 'GEN') as dept_code, 
+                   COALESCE(d.name, 'General') as dept_name, 
+                   COALESCE(y.year_name, '1st Year') as year_name, 
+                   COALESCE(y.year_num, 1) as year_num
+            FROM teachers t
+            LEFT JOIN programs p ON t.program_id = p.id
+            LEFT JOIN departments d ON t.department_id = d.id
+            LEFT JOIN academic_years y ON t.year_id = y.id
+            ORDER BY t.is_approved ASC, t.id DESC""", ()),
+        ("""SELECT s.*, p.code as prog_code, d.code as dept_code, d.name as dept_name, y.year_name
+            FROM students s
+            JOIN programs p ON s.program_id = p.id
+            JOIN departments d ON s.department_id = d.id
+            JOIN academic_years y ON s.year_id = y.id
+            ORDER BY p.id, d.id, y.year_num, s.roll_number ASC""", ()),
+        ("""SELECT h.*, p.code as prog_code, d.code as dept_code, d.name as dept_name
+            FROM hods h
+            JOIN programs p ON h.program_id = p.id
+            JOIN departments d ON h.department_id = d.id
+            ORDER BY h.is_approved ASC, p.id, d.id ASC""", ()),
+        ("SELECT * FROM admins WHERE role = 'principal' ORDER BY is_approved ASC, id ASC", ())
+    ]
 
-    # Principal Executives
-    cursor.execute("SELECT * FROM admins WHERE role = 'principal' ORDER BY is_approved ASC, id ASC")
-    principals = [dict(r) for r in cursor.fetchall()]
+    batch_results = batch_execute(conn, queries)
+    conn.close()
+
+    admin_rows = batch_results[0] if len(batch_results) > 0 else []
+    admin = admin_rows[0] if admin_rows else None
+
+    teachers = [dict(r) for r in (batch_results[1] if len(batch_results) > 1 else [])]
+    all_students = [dict(r) for r in (batch_results[2] if len(batch_results) > 2 else [])]
+    total_students_count = len(all_students)
+
+    hods = [dict(r) for r in (batch_results[3] if len(batch_results) > 3 else [])]
+    principals = [dict(r) for r in (batch_results[4] if len(batch_results) > 4 else [])]
 
     # Pending approvals tracking
     pending_teachers = [t for t in teachers if not t.get("is_approved")]
     pending_hods = [h for h in hods if not h.get("is_approved")]
     pending_principals = [p for p in principals if not p.get("is_approved")]
     total_pending_approvals = len(pending_teachers) + len(pending_hods) + len(pending_principals)
-
-    conn.close()
 
     today_str = get_ist_date_str()
 
@@ -3883,36 +3901,46 @@ def api_students():
     current_section = session.get("section", "A")
 
     conn = get_db_connection()
-    cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT id, roll_number, name, father_name, father_phone, section
-        FROM students
-        WHERE program_id = ? AND department_id = ? AND year_id = ?
-          AND (section = ? OR section IS NULL OR section = '')
-        ORDER BY roll_number ASC
-    """, (session["program_id"], session["dept_id"], session["year_id"], current_section))
-    students = [dict(row) for row in cursor.fetchall()]
+    queries = [
+        ("""SELECT id, roll_number, name, father_name, father_phone, section
+            FROM students
+            WHERE program_id = ? AND department_id = ? AND year_id = ?
+              AND (section = ? OR section IS NULL OR section = '')
+            ORDER BY roll_number ASC""",
+         (session["program_id"], session["dept_id"], session["year_id"], current_section)),
 
-    # STRICT ISOLATION: Join with students table to strictly isolate to THIS class & section!
-    cursor.execute("""
-        SELECT a.student_id
-        FROM attendance_records a
-        JOIN students s ON a.student_id = s.id
-        WHERE a.attendance_date = ? AND a.session_type = ? AND a.status = 'absent'
-          AND s.program_id = ? AND s.department_id = ? AND s.year_id = ?
-          AND (s.section = ? OR s.section IS NULL OR s.section = '')
-    """, (req_date, req_session, session["program_id"], session["dept_id"], session["year_id"], current_section))
-    absent_ids = [row["student_id"] for row in cursor.fetchall()]
+        ("""SELECT a.student_id
+            FROM attendance_records a
+            JOIN students s ON a.student_id = s.id
+            WHERE a.attendance_date = ? AND a.session_type = ? AND a.status = 'absent'
+              AND s.program_id = ? AND s.department_id = ? AND s.year_id = ?
+              AND (s.section = ? OR s.section IS NULL OR s.section = '')""",
+         (req_date, req_session, session["program_id"], session["dept_id"], session["year_id"], current_section)),
 
-    cursor.execute("""
-        SELECT day_type, occasion_name
-        FROM day_status
-        WHERE program_id = ? AND department_id = ? AND year_id = ?
-          AND (section = ? OR section IS NULL OR section = '')
-          AND attendance_date = ?
-    """, (session["program_id"], session["dept_id"], session["year_id"], current_section, req_date))
-    day_row = cursor.fetchone()
+        ("""SELECT day_type, occasion_name
+            FROM day_status
+            WHERE program_id = ? AND department_id = ? AND year_id = ?
+              AND (section = ? OR section IS NULL OR section = '')
+              AND attendance_date = ?""",
+         (session["program_id"], session["dept_id"], session["year_id"], current_section, req_date)),
+
+        ("""SELECT COUNT(*) as cnt
+            FROM attendance_records a
+            JOIN students s ON a.student_id = s.id
+            WHERE a.attendance_date = ? AND LOWER(a.session_type) = LOWER(?)
+              AND s.program_id = ? AND s.department_id = ? AND s.year_id = ?
+              AND (s.section = ? OR s.section IS NULL OR s.section = '')""",
+         (req_date, req_session, session["program_id"], session["dept_id"], session["year_id"], current_section))
+    ]
+
+    batch_res = batch_execute(conn, queries)
+    conn.close()
+
+    students = [dict(row) for row in (batch_res[0] if len(batch_res) > 0 else [])]
+    absent_ids = [row["student_id"] for row in (batch_res[1] if len(batch_res) > 1 else [])]
+    day_rows = batch_res[2] if len(batch_res) > 2 else []
+    day_row = day_rows[0] if day_rows else None
 
     if day_row:
         day_type = day_row["day_type"]
@@ -3924,18 +3952,8 @@ def api_students():
         except Exception:
             day_type, occasion_name = 'working', ''
 
-    # Check if ANY attendance record has been committed for this class & session
-    cursor.execute("""
-        SELECT COUNT(*) as cnt
-        FROM attendance_records a
-        JOIN students s ON a.student_id = s.id
-        WHERE a.attendance_date = ? AND LOWER(a.session_type) = LOWER(?)
-          AND s.program_id = ? AND s.department_id = ? AND s.year_id = ?
-          AND (s.section = ? OR s.section IS NULL OR s.section = '')
-    """, (req_date, req_session, session["program_id"], session["dept_id"], session["year_id"], current_section))
-    has_attendance_records = cursor.fetchone()["cnt"] > 0
-
-    conn.close()
+    cnt_rows = batch_res[3] if len(batch_res) > 3 else []
+    has_attendance_records = (cnt_rows[0]["cnt"] > 0) if cnt_rows else False
 
     return jsonify({
         "status": "success",
@@ -4858,6 +4876,64 @@ def hod_dashboard():
     ''', (dept_id,))
     classes_meta = cursor.fetchall()
 
+    # --- ULTRA-FAST BULK QUERIES FOR HOD DASHBOARD ---
+    # 1. Teachers map for department
+    cursor.execute('''
+        SELECT id, name, phone, email, username, program_id, department_id, year_id,
+               COALESCE(NULLIF(section, ''), 'A') as section
+        FROM teachers
+        WHERE department_id = ? AND is_approved = 1
+    ''', (dept_id,))
+    teachers_map = {}
+    for t in cursor.fetchall():
+        sec = (t["section"] or "A").strip().upper() or "A"
+        key = (t["program_id"], t["department_id"], t["year_id"], sec)
+        if key not in teachers_map:
+            teachers_map[key] = dict(t)
+
+    # 2. Student counts by class for department
+    cursor.execute('''
+        SELECT program_id, department_id, year_id,
+               COALESCE(NULLIF(section, ''), 'A') as section,
+               COUNT(*) as cnt
+        FROM students
+        WHERE department_id = ?
+        GROUP BY program_id, department_id, year_id, COALESCE(NULLIF(section, ''), 'A')
+    ''', (dept_id,))
+    student_counts = {
+        (r["program_id"], r["department_id"], r["year_id"], (r["section"] or "A").strip().upper() or "A"): r["cnt"]
+        for r in cursor.fetchall()
+    }
+
+    # 3. Day status for department on selected date
+    cursor.execute('''
+        SELECT program_id, department_id, year_id,
+               COALESCE(NULLIF(section, ''), 'A') as section,
+               day_type
+        FROM day_status
+        WHERE department_id = ? AND attendance_date = ?
+    ''', (dept_id, selected_date))
+    day_status_map = {
+        (r["program_id"], r["department_id"], r["year_id"], (r["section"] or "A").strip().upper() or "A"): r["day_type"]
+        for r in cursor.fetchall()
+    }
+
+    # 4. Attendance records for department on selected date
+    cursor.execute('''
+        SELECT a.student_id, a.session_type, a.status,
+               s.roll_number, s.name, s.father_name, s.father_phone,
+               s.program_id, s.department_id, s.year_id,
+               COALESCE(NULLIF(s.section, ''), 'A') as section
+        FROM attendance_records a
+        JOIN students s ON a.student_id = s.id
+        WHERE s.department_id = ? AND a.attendance_date = ?
+    ''', (dept_id, selected_date))
+    attendance_by_class = {}
+    for r in cursor.fetchall():
+        sec = (r["section"] or "A").strip().upper() or "A"
+        key = (r["program_id"], r["department_id"], r["year_id"], sec)
+        attendance_by_class.setdefault(key, []).append(r)
+
     dept_classes = []
     diploma_classes = []
     btech_classes = []
@@ -4873,42 +4949,16 @@ def hod_dashboard():
         did = cm["department_id"]
         yid = cm["year_id"]
         sec = "A"
+        class_key = (pid, did, yid, sec)
 
-        cursor.execute('''
-            SELECT id, name, phone, email, username FROM teachers
-            WHERE program_id = ? AND department_id = ? AND year_id = ?
-              AND (section = ? OR section IS NULL OR section = '')
-            LIMIT 1
-        ''', (pid, did, yid, sec))
-        t_row = cursor.fetchone()
-
-        cursor.execute('''
-            SELECT COUNT(*) as cnt FROM students
-            WHERE program_id = ? AND department_id = ? AND year_id = ?
-              AND (section = ? OR section IS NULL OR section = '')
-        ''', (pid, did, yid, sec))
-        tot_stud = cursor.fetchone()["cnt"]
+        t_row = teachers_map.get(class_key)
+        tot_stud = student_counts.get(class_key, 0)
         total_dept_students += tot_stud
 
-        cursor.execute('''
-            SELECT day_type FROM day_status
-            WHERE program_id = ? AND department_id = ? AND year_id = ?
-              AND (section = ? OR section IS NULL OR section = '')
-              AND attendance_date = ?
-        ''', (pid, did, yid, sec, selected_date))
-        day_row = cursor.fetchone()
-        is_day_marked = day_row is not None
+        day_type = day_status_map.get(class_key)
+        is_day_marked = day_type is not None
 
-        cursor.execute('''
-            SELECT a.student_id, a.session_type, a.status,
-                   s.roll_number, s.name, s.father_name, s.father_phone
-            FROM attendance_records a
-            JOIN students s ON a.student_id = s.id
-            WHERE a.attendance_date = ?
-              AND s.program_id = ? AND s.department_id = ? AND s.year_id = ?
-              AND (s.section = ? OR s.section IS NULL OR s.section = '' OR ? = 'A')
-        ''', (selected_date, pid, did, yid, sec, sec))
-        att_rows = cursor.fetchall()
+        att_rows = attendance_by_class.get(class_key, [])
 
         absent_by_student = {}
         for r in att_rows:
@@ -5216,6 +5266,63 @@ def principal_dashboard():
     ''')
     all_classes_meta = cursor.fetchall()
 
+    # --- ULTRA-FAST BULK QUERIES (0 queries inside loop!) ---
+    # 1. Teachers map
+    cursor.execute('''
+        SELECT id, name, phone, email, username, program_id, department_id, year_id,
+               COALESCE(NULLIF(section, ''), 'A') as section
+        FROM teachers
+        WHERE is_approved = 1
+    ''')
+    teachers_map = {}
+    for t in cursor.fetchall():
+        sec = (t["section"] or "A").strip().upper() or "A"
+        key = (t["program_id"], t["department_id"], t["year_id"], sec)
+        if key not in teachers_map:
+            teachers_map[key] = dict(t)
+
+    # 2. Student counts by class
+    cursor.execute('''
+        SELECT program_id, department_id, year_id,
+               COALESCE(NULLIF(section, ''), 'A') as section,
+               COUNT(*) as cnt
+        FROM students
+        GROUP BY program_id, department_id, year_id, COALESCE(NULLIF(section, ''), 'A')
+    ''')
+    student_counts = {
+        (r["program_id"], r["department_id"], r["year_id"], (r["section"] or "A").strip().upper() or "A"): r["cnt"]
+        for r in cursor.fetchall()
+    }
+
+    # 3. Day status for selected date
+    cursor.execute('''
+        SELECT program_id, department_id, year_id,
+               COALESCE(NULLIF(section, ''), 'A') as section,
+               day_type
+        FROM day_status
+        WHERE attendance_date = ?
+    ''', (selected_date,))
+    day_status_map = {
+        (r["program_id"], r["department_id"], r["year_id"], (r["section"] or "A").strip().upper() or "A"): r["day_type"]
+        for r in cursor.fetchall()
+    }
+
+    # 4. Attendance records for selected date
+    cursor.execute('''
+        SELECT a.student_id, a.session_type, a.status,
+               s.roll_number, s.name, s.father_name, s.father_phone,
+               s.program_id, s.department_id, s.year_id,
+               COALESCE(NULLIF(s.section, ''), 'A') as section
+        FROM attendance_records a
+        JOIN students s ON a.student_id = s.id
+        WHERE a.attendance_date = ?
+    ''', (selected_date,))
+    attendance_by_class = {}
+    for r in cursor.fetchall():
+        sec = (r["section"] or "A").strip().upper() or "A"
+        key = (r["program_id"], r["department_id"], r["year_id"], sec)
+        attendance_by_class.setdefault(key, []).append(r)
+
     all_classes = []
     college_absentees = []
 
@@ -5229,42 +5336,16 @@ def principal_dashboard():
         did = cm["department_id"]
         yid = cm["year_id"]
         sec = "A"
+        class_key = (pid, did, yid, sec)
 
-        cursor.execute('''
-            SELECT id, name, phone, email, username FROM teachers
-            WHERE program_id = ? AND department_id = ? AND year_id = ?
-              AND (section = ? OR section IS NULL OR section = '')
-            LIMIT 1
-        ''', (pid, did, yid, sec))
-        t_row = cursor.fetchone()
-
-        cursor.execute('''
-            SELECT COUNT(*) as cnt FROM students
-            WHERE program_id = ? AND department_id = ? AND year_id = ?
-              AND (section = ? OR section IS NULL OR section = '')
-        ''', (pid, did, yid, sec))
-        tot_stud = cursor.fetchone()["cnt"]
+        t_row = teachers_map.get(class_key)
+        tot_stud = student_counts.get(class_key, 0)
         total_college_students += tot_stud
 
-        cursor.execute('''
-            SELECT day_type FROM day_status
-            WHERE program_id = ? AND department_id = ? AND year_id = ?
-              AND (section = ? OR section IS NULL OR section = '')
-              AND attendance_date = ?
-        ''', (pid, did, yid, sec, selected_date))
-        day_row = cursor.fetchone()
-        is_day_marked = day_row is not None
+        day_type = day_status_map.get(class_key)
+        is_day_marked = day_type is not None
 
-        cursor.execute('''
-            SELECT a.student_id, a.session_type, a.status,
-                   s.roll_number, s.name, s.father_name, s.father_phone
-            FROM attendance_records a
-            JOIN students s ON a.student_id = s.id
-            WHERE a.attendance_date = ?
-              AND s.program_id = ? AND s.department_id = ? AND s.year_id = ?
-              AND (s.section = ? OR s.section IS NULL OR s.section = '' OR ? = 'A')
-        ''', (selected_date, pid, did, yid, sec, sec))
-        att_rows = cursor.fetchall()
+        att_rows = attendance_by_class.get(class_key, [])
 
         absent_by_student = {}
         for r in att_rows:
