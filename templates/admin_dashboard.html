@@ -35,9 +35,9 @@
                 </div>
 
                 <div class="d-flex flex-wrap gap-2">
-                    <button type="button" class="btn btn-success fw-bold rounded-pill px-3 shadow-sm text-white" onclick="openAddFacultyModal('faculty')" id="btnTopAddFaculty" title="Quickly Add New Faculty, HOD or Principal">
+                    <a href="/admin/add-faculty" class="btn btn-success fw-bold rounded-pill px-3 shadow-sm text-white" id="btnTopAddFaculty" title="Add New Faculty, HOD or Principal (Direct Turso Cloud Save)">
                         <i class="bi bi-person-plus-fill me-1"></i> + Add Faculty / Staff
-                    </button>
+                    </a>
                     <button type="button" class="btn btn-warning fw-bold rounded-pill px-3 shadow-sm text-dark" data-bs-toggle="modal" data-bs-target="#changeAdminPasswordModal">
                         <i class="bi bi-person-lock me-1"></i> Admin Credentials
                     </button>
@@ -865,8 +865,11 @@
                             <small class="text-muted">All faculty passwords, registered Gmail addresses, and sections are securely stored and viewable by Admin.</small>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <button type="button" class="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm" onclick="openAddFacultyModal('faculty')" id="btnPaneAddFaculty" title="Add New Faculty / Staff Member">
+                            <a href="/admin/add-faculty" class="btn btn-sm btn-primary fw-bold rounded-pill px-3 shadow-sm" id="btnPaneAddFaculty" title="Open Dedicated Add Faculty Page">
                                 <i class="bi bi-person-plus-fill me-1"></i> + Add Faculty / Staff
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-success fw-bold rounded-pill px-3 shadow-sm" data-bs-toggle="collapse" data-bs-target="#quickAddFacultyCard" aria-expanded="false" title="Quick Add Directly On This Page">
+                                <i class="bi bi-lightning-fill me-1"></i> Quick Add In Page
                             </button>
                             <button type="button" id="btnBulkDeleteTeachers" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="handleBulkDeleteTeachers()" disabled title="Select one or more faculty members using checkboxes to delete">
                                 <i class="bi bi-trash3-fill me-1"></i> Delete Selected Faculty (<span id="bulkDeleteCount">0</span>)
@@ -877,6 +880,91 @@
                 </div>
 
                 <div class="card-body p-0">
+                    <!-- Inline Quick Add Faculty Member (Zero Modal, Instant Turso Save) -->
+                    <div class="collapse mx-3 mt-3 mb-2" id="quickAddFacultyCard">
+                        <div class="card border border-primary-subtle shadow rounded-3 overflow-hidden">
+                            <div class="card-header py-2 px-3 bg-primary text-white d-flex justify-content-between align-items-center">
+                                <span class="fw-bold"><i class="bi bi-person-plus-fill me-1"></i> Quick Add Faculty Member (Direct Turso Cloud Save)</span>
+                                <button type="button" class="btn-close btn-close-white btn-sm" data-bs-toggle="collapse" data-bs-target="#quickAddFacultyCard"></button>
+                            </div>
+                            <div class="card-body p-3 bg-light">
+                                <form method="POST" action="/admin/add-faculty">
+                                    <input type="hidden" name="role" value="faculty">
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label small fw-bold text-navy mb-1">PROGRAM *</label>
+                                            <select class="form-select form-select-sm fw-bold" name="program_id" required>
+                                                {% for p in programs %}
+                                                <option value="{{ p.id }}">{{ p.name }} ({{ p.code }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label small fw-bold text-navy mb-1">BRANCH *</label>
+                                            <select class="form-select form-select-sm fw-bold" name="department_id" required>
+                                                {% for d in departments %}
+                                                <option value="{{ d.id }}">{{ d.name }} ({{ d.code }})</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label small fw-bold text-navy mb-1">YEAR *</label>
+                                            <select class="form-select form-select-sm" name="year_id" required>
+                                                {% for y in academic_years %}
+                                                <option value="{{ y.id }}">{{ y.year_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label small fw-bold text-navy mb-1">SECTION *</label>
+                                            <select class="form-select form-select-sm fw-bold" name="section" required>
+                                                <option value="A" selected>Section A</option>
+                                                <option value="B">Section B</option>
+                                                <option value="C">Section C</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="row g-2 mb-2">
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label small fw-bold text-navy mb-1">FULL NAME *</label>
+                                            <input type="text" class="form-control form-control-sm fw-bold" name="name" placeholder="e.g. Smt. K. Anitha" required>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label small fw-bold text-navy mb-1">MOBILE PHONE *</label>
+                                            <input type="tel" class="form-control form-control-sm" name="phone" placeholder="10 Digits" pattern="[0-9]{10}" maxlength="10" required>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label small fw-bold text-navy mb-1">GMAIL / EMAIL *</label>
+                                            <input type="email" class="form-control form-control-sm" name="email" placeholder="faculty@gmail.com" required>
+                                        </div>
+                                        <div class="col-12 col-md-3">
+                                            <label class="form-label small fw-bold text-navy mb-1">INITIAL PASSWORD *</label>
+                                            <input type="text" class="form-control form-control-sm font-monospace fw-bold" name="password" value="Pass@123" required>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex flex-wrap justify-content-between align-items-center pt-2 border-top gap-2">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="form-check form-check-inline mb-0">
+                                                <input class="form-check-input" type="radio" name="is_approved" id="quick_appr_0" value="0" checked>
+                                                <label class="form-check-label small fw-bold text-warning-emphasis" for="quick_appr_0">⏳ Pending Approval</label>
+                                            </div>
+                                            <div class="form-check form-check-inline mb-0">
+                                                <input class="form-check-input" type="radio" name="is_approved" id="quick_appr_1" value="1">
+                                                <label class="form-check-label small fw-bold text-success" for="quick_appr_1">✅ Direct Approve</label>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-toggle="collapse" data-bs-target="#quickAddFacultyCard">Close</button>
+                                            <button type="submit" class="btn btn-sm btn-primary fw-bold rounded-pill px-4 shadow-sm">
+                                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Save to Turso Cloud
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Prominent In-Tab Pending Approvals Banner -->
                     {% if pending_teachers and pending_teachers|length > 0 %}
                     <div id="pendingTeachersAlert" class="alert alert-warning border border-warning shadow-sm mx-3 mt-3 mb-2 p-3 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3" style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border-left: 6px solid #F59E0B !important;">
@@ -884,7 +972,7 @@
                             <span class="badge bg-danger rounded-pill px-2 py-1 fs-6" id="tabPendingCounter"><i class="bi bi-person-exclamation me-1"></i> {{ pending_teachers|length }} Pending Approval</span>
                             <span class="fw-bold text-dark">Newly registered faculty waiting for Super Admin authorization:</span>
                         </div>
-                        <div class="d-flex flex-wrap gap-2 align-items-center" id="tabPendingItemsList">
+                        <div class="d-flex flex-wrap gap-2 align-items-center" id="tabPendingTeachersList">
                             {% for pt in pending_teachers %}
                             <div class="btn-group btn-group-sm shadow-sm" id="tab-pending-item-teacher-{{ pt.id }}">
                                 <span class="btn btn-dark fw-bold disabled text-white">
@@ -1266,9 +1354,9 @@
                         <small class="text-muted">Direct oversight of all departmental branches, stored passwords, approval access, and 2FA status.</small>
                     </div>
                     <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-sm btn-warning fw-bold rounded-pill px-3 shadow-sm text-dark" onclick="openAddFacultyModal('hod')" id="btnPaneAddHod" title="Add / Configure Department Head">
-                            <i class="bi bi-person-plus-fill me-1"></i> + Add / Configure HOD
-                        </button>
+                        <a href="/admin/add-staff" class="btn btn-sm btn-warning fw-bold rounded-pill px-3 shadow-sm text-dark" id="btnPaneAddHod" title="Add or Configure Department HOD (Direct Turso Cloud Save)">
+                            <i class="bi bi-person-workspace me-1"></i> + Add / Configure HOD
+                        </a>
                         <button type="button" id="btnBulkDeleteHods" class="btn btn-sm btn-outline-danger fw-bold rounded-pill px-3 shadow-sm" onclick="handleBulkDeleteHods()" disabled title="Select one or more HODs using checkboxes to delete">
                             <i class="bi bi-trash3-fill me-1"></i> Delete Selected HODs (<span id="bulkDeleteHodCount">0</span>)
                         </button>
@@ -4179,7 +4267,6 @@ async function handleAdminAddPrincipal(event) {
         }
     }
 }
-
 
 function openRestoreModal() {
     const fileInput = document.getElementById('restore_backup_file');

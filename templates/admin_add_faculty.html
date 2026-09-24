@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Add Faculty & Staff Member | SSITS Master Admin{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 900px;">
+    <!-- Top Breadcrumb Navigation -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <a href="/admin/dashboard" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm">
+            <i class="bi bi-arrow-left me-1"></i> Back to Admin Dashboard
+        </a>
+        <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-2 rounded-pill fw-semibold">
+            <i class="bi bi-cloud-check-fill me-1 text-success"></i> Direct Turso Cloud Persistence
+        </span>
+    </div>
+
+    <!-- Header Card -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4" style="background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);">
+        <div class="card-body p-4 text-white">
+            <div class="d-flex align-items-center gap-3">
+                <div class="rounded-circle p-3 bg-white bg-opacity-10 text-warning border border-warning-subtle shadow-sm">
+                    <i class="bi bi-person-plus-fill fs-2"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold mb-1 text-white">Add Institutional Faculty &amp; Staff</h3>
+                    <p class="text-white-50 mb-0 small">
+                        Create credentials directly in the live Turso Cloud Database for Class Teachers, Department HODs, or Principal.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Role Selection Tabs -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-light p-2 border-bottom">
+            <ul class="nav nav-pills nav-fill" id="addStaffRoleTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active fw-bold py-2 rounded-3" id="tab-fac" data-bs-toggle="pill" data-bs-target="#pane-fac" type="button" role="tab">
+                        <i class="bi bi-person-badge-fill text-primary me-1"></i> 1. Class Teacher / Faculty
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 rounded-3" id="tab-hod" data-bs-toggle="pill" data-bs-target="#pane-hod" type="button" role="tab">
+                        <i class="bi bi-person-workspace text-warning me-1"></i> 2. Department HOD
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link fw-bold py-2 rounded-3" id="tab-princ" data-bs-toggle="pill" data-bs-target="#pane-princ" type="button" role="tab">
+                        <i class="bi bi-building-fill-lock text-danger me-1"></i> 3. Principal Executive
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-4">
+            <div class="tab-content" id="addStaffTabContent">
+
+                <!-- ================= 1. CLASS TEACHER / FACULTY FORM ================= -->
+                <div class="tab-pane fade show active" id="pane-fac" role="tabpanel">
+                    <div class="alert alert-primary py-2 px-3 mb-4 small d-flex align-items-center gap-2 rounded-3 border-0 bg-primary-subtle text-primary-emphasis">
+                        <i class="bi bi-info-circle-fill fs-5"></i>
+                        <div>
+                            <strong>Class Coordinator Setup:</strong> Assigns the faculty member to their specific Program, Branch, Academic Year, and Section to take daily attendance and broadcast WhatsApp alerts.
+                        </div>
+                    </div>
+
+                    <form method="POST" action="/admin/add-faculty" id="formAddFaculty">
+                        <input type="hidden" name="role" value="faculty">
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">1. DEGREE / PROGRAM *</label>
+                                <select class="form-select fw-bold" name="program_id" id="fac_prog_id" required>
+                                    <option value="" disabled selected>-- Select Program --</option>
+                                    {% for p in programs %}
+                                    <option value="{{ p.id }}">{{ p.name }} ({{ p.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">2. DEPARTMENT / BRANCH *</label>
+                                <select class="form-select fw-bold" name="department_id" id="fac_dept_id" required>
+                                    <option value="" disabled selected>-- Select Department --</option>
+                                    {% for d in departments %}
+                                    <option value="{{ d.id }}">{{ d.name }} ({{ d.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">3. ACADEMIC YEAR *</label>
+                                <select class="form-select" name="year_id" id="fac_year_id" required>
+                                    <option value="" disabled selected>-- Select Academic Year --</option>
+                                    {% for y in academic_years %}
+                                    <option value="{{ y.id }}">{{ y.year_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">4. SECTION *</label>
+                                <select class="form-select fw-bold" name="section" id="fac_section" required>
+                                    <option value="A" selected>Section A</option>
+                                    <option value="B">Section B</option>
+                                    <option value="C">Section C</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">5. FACULTY FULL NAME *</label>
+                                <input type="text" class="form-control fw-bold" name="name" id="fac_name" placeholder="e.g. Smt. K. Anitha / Dr. R. Suresh" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">6. MOBILE PHONE (10 DIGITS) *</label>
+                                <input type="tel" class="form-control" name="phone" id="fac_phone" placeholder="e.g. 9848012345" pattern="[0-9]{10}" maxlength="10" required>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">7. OFFICIAL GMAIL / EMAIL *</label>
+                                <input type="email" class="form-control" name="email" id="fac_email" placeholder="e.g. faculty.name@gmail.com" required>
+                                <small class="text-muted" style="font-size: 11px;">Username is auto-generated from this email address.</small>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">8. INITIAL LOGIN PASSWORD *</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace fw-bold" name="password" id="fac_password" value="Pass@123" required>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="generateFacultyPassword()" title="Generate Random Secure Password">
+                                        <i class="bi bi-shuffle"></i> Random
+                                    </button>
+                                </div>
+                                <small class="text-muted" style="font-size: 11px;">Faculty can change this password after signing in.</small>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-light rounded-3 border mb-4">
+                            <label class="form-label small fw-bold text-navy mb-2">9. INITIAL APPROVAL STATUS</label>
+                            <div class="d-flex flex-wrap gap-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="is_approved" id="status_pending" value="0" checked>
+                                    <label class="form-check-label fw-bold text-warning-emphasis" for="status_pending">
+                                        ⏳ Pending Approval (Appear in Faculty Credentials with green "Accept" button)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="is_approved" id="status_approved" value="1">
+                                    <label class="form-check-label fw-bold text-success" for="status_approved">
+                                        ✅ Approve Immediately (Active right away for login)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="/admin/dashboard#teachersPane" class="btn btn-outline-secondary rounded-pill px-4">
+                                <i class="bi bi-x-circle me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary fw-bold rounded-pill px-5 shadow-sm" id="btnSubmitFaculty">
+                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Save &amp; Add Faculty to Turso Cloud
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ================= 2. DEPARTMENT HOD FORM ================= -->
+                <div class="tab-pane fade" id="pane-hod" role="tabpanel">
+                    <div class="alert alert-warning py-2 px-3 mb-4 small d-flex align-items-center gap-2 rounded-3 border-0 bg-warning-subtle text-warning-emphasis">
+                        <i class="bi bi-person-workspace fs-5"></i>
+                        <div>
+                            <strong>Department Head Setup:</strong> Configures the branch-level oversight leader for absentees and section monitoring.
+                        </div>
+                    </div>
+
+                    <form method="POST" action="/admin/add-faculty" id="formAddHod">
+                        <input type="hidden" name="role" value="hod">
+                        <input type="hidden" name="is_approved" value="1">
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">1. DEGREE / PROGRAM *</label>
+                                <select class="form-select fw-bold" name="program_id" id="hod_prog_id" required>
+                                    {% for p in programs %}
+                                    <option value="{{ p.id }}">{{ p.name }} ({{ p.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">2. DEPARTMENT / BRANCH *</label>
+                                <select class="form-select fw-bold" name="department_id" id="hod_dept_id" required>
+                                    {% for d in departments %}
+                                    <option value="{{ d.id }}">{{ d.name }} ({{ d.code }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">3. HOD FULL NAME *</label>
+                                <input type="text" class="form-control fw-bold" name="name" id="hod_name" placeholder="e.g. Dr. P. Mallikarjuna Rao" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">4. MOBILE PHONE (10 DIGITS) *</label>
+                                <input type="tel" class="form-control" name="phone" id="hod_phone" placeholder="e.g. 9848044550" pattern="[0-9]{10}" maxlength="10" required>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">5. OFFICIAL EMAIL *</label>
+                                <input type="email" class="form-control" name="email" id="hod_email" placeholder="e.g. hod_ece@srisaitech.ac.in" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">6. LOGIN PASSWORD *</label>
+                                <input type="text" class="form-control font-monospace fw-bold" name="password" id="hod_password" value="hod123" required>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="/admin/dashboard#hodsPane" class="btn btn-outline-secondary rounded-pill px-4">
+                                <i class="bi bi-x-circle me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-warning fw-bold text-dark rounded-pill px-5 shadow-sm" id="btnSubmitHod">
+                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Save &amp; Configure HOD in Turso Cloud
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ================= 3. PRINCIPAL EXECUTIVE FORM ================= -->
+                <div class="tab-pane fade" id="pane-princ" role="tabpanel">
+                    <div class="alert alert-danger py-2 px-3 mb-4 small d-flex align-items-center gap-2 rounded-3 border-0 bg-danger-subtle text-danger-emphasis">
+                        <i class="bi bi-building-fill-lock fs-5"></i>
+                        <div>
+                            <strong>Principal Executive Setup:</strong> Sets up the institution director account with college-wide attendance analytics and export access.
+                        </div>
+                    </div>
+
+                    <form method="POST" action="/admin/add-faculty" id="formAddPrinc">
+                        <input type="hidden" name="role" value="principal">
+                        <input type="hidden" name="is_approved" value="1">
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">1. PRINCIPAL FULL NAME *</label>
+                                <input type="text" class="form-control fw-bold" name="name" id="princ_name" placeholder="e.g. Dr. Principal / Director (SSITS)" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">2. MOBILE PHONE (10 DIGITS) *</label>
+                                <input type="tel" class="form-control" name="phone" id="princ_phone" placeholder="e.g. 9848099901" pattern="[0-9]{10}" maxlength="10" required>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">3. OFFICIAL EMAIL *</label>
+                                <input type="email" class="form-control" name="email" id="princ_email" placeholder="e.g. principal@srisaitech.ac.in" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-bold text-navy">4. LOGIN PASSWORD *</label>
+                                <input type="text" class="form-control font-monospace fw-bold" name="password" id="princ_password" value="principal123" required>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+                            <a href="/admin/dashboard#principalPane" class="btn btn-outline-secondary rounded-pill px-4">
+                                <i class="bi bi-x-circle me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger fw-bold rounded-pill px-5 shadow-sm" id="btnSubmitPrinc">
+                                <i class="bi bi-cloud-arrow-up-fill me-1"></i> Save &amp; Update Principal in Turso Cloud
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function generateFacultyPassword() {
+    const pw = 'Ssits@' + Math.floor(1000 + Math.random() * 9000);
+    document.getElementById('fac_password').value = pw;
+}
+
+// Ensure form buttons indicate progress on submit
+['formAddFaculty', 'formAddHod', 'formAddPrinc'].forEach(function(formId) {
+    const formEl = document.getElementById(formId);
+    if (formEl) {
+        formEl.addEventListener('submit', function() {
+            const btn = formEl.querySelector('button[type="submit"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span> Saving to Turso Cloud...';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

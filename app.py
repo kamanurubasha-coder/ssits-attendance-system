@@ -1585,9 +1585,30 @@ def admin_api_add_student():
 
     return redirect(url_for("admin_dashboard") + "#studentsPane")
 
+@app.route("/admin/add-faculty", methods=["GET", "POST"])
+@app.route("/admin/add-staff", methods=["GET", "POST"])
+def admin_add_faculty_page():
+    if not is_admin():
+        flash("Please log in as Administrator to access this page.", "error")
+        return redirect(url_for("admin_portal"))
+
+    if request.method == "POST":
+        return admin_api_add_faculty()
+
+    conn = get_db_connection()
+    programs, departments, academic_years, _ = get_static_catalog(conn)
+    conn.close()
+
+    return render_template(
+        "admin_add_faculty.html",
+        programs=programs,
+        departments=departments,
+        academic_years=academic_years
+    )
+
 @app.route("/admin/api/add-faculty", methods=["POST"])
 def admin_api_add_faculty():
-    is_api = request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'fetch' in request.headers.get('Sec-Fetch-Mode', '')
+    is_api = request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if not is_admin():
         if is_api:
             return jsonify({"status": "error", "message": "Unauthorized"}), 401
