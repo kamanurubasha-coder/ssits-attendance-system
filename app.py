@@ -76,6 +76,24 @@ def health_check():
         "ist_time": get_ist_now().strftime("%Y-%m-%d %I:%M:%S %p IST")
     }), 200
 
+# PWA (Progressive Web App) Manifest & Service Worker Endpoints
+@app.route("/manifest.json")
+def serve_manifest():
+    return send_file(
+        os.path.join(app.root_path, "static", "manifest.json"),
+        mimetype="application/manifest+json"
+    )
+
+@app.route("/sw.js")
+def serve_sw():
+    response = send_file(
+        os.path.join(app.root_path, "static", "sw.js"),
+        mimetype="application/javascript"
+    )
+    response.headers["Service-Worker-Allowed"] = "/"
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
 # Ensure database tables and initial institutional schemas are created
 try:
     init_db()
@@ -3703,7 +3721,7 @@ def admin_api_class_pdf():
         return redirect(url_for("welcome"))
 
     prog_id = request.args.get("program_id", type=int)
-    dept_id = request.args.get("dept_id", type=int)
+    dept_id = request.args.get("dept_id", type=int) or request.args.get("department_id", type=int)
     year_id = request.args.get("year_id", type=int)
     section = request.args.get("section", "A").upper()
     req_date = request.args.get("date", get_ist_date_str())

@@ -14,6 +14,15 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="/static/css/style.css">
+    
+    <!-- PWA (Progressive Web App) Manifest & Mobile Meta -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#1e3a8a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SSITS Portal">
+    <link rel="apple-touch-icon" href="/static/images/pwa-icon-192.png">
+    
     {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if request.endpoint in ['login', 'admin_portal', 'admin_login', 'hod_login', 'principal_login', 'login_2fa', 'login_2fa_setup', 'admin_2fa', 'admin_2fa_setup', 'hod_2fa', 'hod_2fa_setup', 'principal_2fa', 'principal_2fa_setup', 'forgot_password', 'reset_password', 'register'] %}auth-page-bg{% endif %} {% block body_class %}{% endblock %}">
@@ -220,8 +229,79 @@
     <!-- ================= OPTIONAL OFF-CANVAS MENU (WELCOME PAGE ONLY) ================= -->
     {% block offcanvas_menu %}{% endblock %}
 
+    <!-- ================= PWA INSTALLATION PROMPT BANNER ================= -->
+    <div id="pwaInstallBanner" class="position-fixed bottom-0 start-50 translate-middle-x mb-3 p-3 bg-dark text-white rounded-4 shadow-lg border border-primary d-none" style="z-index: 1090; max-width: 94%; width: 440px;">
+        <div class="d-flex align-items-center gap-3">
+            <img src="/static/images/pwa-icon-192.png" alt="SSITS App" style="width: 50px; height: 50px; border-radius: 12px; object-fit: contain; background: #fff; padding: 2px;">
+            <div class="flex-grow-1">
+                <div class="fw-bold fs-6 text-white">Install SSITS App</div>
+                <div class="text-white-50 extra-small">Add to Home Screen for 1-tap fast access!</div>
+            </div>
+            <button id="pwaInstallBtn" class="btn btn-sm btn-success fw-bold px-3 py-2 rounded-pill shadow-sm">
+                <i class="bi bi-download me-1"></i> Install
+            </button>
+            <button id="pwaDismissBtn" class="btn btn-sm btn-outline-secondary text-white-50 border-0 p-1" title="Dismiss">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+    </div>
+
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- PWA Service Worker Registration & Install Handler -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                    .then((reg) => console.log('[PWA] Service Worker registered with scope:', reg.scope))
+                    .catch((err) => console.log('[PWA] Service Worker registration failed:', err));
+            });
+        }
+
+        let deferredPrompt = null;
+        const installBanner = document.getElementById('pwaInstallBanner');
+        const installBtn = document.getElementById('pwaInstallBtn');
+        const dismissBtn = document.getElementById('pwaDismissBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            if (!sessionStorage.getItem('pwa_prompt_dismissed')) {
+                if (installBanner) {
+                    installBanner.classList.remove('d-none');
+                }
+            }
+        });
+
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                installBanner.classList.add('d-none');
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log('[PWA] User choice:', outcome);
+                deferredPrompt = null;
+            });
+        }
+
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', () => {
+                if (installBanner) {
+                    installBanner.classList.add('d-none');
+                }
+                sessionStorage.setItem('pwa_prompt_dismissed', 'true');
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            console.log('[PWA] SSITS App was installed successfully!');
+            if (installBanner) {
+                installBanner.classList.add('d-none');
+            }
+            deferredPrompt = null;
+        });
+    </script>
     {% block extra_scripts %}{% endblock %}
 </body>
 </html>
