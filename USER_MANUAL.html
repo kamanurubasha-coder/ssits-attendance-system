@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Manual - SSITS Institutional Attendance Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+        .manual-container {
+            max-width: 900px;
+            margin: 40px auto;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.06);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        .manual-header {
+            background: linear-gradient(135deg, #0F2C59 0%, #1e1b4b 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .manual-body {
+            padding: 40px;
+        }
+        h2.section-title {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 700;
+            color: #0f2c59;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
+            margin-top: 35px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .step-box {
+            background: #f8fafc;
+            border-left: 4px solid #0284c7;
+            padding: 16px 20px;
+            border-radius: 0 12px 12px 0;
+            margin-bottom: 20px;
+        }
+        .step-box.hod {
+            border-left-color: #7c3aed;
+        }
+        .step-box.principal {
+            border-left-color: #d97706;
+        }
+        .step-title {
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+        .badge-role {
+            font-size: 0.8rem;
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-weight: 700;
+        }
+        .print-btn-bar {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        @media print {
+            .print-btn-bar { display: none !important; }
+            .manual-container { box-shadow: none; border: none; margin: 0; max-width: 100%; }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sticky Top Action Bar -->
+    <div class="print-btn-bar text-center d-flex justify-content-between align-items-center">
+        <div class="fw-bold text-navy">
+            <i class="bi bi-book-half text-primary me-2"></i> SSITS Official Portal Handbook
+        </div>
+        <div>
+            <button onclick="window.print()" class="btn btn-primary btn-sm fw-bold px-3 rounded-pill shadow-sm">
+                <i class="bi bi-printer-fill me-1"></i> Print / Save as PDF
+            </button>
+        </div>
+    </div>
+
+    <div class="manual-container">
+        <!-- Document Header -->
+        <div class="manual-header">
+            <span class="badge bg-warning text-dark fw-bold px-3 py-1 mb-2 text-uppercase letter-spacing-1">
+                An Autonomous Institution &bull; College Code: SRSR
+            </span>
+            <h1 class="h3 fw-bold mb-1">SRI SAI INSTITUTE OF TECHNOLOGY AND SCIENCE</h1>
+            <h2 class="h5 text-warning-emphasis mb-3">Institutional Attendance & Parent WhatsApp Alert System (SSITS-EduPulse)</h2>
+            <div class="badge bg-white bg-opacity-25 text-white px-3 py-2 rounded-pill fs-7">
+                OFFICIAL OPERATIONAL GUIDE &bull; FACULTY, HOD &amp; PRINCIPAL DESK
+            </div>
+            <p class="text-white-50 small mt-3 mb-0">
+                Official Portal Link: <a href="https://ssits-edupulse.onrender.com" target="_blank" class="text-warning text-decoration-none fw-bold">https://ssits-edupulse.onrender.com</a>
+            </p>
+        </div>
+
+        <div class="manual-body">
+
+            <!-- SECTION 1: FACULTY -->
+            <h2 class="section-title">
+                <i class="bi bi-person-workspace text-primary"></i> 
+                1. Faculty &amp; Class Teachers Operational Guide
+            </h2>
+
+            <div class="step-box">
+                <div class="step-title">Step 1.1: Self-Registration &amp; Coordinator Profile</div>
+                <p class="mb-1 text-muted small">If you are a new faculty member and do not yet have login credentials:</p>
+                <ol class="small text-muted mb-0 ps-3">
+                    <li>Open portal homepage: <a href="https://ssits-edupulse.onrender.com" target="_blank">https://ssits-edupulse.onrender.com</a></li>
+                    <li>Tap <strong>MENU (☰)</strong> on top-right &rarr; Select <strong>Faculty Self-Registration</strong>.</li>
+                    <li>Enter your Full Name, Mobile Number, Email, Assigned Program (Diploma / B.Tech), Department, Academic Year, and Section.</li>
+                    <li>Choose your username and password, then click <strong>Submit Registration Request</strong>.</li>
+                    <li>Once Administrator approves, your account is immediately active.</li>
+                </ol>
+            </div>
+
+            <div class="step-box">
+                <div class="step-title">Step 1.2: Sign In &amp; Google Authenticator (2FA Setup)</div>
+                <p class="mb-1 text-muted small">To protect college records, Two-Factor Authentication is mandatory:</p>
+                <ol class="small text-muted mb-0 ps-3">
+                    <li>Open <strong>MENU (☰) &rarr; Faculty Sign In</strong>. Enter your username and password.</li>
+                    <li><strong>First Login:</strong> Install <strong>Google Authenticator</strong> app on your smartphone from Play Store / App Store.</li>
+                    <li>Tap the <strong>+</strong> button in Google Authenticator, choose <strong>Scan a QR code</strong>, and scan the QR code on your computer screen.</li>
+                    <li>Enter the 6-digit code showing on your phone to link your account.</li>
+                    <li>On future logins, simply enter the 6-digit code generated on your phone.</li>
+                </ol>
+            </div>
+
+            <div class="step-box">
+                <div class="step-title">Step 1.3: Daily Attendance Marking (FN &amp; AN Sessions)</div>
+                <ol class="small text-muted mb-0 ps-3">
+                    <li>Select the session: <strong>Morning Session (FN)</strong> or <strong>Afternoon Session (AN)</strong>.</li>
+                    <li>By default, all enrolled students in your section are pre-marked <strong>PRESENT</strong> (Green).</li>
+                    <li>Simply tap on any student who is absent to toggle their status to <strong class="text-danger">ABSENT</strong> (Red).</li>
+                    <li>Click <strong>Save Attendance</strong>. Present percentage and absentees count update instantly.</li>
+                </ol>
+            </div>
+
+            <div class="step-box">
+                <div class="step-title">Step 1.4: 1-Click WhatsApp Absentee Alerts to Parents</div>
+                <p class="mb-1 text-muted small">Notify parents immediately after attendance is submitted:</p>
+                <ol class="small text-muted mb-0 ps-3">
+                    <li>Click the <strong>Send Parent WhatsApp Alerts</strong> button.</li>
+                    <li>Review the auto-generated bilingual absentee notification for the student.</li>
+                    <li>Click <strong>Send Alert</strong> to dispatch the official notification directly to the parent's WhatsApp.</li>
+                </ol>
+            </div>
+
+            <div class="step-box">
+                <div class="step-title">Step 1.5: Declaring Holidays &amp; Special College Events</div>
+                <p class="small text-muted mb-0">
+                    If college is closed due to a festival or Sunday, use <strong>Day Status &amp; Academic Occasion</strong> to mark "Holiday" and give the occasion name (e.g., <em>Pongal / Independence Day</em>). This ensures holiday dates are not counted as working days.
+                </p>
+            </div>
+
+            <div class="step-box">
+                <div class="step-title">Step 1.6: Generating Official Monthly Reports &amp; Dossiers</div>
+                <p class="small text-muted mb-0">
+                    Open the <strong>Reports</strong> tab, choose the Month &amp; Year, and click <strong>Download Cumulative Monthly PDF</strong> for official JNTUA/SBTET compliant attendance sheets with full daily grid and percentage calculations.
+                </p>
+            </div>
+
+            <!-- SECTION 2: HOD -->
+            <h2 class="section-title">
+                <i class="bi bi-diagram-3-fill text-purple"></i> 
+                2. Head of Department (HOD) Operational Guide
+            </h2>
+
+            <div class="step-box hod">
+                <div class="step-title">Step 2.1: HOD Access &amp; Department Selection</div>
+                <ol class="small text-muted mb-0 ps-3">
+                    <li>Tap <strong>MENU (☰) &rarr; HOD Portal</strong> (or visit <code>/hod/login</code>).</li>
+                    <li>Select your Department (e.g., <em>ECE, CSE, EEE, MECH, CIVIL, AI&amp;DS</em>).</li>
+                    <li>Enter your HOD username, password, and Google Authenticator 2FA code.</li>
+                    <li>Your dashboard immediately greets you with: <strong class="text-purple">Head of Department: [Your Name]</strong>.</li>
+                </ol>
+            </div>
+
+            <div class="step-box hod">
+                <div class="step-title">Step 2.2: Dual Academic Oversight (Diploma + B.Tech)</div>
+                <p class="small text-muted mb-0">
+                    HODs have full unified visibility over all 3 years of Diploma and all 4 years of B.Tech. View live class-by-class present percentages, total strength, and coordinator status in real time.
+                </p>
+            </div>
+
+            <div class="step-box hod">
+                <div class="step-title">Step 2.3: Department Daily Absentees Monitoring</div>
+                <p class="small text-muted mb-0">
+                    Select any date to see the consolidated list of all absentees across all years in your department. View which class teacher marked them and access parent phone numbers for follow-ups.
+                </p>
+            </div>
+
+            <!-- SECTION 3: PRINCIPAL -->
+            <h2 class="section-title">
+                <i class="bi bi-award-fill text-warning"></i> 
+                3. Principal &amp; Director Executive Desk Guide
+            </h2>
+
+            <div class="step-box principal">
+                <div class="step-title">Step 3.1: Executive Desk Login</div>
+                <ol class="small text-muted mb-0 ps-3">
+                    <li>Tap <strong>MENU (☰) &rarr; Principal Portal</strong> (or visit <code>/principal/login</code>).</li>
+                    <li>Enter Principal credentials and 6-digit Google Authenticator code.</li>
+                    <li>Dashboard displays: <strong class="text-warning">Principal: Dr. Principal / Director (SSITS)</strong>.</li>
+                </ol>
+            </div>
+
+            <div class="step-box principal">
+                <div class="step-title">Step 3.2: Institution-Wide College Governance</div>
+                <p class="small text-muted mb-0">
+                    Provides top-level counters: Total Enrolled Strength across all branches, Today's Overall College Attendance Percentage, and a live <strong>Branch Comparison Matrix</strong> comparing attendance across ECE, CSE, EEE, MECH, CIVIL, and AIDS.
+                </p>
+            </div>
+
+            <!-- SECTION 4: FAQ -->
+            <h2 class="section-title">
+                <i class="bi bi-question-circle-fill text-danger"></i> 
+                4. Frequently Asked Questions (FAQ) &amp; Troubleshooting
+            </h2>
+
+            <div class="accordion" id="faqAccordion">
+                <div class="accordion-item mb-2 border rounded-3">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed fw-bold small" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                            Q1: Google Authenticator shows "Invalid Code". What is the fix?
+                        </button>
+                    </h2>
+                    <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body small text-muted">
+                            This occurs if your smartphone's internal clock is off by a few seconds. 
+                            <strong>Fix on Android:</strong> Open Google Authenticator &rarr; Settings (3 dots) &rarr; Time correction for codes &rarr; <em>Sync now</em>.<br>
+                            <strong>Fix on iPhone:</strong> Go to iPhone Settings &rarr; General &rarr; Date &amp; Time &rarr; turn ON <em>Set Automatically</em>.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item mb-2 border rounded-3">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed fw-bold small" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                            Q2: What if a faculty member forgets their password?
+                        </button>
+                    </h2>
+                    <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body small text-muted">
+                            Click <strong>Forgot Password?</strong> on the login page and enter your registered email. An official authorized password reset link valid for 2 hours will be sent to your email.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item mb-2 border rounded-3">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed fw-bold small" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                            Q3: Does attendance reset at the end of each month?
+                        </button>
+                    </h2>
+                    <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                        <div class="accordion-body small text-muted">
+                            <strong>NO!</strong> Attendance history is permanently preserved month-over-month. You do not need to press any reset button at the end of the month. Monthly reports calculate automatically.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Notes -->
+            <div class="mt-5 pt-3 border-top text-center text-muted small">
+                <div>&copy; 2026 <strong>Sri Sai Institute of Technology and Science (Autonomous)</strong></div>
+                <div class="extra-small text-muted mt-1">College Code: SRSR &bull; Rayachoty, Annamayya District, Andhra Pradesh</div>
+                <span class="badge bg-dark text-warning mt-2 px-3 py-1">DESIGNED AND DEVELOPED BY ECE DEPARTMENT - RK</span>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+</html>
